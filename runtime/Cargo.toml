@@ -189,6 +189,21 @@ git = 'https://github.com/paritytech/substrate.git'
 tag = 'devhub/latest'
 version = '4.0.0-dev'
 
+[dependencies.pallet-profile]
+default-features = false
+git = 'https://github.com/UniversalDot/pallets.git'
+version = '0.0.65'
+
+[dependencies.pallet-task]
+default-features = false
+git = 'https://github.com/UniversalDot/pallets.git'
+version = '0.0.39'
+
+[dependencies.pallet-dao]
+default-features = false
+git = 'https://github.com/UniversalDot/pallets.git'
+version = '0.0.23'
+
 [features]
 default = ['std']
 runtime-benchmarks = [
@@ -210,6 +225,9 @@ std = [
     'frame-system-rpc-runtime-api/std',
     'frame-system/std',
     'pallet-aura/std',
+    'pallet-task/std',
+    'pallet-profile/std',
+    'pallet-dao/std',
     'pallet-balances/std',
     'pallet-grandpa/std',
     'pallet-randomness-collective-flip/std',
