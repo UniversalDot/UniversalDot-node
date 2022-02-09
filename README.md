@@ -194,7 +194,7 @@ To pull the image locally, run the following command in your terminal.
 docker pull universaldot/node
 ```
 
-Furthermore, we provide a [Docker-Compose](https://github.com/UniversalDot/docker-compose) service that is able to start a blockchain with basic front-end application. 
+Furthermore, we provide a [Docker-Compose](https://github.com/UniversalDot/compose-service) service that is able to start a blockchain with basic front-end application. 
 <!-- 
 Then run the following command to start a single node development chain.
 
