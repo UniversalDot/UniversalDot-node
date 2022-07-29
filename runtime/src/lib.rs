@@ -360,6 +360,7 @@ construct_runtime!(
 		Profile: pallet_profile::{Pallet, Call, Storage, Event<T>},
 		Dao: pallet_dao::{Pallet, Call, Storage, Event<T>},
 		Did: pallet_did::{Pallet, Call, Storage, Event<T>},
+		Grant: pallet_grant::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
