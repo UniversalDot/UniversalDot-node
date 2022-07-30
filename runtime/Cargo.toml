@@ -204,6 +204,11 @@ default-features = false
 path = '../pallets/did'
 version = '0.7.0'
 
+[dependencies.pallet-grant]
+default-features = false
+path = '../pallets/grant'
+version = '0.0.1'
+
 [features]
 default = ['std']
 runtime-benchmarks = [

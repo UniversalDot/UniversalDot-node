@@ -333,6 +333,12 @@ impl pallet_profile::Config for Runtime {
 	type MaxCompletedTasksLen = MaxCompletedTasksLen;
 }
 
+impl pallet_grant::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type WeightInfo = pallet_grant::weights::SubstrateWeight<Runtime>;
+}
+
 impl pallet_did::Config for Runtime {
 	type Event = Event;
 	type Public = <Signature as Verify>::Signer;
