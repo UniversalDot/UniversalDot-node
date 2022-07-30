@@ -34,102 +34,35 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
 }
 
 
-// This creates an `Profile` object.
-fn create_profile_info<T: Config>(_num_fields: u32) -> Profile<T> {
-
-	let s: u8 = u8::MAX.into();
-	let interests = vec![0u8, s as u8];
-	let username = vec![0u8, s as u8];
-	let available_hours_per_week = 40_u8;
-
-	let caller: T::AccountId = whitelisted_caller();
-	let balance = T::Currency::free_balance(&caller);
-
-	let info = Profile {
-		owner: caller,
-		name: username.try_into().unwrap(),
-		interests: interests.try_into().unwrap(),
-		balance: Some(balance),
-		reputation: u32::MAX,
-		available_hours_per_week,
-		additional_information: None,
-	};
-
-	return info
-}
-
-
 benchmarks! {
-	create_profile {
+	request_grant {
 		/* setup initial state */
 
 		let caller: T::AccountId = whitelisted_caller();
+		let grant_receiver:  T::AccountId = whitelisted_caller();
 
-		// Populate data fields
-		let x in 1 .. 100;  // # of profiles
-		let s in 1 .. u8::MAX.into(); // max bytes for interests
-		let profile = create_profile_info::<T>(1);
-		let interests = vec![0u8, s as u8];
-		let username = vec![0u8, s as u8];
-		let additional_information = vec![0_u8; 5000];
-		let available_hours_per_week = 40_u8;
 
-	}: create_profile(RawOrigin::Signed(caller), username.try_into().unwrap(),
-	interests.try_into().unwrap(), available_hours_per_week, Some(additional_information.try_into().unwrap()))
+	}: request_grant(RawOrigin::Signed(caller), grant_receiver)
 
 	verify {
 		/* verifying final state */
 		let caller: T::AccountId = whitelisted_caller();
-		assert_last_event::<T>(Event::<T>::ProfileCreated { who: caller }.into());
+		assert_last_event::<T>(Event::<T>::GrantRequested { who: caller }.into());
 	}
 
-	update_profile {
+	winner_is {
 		/* setup initial state */
-		let create_account_caller: T::AccountId = whitelisted_caller();
-		let update_account_caller: T::AccountId = whitelisted_caller();
+		let treasury_account: T::AccountId = whitelisted_caller();
+		let grant_receiver: T::AccountId = whitelisted_caller();
 
-		// Populate data fields
-		let s in 1 .. u8::MAX.into(); // max bytes for interests
-		let interests = vec![0u8, s as u8];
-		let username = vec![0u8, s as u8];
-		let available_hours_per_week = 40_u8;
-		let additional_information = vec![0_u8; 5000];
-
-		// before we update profile, profile must be created
-		let _ = PalletProfile::<T>::create_profile(RawOrigin::Signed(create_account_caller).into(), username.clone().try_into().unwrap(), interests.clone().try_into().unwrap(), 
-			available_hours_per_week, Some(additional_information.clone().try_into().unwrap()));
-
-	}: update_profile(RawOrigin::Signed(update_account_caller), username.try_into().unwrap(), interests.try_into().unwrap(), available_hours_per_week, Some(additional_information.try_into().unwrap()))
+	}: winner_is(RawOrigin::Signed(treasury_account))
 
 	verify {
 		/* verifying final state */
 		let caller: T::AccountId = whitelisted_caller();
-		assert_last_event::<T>(Event::<T>::ProfileUpdated { who: caller }.into());
+		assert_last_event::<T>(Event::<T>::WinnerSelected { who: caller }.into());
 	}
 
-	remove_profile {
-		/* setup initial state */
-		let create_account_caller: T::AccountId = whitelisted_caller();
-		let delete_account_caller: T::AccountId = whitelisted_caller();
-
-		// Populate data fields
-		let s in 1 .. u8::MAX.into(); // max bytes for interests
-		let interests = vec![0u8, s as u8];
-		let username = vec![0u8, s as u8];
-		let available_hours_per_week = 40_u8;
-		let additional_information = vec![0_u8; 5000];
-
-		// before we delete profile, profile must be created
-		let _ = PalletProfile::<T>::create_profile(RawOrigin::Signed(create_account_caller).into(), username.try_into().unwrap(), interests.try_into().unwrap(), 
-			available_hours_per_week, Some(additional_information.try_into().unwrap()));
-
-	}: remove_profile(RawOrigin::Signed(delete_account_caller))
-
-	verify {
-		/* verifying final state */
-		let caller: T::AccountId = whitelisted_caller();
-		assert_last_event::<T>(Event::<T>::ProfileDeleted { who: caller }.into());
-	}
 }
 
 impl_benchmark_test_suite!(PalletProfile, crate::mock::new_test_ext(), crate::mock::Test,);
