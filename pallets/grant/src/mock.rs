@@ -73,10 +73,6 @@ impl pallet_grant::Config for Test {
 	type Event = Event;
 	type Currency =  Balances;
 	type WeightInfo = ();
-	type MaxUsernameLen = MaxUsernameLen;
-	type MaxInterestsLen = MaxInterestsLen;
-	type MaxAdditionalInformationLen = MaxAdditionalInformationLen;
-	type MaxCompletedTasksLen = MaxCompletedTasksLen;
 }
 
 parameter_types! {
@@ -93,6 +89,10 @@ impl pallet_balances::Config for Test {
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
+}
+
+impl pallet_randomness_collective_flip::Config for Test {
+
 }
 
 // Build genesis storage according to the mock runtime.
