@@ -100,7 +100,7 @@ pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 	GenesisConfig {
 		balances: BalancesConfig {
-			balances: vec![(1,  10), (2,  10)]
+			balances: vec![(1,  10), (2,  10), (3, 1)]
 		},
 		..Default::default()
 	}
