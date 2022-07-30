@@ -94,10 +94,10 @@ fn ensure_only_users_with_no_balance_can_request_grants() {
 }
 
 #[test]
-fn random_account_is_selected() {
+fn winner_is_selected() {
 	new_test_ext().execute_with(|| {
 
-		
+		assert_ok!(Grant::winner_is(Origin::signed(3)));
 
 	});
 }

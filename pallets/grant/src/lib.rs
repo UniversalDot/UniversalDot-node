@@ -46,6 +46,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
+use frame_support::traits::Randomness;
+
 
 
 #[cfg(test)]
@@ -89,22 +91,9 @@ pub mod pallet {
 		pub balance: Option<BalanceOf<T>>,
 	}
 
-	// Struct for holding Profile information.
-	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
-	#[scale_info(skip_type_params(T))]
-	pub struct Profile<T: Config> {
-		pub owner: AccountOf<T>,
-		pub name: BoundedVec<u8, T::MaxUsernameLen>,
-		pub interests: BoundedVec<u8, T::MaxInterestsLen>,
-		pub balance: Option<BalanceOf<T>>,
-		pub reputation: u32,
-		pub available_hours_per_week: u8,
-		pub additional_information: Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>,
-	}
-
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + pallet_randomness_collective_flip::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -113,37 +102,21 @@ pub mod pallet {
 
 		/// WeightInfo provider.
 		type WeightInfo: WeightInfo;
-
-		/// A bound on name field of Profile struct.
-		#[pallet::constant]
-		type MaxUsernameLen: Get<u32> + MaxEncodedLen + TypeInfo;
-
-		/// A bound on interests field of Profile struct.
-		#[pallet::constant]
-		type MaxInterestsLen: Get<u32> + MaxEncodedLen + TypeInfo;
-
-		/// A bound on additional information for Profile struct.
-		#[pallet::constant]
-		type MaxAdditionalInformationLen: Get<u32> + MaxEncodedLen + TypeInfo;
-
-		/// A bound on number of completed tasks for Profile.
-		#[pallet::constant]
-		type MaxCompletedTasksLen: Get<u32> + MaxEncodedLen + TypeInfo;
 	}
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
-	#[pallet::storage]
-	#[pallet::getter(fn profile_count)]
-	/// Storage Value that counts the total number of Profiles
-	pub(super) type ProfileCount<T: Config> = StorageValue<_, u32, ValueQuery>;
+	// #[pallet::storage]
+	// #[pallet::getter(fn profile_count)]
+	// /// Storage Value that counts the total number of Profiles
+	// pub(super) type ProfileCount<T: Config> = StorageValue<_, u32, ValueQuery>;
 
-	#[pallet::storage]
-	#[pallet::getter(fn profiles)]
-	/// Stores a Profile unique properties in a StorageMap.
-	pub(super) type Profiles<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Profile<T>>;
+	// #[pallet::storage]
+	// #[pallet::getter(fn profiles)]
+	// /// Stores a Profile unique properties in a StorageMap.
+	// pub(super) type Profiles<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Profile<T>>;
 
 
 	#[pallet::storage]
@@ -151,10 +124,6 @@ pub mod pallet {
 	/// Stores a Profile unique properties in a StorageMap.
 	pub(super) type StorageRequesters<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Requesters<T>>;
 
-	#[pallet::storage]
-	#[pallet::getter(fn completed_tasks)]
-	/// Stores list of completed tasks for a profile.
-	pub(super) type CompletedTasks<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, BoundedVec<T::Hash, T::MaxCompletedTasksLen> >;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -168,11 +137,6 @@ pub mod pallet {
 		/// Profile was successfully updated.
 		WinnerSelected { who: T::AccountId },
 
-		/// A task completed by profile
-		TaskCompletedByProfile { who: T::AccountId, task: T::Hash },
-
-		/// A task archived from completed tasks storage.
-		TaskArchivedFromProfileStorage { who: T::AccountId, task: T::Hash }
 	}
 
 	// Errors inform users that something went wrong.
@@ -218,25 +182,24 @@ pub mod pallet {
 		}
 
 		#[pallet::weight(<T as Config>::WeightInfo::update_profile(0))]
-		pub fn winner_is(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn winner_is(origin: OriginFor<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
-			//Self::select_winner(&grant_requester);
+			Self::select_winner(&account);
 			
 			Self::deposit_event(Event::WinnerSelected{ who:account });
 
 			// pays no fees
-			Ok(Pays::No.into())
+			Ok(())
 		}
 	}
 
 	// ** Helper internal functions ** //
 	impl<T:Config> Pallet<T> {
-		// Generates initial Profile.
-
-		//let total_requests: u32 = 0;
+		
+		// Generates requests in storage
 		pub fn generate_requests(grant_receiver: &T::AccountId) -> Result<T::Hash, DispatchError> {
 
 			// Get current balance of owner
@@ -258,10 +221,19 @@ pub mod pallet {
 			<StorageRequesters<T>>::insert(grant_receiver, requesters);
 
 			// Increase profile count
-			let new_count = Self::profile_count().checked_add(1).ok_or(<Error<T>>::ProfileCountOverflow)?;
-			<ProfileCount<T>>::put(new_count);
+			// let new_count = Self::profile_count().checked_add(1).ok_or(<Error<T>>::ProfileCountOverflow)?;
+			// <ProfileCount<T>>::put(new_count);
 
 			Ok(requesters_id)
+		}
+
+		pub fn select_winner(owner: &T::AccountId) -> Result<&T::AccountId, DispatchError> {
+
+			let requesers = <StorageRequesters<T>>::get(owner);
+
+			// let winner = <pallet_randomness_collective_flip::Pallet<T>>::random_material();
+
+			Ok(owner.into())
 		}
 
 		// Public function that check if user has made requests
