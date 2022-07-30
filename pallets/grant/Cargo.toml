@@ -77,12 +77,19 @@ git = 'https://github.com/paritytech/substrate.git'
 default-features = false
 tag = 'monthly-2021-11'
 
+[dependencies.pallet-randomness-collective-flip]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'monthly-2021-11'
+version = '4.0.0-dev'
+
 [features]
 default = ['std']
 runtime-benchmarks = ['frame-benchmarking']
 std = [
     'codec/std',
     'pallet-balances/std',
+    'pallet-randomness-collective-flip/std',
     'scale-info/std',
     'frame-support/std',
     'frame-system/std',
