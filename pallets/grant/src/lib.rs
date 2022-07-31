@@ -206,12 +206,23 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
-			Self::select_winner(&account);
+			// Self::select_winner();
 			
 			Self::deposit_event(Event::WinnerSelected{ who:account });
 
 			// pays no fees
 			Ok(())
+		}
+	}
+
+	#[pallet::hooks]
+	impl<T:Config> Hooks<T::BlockNumber> for Pallet<T> {
+		fn on_initialize(_n: T::BlockNumber) -> frame_support::weights::Weight {
+			let mut weight = 0;
+			Self::select_winner();
+
+			// TODO: Flush Requests
+			weight
 		}
 	}
 
@@ -246,16 +257,18 @@ pub mod pallet {
 			Ok(requesters_id)
 		}
 
-		pub fn select_winner(owner: &T::AccountId) -> Result<(), DispatchError> {
+		pub fn select_winner() -> Result<(), DispatchError> {
 
-			let requestors = <StorageRequesters<T>>::iter();
+			let mut requestor: Vec<T::AccountId> = <StorageRequesters<T>>::iter_keys().collect();
 			// let mut rng = thread_rng();
 			// let winner = requestors
+
+			let winner = &requestor[0];
 
 			// let winner = <pallet_randomness_collective_flip::Pallet<T>>::random_material();
 			let random_number = rand::thread_rng().gen_range(0..100);
 
-			<Winner<T>>::put(owner);
+			<Winner<T>>::put(winner);
 
 			Ok(())
 		}
