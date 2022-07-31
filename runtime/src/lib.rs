@@ -548,6 +548,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, pallet_profile, Profile);
 			list_benchmark!(list, extra, pallet_task, Task);
 			list_benchmark!(list, extra, pallet_dao, Dao);
+			list_benchmark!(list, extra, pallet_grant, Grant);
 			list_benchmark!(list, extra, pallet_did, Did);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
@@ -589,6 +590,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_profile, Profile);
 			add_benchmark!(params, batches, pallet_task, Task);
 			add_benchmark!(params, batches, pallet_dao, Dao);
+			add_benchmark!(params, batches, pallet_grant, Grant);
 			add_benchmark!(params, batches, pallet_did, Did);
 
 
