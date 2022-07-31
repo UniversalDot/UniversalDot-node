@@ -65,6 +65,7 @@ pub mod pallet {
 	use frame_support::{dispatch::DispatchResult,
 	storage::bounded_vec::BoundedVec,
 	pallet_prelude::*};
+	use rand::Rng;
 	use frame_system::pallet_prelude::*;
 	use frame_support::{ 
 		sp_runtime::traits::{Hash, Zero},
@@ -108,10 +109,10 @@ pub mod pallet {
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
-	// #[pallet::storage]
-	// #[pallet::getter(fn profile_count)]
-	// /// Storage Value that counts the total number of Profiles
-	// pub(super) type ProfileCount<T: Config> = StorageValue<_, u32, ValueQuery>;
+	#[pallet::storage]
+	#[pallet::getter(fn winner)]
+	/// Storage Value that returns the winner for the block
+	pub(super) type Winner<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
 
 	// #[pallet::storage]
 	// #[pallet::getter(fn profiles)]
@@ -181,6 +182,22 @@ pub mod pallet {
 			Ok(Pays::No.into())
 		}
 
+		/// Dispatchable call that enables every new actor to create personal profile in storage.
+		#[pallet::weight(<T as Config>::WeightInfo::create_profile(0,0))]
+		pub fn transfer_funds(origin: OriginFor<T>, grant_receiver: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+
+			// Check that the extrinsic was signed and get the signer.
+			let account = ensure_signed(origin)?;
+
+
+            <T as self::Config>::Currency::transfer(&account, &grant_receiver, amount, ExistenceRequirement::KeepAlive)?;
+
+			// // Emit an event.
+			Self::deposit_event(Event::GrantIssued{ who:account });
+
+			Ok(())
+		}
+
 		#[pallet::weight(<T as Config>::WeightInfo::update_profile(0))]
 		pub fn winner_is(origin: OriginFor<T>) -> DispatchResult {
 
@@ -227,14 +244,20 @@ pub mod pallet {
 			Ok(requesters_id)
 		}
 
-		pub fn select_winner(owner: &T::AccountId) -> Result<&T::AccountId, DispatchError> {
+		pub fn select_winner(owner: &T::AccountId) -> Result<(), DispatchError> {
 
-			let requesers = <StorageRequesters<T>>::get(owner);
+			let requestors = <StorageRequesters<T>>::iter();
+			// let mut rng = thread_rng();
+			// let winner = requestors
 
 			// let winner = <pallet_randomness_collective_flip::Pallet<T>>::random_material();
+			let random_number = rand::thread_rng().gen_range(0..100);
 
-			Ok(owner.into())
+			<Winner<T>>::put(owner);
+
+			Ok(())
 		}
+
 
 		// Public function that check if user has made requests
 		pub fn has_made_requests(owner: &T::AccountId) -> Result<bool, DispatchError>  {

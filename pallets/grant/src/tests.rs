@@ -4,25 +4,6 @@ use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
 
 
-// #[test]
-// fn issue_grant_to_account() {
-// 	new_test_ext().execute_with(|| {
-
-// 		// Ensure the user can create profile
-// 		assert_ok!(Grant::issue_grant(Origin::signed(1), 2 ));
-// 	});
-// }
-
-// #[test]
-// fn ensure_funds_are_transfered() {
-// 	new_test_ext().execute_with(|| {
-
-// 		// Ensure the user can create profile
-// 		assert_ok!(Grant::issue_grant(Origin::signed(1), 2 ));
-
-//         assert_eq!(Balances::free_balance(&2), 11);
-// 	});
-// }
 
 #[test]
 fn accounts_can_request_a_grant() {
@@ -31,7 +12,37 @@ fn accounts_can_request_a_grant() {
 		// Ensure the user can create profile
 		assert_ok!(Grant::request_grant(Origin::signed(1), 2 ));
 
-        
+	});
+}
+
+#[test]
+fn ensure_funds_can_be_transfered() {
+	new_test_ext().execute_with(|| {
+
+		// Account starts with balance of 10
+		assert_eq!(Balances::free_balance(&2), 10);
+
+		// Ensure the user can create profile
+		assert_ok!(Grant::transfer_funds(Origin::signed(1), 2 , 1));
+
+		// User balance has increased by ammount
+        assert_eq!(Balances::free_balance(&2), 11);
+	});
+}
+
+#[test]
+fn ensure_exact_amount_is_transfered() {
+	new_test_ext().execute_with(|| {
+
+		// Account starts with balance of 10
+		assert_eq!(Balances::free_balance(&2), 10);
+
+		// Ensure the user can create profile
+		assert_ok!(Grant::transfer_funds(Origin::signed(1), 2 , 2));
+
+		// Ensure user balance is not equal to 11 since we increased 10 + 2
+        assert_ne!(Balances::free_balance(&2), 11);
+
 	});
 }
 
@@ -98,6 +109,8 @@ fn winner_is_selected() {
 	new_test_ext().execute_with(|| {
 
 		assert_ok!(Grant::winner_is(Origin::signed(3)));
+
+		assert_eq!(Grant::winner(), 3);
 
 	});
 }
