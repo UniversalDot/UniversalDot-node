@@ -65,7 +65,7 @@ pub mod pallet {
 	use frame_support::{dispatch::DispatchResult,
 	storage::bounded_vec::BoundedVec,
 	pallet_prelude::*};
-	use rand::Rng;
+	use frame_support::inherent::Vec;
 	use frame_system::pallet_prelude::*;
 	use frame_support::{ 
 		sp_runtime::traits::{Hash, Zero},
@@ -76,15 +76,12 @@ pub mod pallet {
 	use scale_info::TypeInfo;
 	use crate::weights::WeightInfo;
 
-
-
-	// Account, Balance are used in Profile Struct
+	// Account, Balance
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
 	type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-
-		// Struct for holding Profile information.
+	// Struct for holding Request information.
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
 	pub struct Requesters<T: Config> {
@@ -111,13 +108,12 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn winner)]
-	/// Storage Value that returns the winner for the block
+	/// Stores the current winner for the block
 	pub(super) type Winner<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
-
 
 	#[pallet::storage]
 	#[pallet::getter(fn storage_requesters)]
-	/// Stores a Profile unique properties in a StorageMap.
+	/// Stores a Reuesters unique properties in a StorageMap.
 	pub(super) type StorageRequesters<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Requesters<T>>;
 
 
@@ -164,7 +160,7 @@ pub mod pallet {
 
 			Self::generate_requests(&grant_requester);
 			
-			Self::deposit_event(Event::GrantRequested{ who:account });
+			Self::deposit_event(Event::GrantRequested{ who:grant_requester });
 
 			// pays no fees
 			Ok(Pays::No.into())
@@ -194,11 +190,10 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
-			// Self::select_winner();
+			let winner = <Winner<T>>::get();
 			
-			Self::deposit_event(Event::WinnerSelected{ who:account });
+			Self::deposit_event(Event::WinnerSelected{ who:winner });
 
-			// pays no fees
 			Ok(())
 		}
 	}
@@ -250,7 +245,7 @@ pub mod pallet {
 			let mut requestor: Vec<T::AccountId> = <StorageRequesters<T>>::iter_keys().collect();
 
 			// Genereate randomness
-			let _random_number = rand::thread_rng().gen_range(0..requestor.len());
+			//let _random_number = rand::thread_rng().gen_range(0..requestor.len());
 			//let _random_material = <pallet_randomness_collective_flip::Pallet<T>>::random_material();
 
 			// Select winner as last requestor
