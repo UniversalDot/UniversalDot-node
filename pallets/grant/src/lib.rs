@@ -114,11 +114,6 @@ pub mod pallet {
 	/// Storage Value that returns the winner for the block
 	pub(super) type Winner<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
 
-	// #[pallet::storage]
-	// #[pallet::getter(fn profiles)]
-	// /// Stores a Profile unique properties in a StorageMap.
-	// pub(super) type Profiles<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Profile<T>>;
-
 
 	#[pallet::storage]
 	#[pallet::getter(fn storage_requesters)]
@@ -143,13 +138,6 @@ pub mod pallet {
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Reached maximum number of profiles.
-		ProfileCountOverflow,
-		/// One Account can only create a single profile.
-		ProfileAlreadyCreated,
-		/// This Account has not yet created a profile.
-		NoProfileCreated,
-		/// Completed task storage reached its bound.
 		CompletedTasksStorageFull,
 		/// Cant grant to recieving account
 		CantGrantToSelf,
@@ -222,6 +210,7 @@ pub mod pallet {
 			Self::select_winner();
 
 			// TODO: Flush Requests
+			
 			weight
 		}
 	}
@@ -234,8 +223,7 @@ pub mod pallet {
 
 			// Get current balance of owner
 			let balance = T::Currency::free_balance(grant_receiver);
-			// ensure!(balance > T::ExistentialDeposit::get() , Error::<T>::NonEmptyBalance);
-
+			
 			let total = T::Currency::total_issuance();
 		
 			// Populate Requesters struct
@@ -244,15 +232,15 @@ pub mod pallet {
 				balance: Some(balance)
 			};
 
+			// Ensure non-empty balance
+			ensure!(requesters.balance.is_some() , Error::<T>::NonEmptyBalance);
+			
 			// Get hash of profile
 			let requesters_id = T::Hashing::hash_of(&requesters);
 
 			// Insert profile into HashMap
 			<StorageRequesters<T>>::insert(grant_receiver, requesters);
 
-			// Increase profile count
-			// let new_count = Self::profile_count().checked_add(1).ok_or(<Error<T>>::ProfileCountOverflow)?;
-			// <ProfileCount<T>>::put(new_count);
 
 			Ok(requesters_id)
 		}
@@ -260,13 +248,14 @@ pub mod pallet {
 		pub fn select_winner() -> Result<(), DispatchError> {
 
 			let mut requestor: Vec<T::AccountId> = <StorageRequesters<T>>::iter_keys().collect();
-			// let mut rng = thread_rng();
-			// let winner = requestors
 
+			// Genereate randomness
+			let _random_number = rand::thread_rng().gen_range(0..requestor.len());
+			//let _random_material = <pallet_randomness_collective_flip::Pallet<T>>::random_material();
+
+			// Select winner as last requestor
+			// TODO: Use randomness from above
 			let winner = &requestor[0];
-
-			// let winner = <pallet_randomness_collective_flip::Pallet<T>>::random_material();
-			let random_number = rand::thread_rng().gen_range(0..100);
 
 			<Winner<T>>::put(winner);
 
