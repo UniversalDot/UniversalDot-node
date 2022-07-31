@@ -153,7 +153,7 @@ pub mod pallet {
 
 		/// Dispatchable call that ensures user can update existing personal profile in storage.
 		#[pallet::weight(<T as Config>::WeightInfo::update_profile(0))]
-		pub fn request_grant(origin: OriginFor<T>, grant_requester: T::AccountId) -> DispatchResultWithPostInfo {
+		pub fn request_grant(origin: OriginFor<T>, grant_requester: T::AccountId) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
@@ -163,7 +163,7 @@ pub mod pallet {
 			Self::deposit_event(Event::GrantRequested{ who:grant_requester });
 
 			// pays no fees
-			Ok(Pays::No.into())
+			Ok(())
 		}
 
 		/// Dispatchable call that enables every new actor to create personal profile in storage.
@@ -202,7 +202,11 @@ pub mod pallet {
 	impl<T:Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_initialize(_n: T::BlockNumber) -> frame_support::weights::Weight {
 			let mut weight = 0;
+			//let requests = Self::storage_requesters(Origin);
+			// if requests  {
 			Self::select_winner();
+			// }
+			//Self::select_winner();
 
 			// TODO: Flush Requests
 			
@@ -218,6 +222,8 @@ pub mod pallet {
 
 			// Get current balance of owner
 			let balance = T::Currency::free_balance(grant_receiver);
+			// Ensure empty balance
+			ensure!(balance.is_zero() , Error::<T>::NonEmptyBalance);
 			
 			let total = T::Currency::total_issuance();
 		
@@ -227,8 +233,7 @@ pub mod pallet {
 				balance: Some(balance)
 			};
 
-			// Ensure non-empty balance
-			ensure!(requesters.balance.is_some() , Error::<T>::NonEmptyBalance);
+			
 			
 			// Get hash of profile
 			let requesters_id = T::Hashing::hash_of(&requesters);
