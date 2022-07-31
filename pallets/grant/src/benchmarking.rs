@@ -15,12 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Benchmarking setup for pallet-profile
+//! Benchmarking setup for pallet-grant
 
 use super::*;
 
 #[allow(unused)]
-use crate::Pallet as PalletProfile;
+use crate::Pallet as PalletGrant;
 use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller, vec};
 use frame_system::RawOrigin;
 use sp_std::convert::TryInto;
@@ -50,19 +50,19 @@ benchmarks! {
 		assert_last_event::<T>(Event::<T>::GrantRequested { who: caller }.into());
 	}
 
-	winner_is {
-		/* setup initial state */
-		let treasury_account: T::AccountId = whitelisted_caller();
-		let grant_receiver: T::AccountId = whitelisted_caller();
+	// winner_is {
+	// 	/* setup initial state */
+	// 	let treasury_account: T::AccountId = whitelisted_caller();
+	// 	let grant_receiver: T::AccountId = whitelisted_caller();
 
-	}: winner_is(RawOrigin::Signed(treasury_account))
+	// }: winner_is(RawOrigin::Signed(treasury_account))
 
-	verify {
-		/* verifying final state */
-		let caller: T::AccountId = whitelisted_caller();
-		assert_last_event::<T>(Event::<T>::WinnerSelected { who: caller }.into());
-	}
+	// verify {
+	// 	/* verifying final state */
+	// 	let caller: T::AccountId = whitelisted_caller();
+	// 	assert_last_event::<T>(Event::<T>::WinnerSelected { who: caller }.into());
+	// }
 
 }
 
-impl_benchmark_test_suite!(PalletProfile, crate::mock::new_test_ext(), crate::mock::Test,);
+impl_benchmark_test_suite!(PalletGrant, crate::mock::new_test_ext(), crate::mock::Test,);

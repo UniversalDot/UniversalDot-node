@@ -152,7 +152,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 
 		/// Dispatchable call that ensures user can update existing personal profile in storage.
-		#[pallet::weight(<T as Config>::WeightInfo::update_profile(0))]
+		#[pallet::weight(<T as Config>::WeightInfo::request_grant())]
 		pub fn request_grant(origin: OriginFor<T>, grant_requester: T::AccountId) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
@@ -167,7 +167,7 @@ pub mod pallet {
 		}
 
 		/// Dispatchable call that enables every new actor to create personal profile in storage.
-		#[pallet::weight(<T as Config>::WeightInfo::create_profile(0,0))]
+		#[pallet::weight(<T as Config>::WeightInfo::request_grant())]
 		pub fn transfer_funds(origin: OriginFor<T>, grant_receiver: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
@@ -184,7 +184,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		#[pallet::weight(<T as Config>::WeightInfo::update_profile(0))]
+		#[pallet::weight(<T as Config>::WeightInfo::request_grant())]
 		pub fn winner_is(origin: OriginFor<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
