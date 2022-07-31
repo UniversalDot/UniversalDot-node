@@ -4,6 +4,10 @@ use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
 use frame_support::traits::{Hooks};
 
+
+// <<<<<<<<<<<<<<<<<< Helper functions and constants >>>>>>>>>>>>>>>>>>
+
+
 fn run_to_block(n: u64) {
 	Grant::on_finalize(System::block_number());
 	for b in (System::block_number() + 1)..=n {
@@ -18,6 +22,9 @@ fn next_block(n: u64) {
 	System::set_block_number(n);
 	Grant::on_initialize(n);
 }
+
+
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< TESTS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 #[test]
 fn accounts_can_request_a_grant() {
@@ -133,6 +140,24 @@ fn winner_can_be_selected() {
 
 	});
 }
+
+#[test]
+fn winner_can_be_queried_by_anyone() {
+	new_test_ext().execute_with(|| {
+
+		// Request grant
+		assert_ok!(Grant::request_grant(Origin::signed(1), 2 ));
+
+		// go to later block 
+		run_to_block(2);
+
+		// Ensure the winner is the only account that requested
+		assert_eq!(Grant::winner(), 2);
+		assert_ok!(Grant::winner_is(Origin::signed(1)));
+
+	});
+}
+
 
 #[test]
 fn winner_can_be_selected_per_block() {
