@@ -50,8 +50,8 @@ fn ensure_exact_amount_is_transfered() {
 fn throw_error_when_granting_to_self() {
 	new_test_ext().execute_with(|| {
 
-		// Ensure the user can create profile
-		// assert_noop!(Grant::request_grant(Origin::signed(1), 1 , 3 ), Error::<Test>::CantGrantToSelf);
+		// Ensure treasury can't issue funds to self
+		assert_noop!(Grant::transfer_funds(Origin::signed(1), 1 , 3 ), Error::<Test>::CantGrantToSelf);
 	});
 }
 
