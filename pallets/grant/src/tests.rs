@@ -2,8 +2,22 @@
 // use frame_support::storage::bounded_vec::BoundedVec;
 use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
+use frame_support::traits::{Hooks};
 
+fn run_to_block(n: u64) {
+	Grant::on_finalize(System::block_number());
+	for b in (System::block_number() + 1)..=n {
+		next_block(b);
+		if b != n {
+			Grant::on_finalize(System::block_number());
+		}
+	}
+}
 
+fn next_block(n: u64) {
+	System::set_block_number(n);
+	Grant::on_initialize(n);
+}
 
 #[test]
 fn accounts_can_request_a_grant() {
@@ -105,11 +119,37 @@ fn ensure_only_users_with_no_balance_can_request_grants() {
 }
 
 #[test]
-fn winner_is_selected() {
+fn winner_can_be_selected() {
 	new_test_ext().execute_with(|| {
 
-		assert_ok!(Grant::winner_is(Origin::signed(3)));
+		// Request grant
+		assert_ok!(Grant::request_grant(Origin::signed(1), 2 ));
 
+		// go to later block 
+		run_to_block(4);
+
+		// Ensure the winner is the only account that requested
+		assert_eq!(Grant::winner(), 2);
+
+	});
+}
+
+#[test]
+fn winner_can_be_selected_per_block() {
+	new_test_ext().execute_with(|| {
+		
+		// Request grant and run to block
+		assert_ok!(Grant::request_grant(Origin::signed(1), 2 ));
+		run_to_block(2);
+
+		// Ensure we have selected the correct winner
+		assert_eq!(Grant::winner(), 2);
+
+		// Request additional grant for different block
+		assert_ok!(Grant::request_grant(Origin::signed(1), 3 ));
+		run_to_block(5);
+
+		// Ensure we have the coorect winner
 		assert_eq!(Grant::winner(), 3);
 
 	});
