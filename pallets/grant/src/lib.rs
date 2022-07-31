@@ -189,6 +189,8 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
+			// Ensure no conflicts of interest
+			ensure!(account != grant_receiver, Error::<T>::CantGrantToSelf);
 
             <T as self::Config>::Currency::transfer(&account, &grant_receiver, amount, ExistenceRequirement::KeepAlive)?;
 
