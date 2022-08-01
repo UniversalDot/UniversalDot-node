@@ -71,10 +71,13 @@ pub mod pallet {
 		sp_runtime::traits::{Hash, Zero},
 		traits::{
 			Currency, 
+			Randomness,
 			tokens::ExistenceRequirement,
 		}};
 	use scale_info::TypeInfo;
 	use crate::weights::WeightInfo;
+	use frame_support::PalletId;
+
 
 	// Account, Balance
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
@@ -98,8 +101,14 @@ pub mod pallet {
 		/// The Currency handler for the Profile pallet.
 		type Currency: Currency<Self::AccountId>;
 
+		#[pallet::constant]
+		type PalletId: Get<PalletId>;
+
 		/// WeightInfo provider.
 		type WeightInfo: WeightInfo;
+
+		type Randomness: Randomness<Self::Hash, Self::BlockNumber>;
+
 	}
 
 	#[pallet::pallet]
@@ -204,7 +213,7 @@ pub mod pallet {
 			let mut weight = 0;
 			//let requests = Self::storage_requesters(Origin);
 			// if requests  {
-			Self::select_winner();
+			//Self::select_winner();
 			// }
 			//Self::select_winner();
 
@@ -250,16 +259,24 @@ pub mod pallet {
 			let mut requestor: Vec<T::AccountId> = <StorageRequesters<T>>::iter_keys().collect();
 
 			// Genereate randomness
+
 			//let _random_number = rand::thread_rng().gen_range(0..requestor.len());
 			//let _random_material = <pallet_randomness_collective_flip::Pallet<T>>::random_material();
+			let mut random_number = Self::generate_random_number(0);
 
-			// Select winner as last requestor
-			// TODO: Use randomness from above
+			// TODO: Use random_number instead of first_requestor
 			let winner = &requestor[0];
 
 			<Winner<T>>::put(winner);
 
 			Ok(())
+		}
+
+		fn generate_random_number(seed: u32) -> u32 {
+			let (random_seed, _) = T::Randomness::random(&(T::PalletId::get(), seed).encode());
+			let random_number = <u32>::decode(&mut random_seed.as_ref())
+				.expect("secure hashes should always be bigger than u32; qed");
+			random_number
 		}
 
 

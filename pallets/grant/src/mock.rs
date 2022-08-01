@@ -9,10 +9,13 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup},
 	BuildStorage,
 };
+use frame_support_test::TestRandomness;
+use frame_support::PalletId;
 
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -30,6 +33,7 @@ frame_support::construct_runtime!(
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
 	pub const SS58Prefix: u8 = 42;
+	pub const LotteryPalletId: PalletId = PalletId(*b"py/lotto");
 }
 
 impl system::Config for Test {
@@ -73,6 +77,8 @@ impl pallet_grant::Config for Test {
 	type Event = Event;
 	type Currency =  Balances;
 	type WeightInfo = ();
+	type PalletId = LotteryPalletId;
+	type Randomness = TestRandomness<Self>;
 }
 
 parameter_types! {
