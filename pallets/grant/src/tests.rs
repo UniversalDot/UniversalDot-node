@@ -30,8 +30,22 @@ fn next_block(n: u64) {
 fn accounts_can_request_a_grant() {
 	new_test_ext().execute_with(|| {
 
-		// Ensure the user can create profile
+		// Ensure we can request grants
 		assert_ok!(Grant::request_grant(Origin::signed(1), 2 ));
+
+	});
+}
+
+#[test]
+fn requests_can_be_counted() {
+	new_test_ext().execute_with(|| {
+
+		// Ensure we can request grants
+		assert_ok!(Grant::request_grant(Origin::signed(1), 7 ));
+		assert_ok!(Grant::request_grant(Origin::signed(1), 6 ));
+		
+		// Ensure we can count requests
+		assert_eq!(Grant::requesters_count(), 2);
 
 	});
 }
@@ -43,7 +57,7 @@ fn ensure_funds_can_be_transfered() {
 		// Account starts with balance of 10
 		assert_eq!(Balances::free_balance(&2), 10);
 
-		// Ensure the user can create profile
+		// Ensure we can transfer
 		assert_ok!(Grant::transfer_funds(Origin::signed(1), 2 , 1));
 
 		// User balance has increased by ammount
@@ -58,7 +72,7 @@ fn ensure_exact_amount_is_transfered() {
 		// Account starts with balance of 10
 		assert_eq!(Balances::free_balance(&2), 10);
 
-		// Ensure the user can create profile
+		// Ensure we can transfer
 		assert_ok!(Grant::transfer_funds(Origin::signed(1), 2 , 2));
 
 		// Ensure user balance is not equal to 11 since we increased 10 + 2
