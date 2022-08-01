@@ -31,7 +31,7 @@ fn accounts_can_request_a_grant() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure we can request grants
-		assert_ok!(Grant::request_grant(Origin::signed(1), 2 ));
+		assert_ok!(Grant::request_grant(Origin::signed(1), 7 ));
 
 	});
 }
@@ -131,12 +131,11 @@ fn ensure_only_users_with_no_balance_can_request_grants() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure a user can request a grant
-		// assert_ok!(Grant::request_grant(Origin::signed(3), 3 ));
+		assert_ok!(Grant::request_grant(Origin::signed(3), 7 ));
 		assert_eq!(Balances::free_balance(7), 0);
         
         // Ensure only empty balance can make requests
-		// TODO: fix
-        // assert_noop!(Grant::request_grant(Origin::signed(3), 7), Error::<Test>::NonEmptyBalance);
+        assert_noop!(Grant::request_grant(Origin::signed(3), 1), Error::<Test>::NonEmptyBalance);
 
 	});
 }
@@ -192,7 +191,7 @@ fn winner_can_be_selected_per_block() {
 
 		// Ensure we have the coorect winner
 		// ToDO: fix test
-		// assert_eq!(Grant::winner(), 6);
+		//assert_eq!(Grant::winner(), 6);
 
 	});
 }
