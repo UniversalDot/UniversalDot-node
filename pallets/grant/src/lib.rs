@@ -46,9 +46,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
-use frame_support::traits::Randomness;
-
-
 
 #[cfg(test)]
 mod mock;
@@ -62,9 +59,7 @@ pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{dispatch::DispatchResult,
-	storage::bounded_vec::BoundedVec,
-	pallet_prelude::*};
+	use frame_support::{dispatch::DispatchResult, pallet_prelude::*};
 	use frame_support::inherent::Vec;
 	use frame_system::pallet_prelude::*;
 	use frame_support::{ 
@@ -167,14 +162,14 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 
-		/// Dispatchable call that ensures user can update existing personal profile in storage.
+		/// Dispatchable call that ensures grants can be requested
 		#[pallet::weight(<T as Config>::WeightInfo::request_grant())]
 		pub fn request_grant(origin: OriginFor<T>, grant_requester: T::AccountId) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
-			let account = ensure_signed(origin)?;
+			let _account = ensure_signed(origin)?;
 
-			Self::generate_requests(&grant_requester);
+			let _requests = Self::generate_requests(&grant_requester)?;
 			
 			Self::deposit_event(Event::GrantRequested{ who:grant_requester });
 
@@ -182,7 +177,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Dispatchable call that enables every new actor to create personal profile in storage.
+		/// Dispatchable call that enables transfer of funds
 		#[pallet::weight(<T as Config>::WeightInfo::request_grant())]
 		pub fn transfer_funds(origin: OriginFor<T>, grant_receiver: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
 
@@ -200,11 +195,12 @@ pub mod pallet {
 			Ok(())
 		}
 
+		// Dispatchable calls that allows to query the winner
 		#[pallet::weight(<T as Config>::WeightInfo::request_grant())]
 		pub fn winner_is(origin: OriginFor<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
-			let account = ensure_signed(origin)?;
+			let _account = ensure_signed(origin)?;
 
 			let winner = <Winner<T>>::get();
 			
@@ -220,12 +216,12 @@ pub mod pallet {
 		// TODO: Maybe convert on_idle?
 		fn on_initialize(_n: T::BlockNumber) -> frame_support::weights::Weight {
 			
-			let mut weight = 0;
+			let weight = 10000;
 			let requests = Self::requesters_count();
 
 			// Only select winners when we have requests
 			if requests > 0u32 {
-				Self::select_winner();
+				let _winner = Self::select_winner();
 			}
 			
 
@@ -247,10 +243,10 @@ pub mod pallet {
 			// Ensure empty balance
 			ensure!(balance.is_zero() , Error::<T>::NonEmptyBalance);
 			
-			let total = T::Currency::total_issuance();
+			let _total = T::Currency::total_issuance();
 		
 			// Populate Requesters struct
-			let mut requesters = Requesters::<T> {
+			let requesters = Requesters::<T> {
 				owner: grant_receiver.clone(),
 				balance: Some(balance)
 			};
@@ -271,13 +267,13 @@ pub mod pallet {
 
 		pub fn select_winner() -> Result<(), DispatchError> {
 
-			let mut requestor: Vec<T::AccountId> = <StorageRequesters<T>>::iter_keys().collect();
+			let requestor: Vec<T::AccountId> = <StorageRequesters<T>>::iter_keys().collect();
 
 			// Genereate randomness
 
 			//let _random_number = rand::thread_rng().gen_range(0..requestor.len());
 			//let _random_material = <pallet_randomness_collective_flip::Pallet<T>>::random_material();
-			let mut random_number = Self::generate_random_number(0);
+			let _random_number = Self::generate_random_number(0);
 
 			// TODO: Use random_number instead of first_requestor
 			let winner = &requestor[0];
