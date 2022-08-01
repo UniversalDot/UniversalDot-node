@@ -18,7 +18,7 @@
 
 //! # Grant Pallet
 //! 
-//! ## Version: 0.7.0
+//! ## Version: 0.0.1
 //!
 //! - [`Config`]
 //! - [`Pallet`]
@@ -72,6 +72,8 @@ pub mod pallet {
 	use scale_info::TypeInfo;
 	use crate::weights::WeightInfo;
 	use frame_support::PalletId;
+	use core::convert::TryInto;
+
 
 
 	// Account, Balance
@@ -213,7 +215,6 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T:Config> Hooks<T::BlockNumber> for Pallet<T> {
 
-		// TODO: Maybe convert on_idle?
 		fn on_initialize(_n: T::BlockNumber) -> frame_support::weights::Weight {
 			
 			let weight = 10000;
@@ -222,11 +223,10 @@ pub mod pallet {
 			// Only select winners when we have requests
 			if requests > 0u32 {
 				let _winner = Self::select_winner();
+				//  Flush Requests each block
+				<RequestersCount<T>>::kill();
+				<StorageRequesters<T>>::drain();
 			}
-			
-
-			// TODO: Flush Requests
-			// <RequestersCount<T>>::put(0);
 			
 			weight
 		}
@@ -251,8 +251,6 @@ pub mod pallet {
 				balance: Some(balance)
 			};
 
-			
-			
 			// Get hash of profile
 			let requesters_id = T::Hashing::hash_of(&requesters);
 
@@ -269,14 +267,12 @@ pub mod pallet {
 
 			let requestor: Vec<T::AccountId> = <StorageRequesters<T>>::iter_keys().collect();
 
-			// Genereate randomness
-
-			//let _random_number = rand::thread_rng().gen_range(0..requestor.len());
-			//let _random_material = <pallet_randomness_collective_flip::Pallet<T>>::random_material();
-			let _random_number = Self::generate_random_number(0);
-
-			// TODO: Use random_number instead of first_requestor
-			let winner = &requestor[0];
+			// Generate randomness
+			// let _random_material = <pallet_randomness_collective_flip::Pallet<T>>::random_material();
+			let get_random_number = Self::generate_random_number(0);
+			let total_requestors: u32 = requestor.len().try_into().unwrap();
+			let winner_index: usize = (get_random_number % total_requestors).try_into().unwrap();
+			let winner = &requestor[winner_index];
 
 			<Winner<T>>::put(winner);
 
@@ -285,8 +281,7 @@ pub mod pallet {
 
 		fn generate_random_number(seed: u32) -> u32 {
 			let (random_seed, _) = T::Randomness::random(&(T::PalletId::get(), seed).encode());
-			let random_number = <u32>::decode(&mut random_seed.as_ref())
-				.expect("secure hashes should always be bigger than u32; qed");
+			let random_number = <u32>::decode(&mut random_seed.as_ref()).expect("secure hashes should always be bigger than u32; qed");
 			random_number
 		}
 

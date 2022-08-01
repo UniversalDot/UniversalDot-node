@@ -186,12 +186,13 @@ fn winner_can_be_selected_per_block() {
 		assert_eq!(Grant::winner(), 5);
 		
 		// Request additional grant for different block
-		assert_ok!(Grant::request_grant(Origin::signed(1), 6 ));
-		run_to_block(4);
+		assert_ok!(Grant::request_grant(Origin::signed(1), 8 ));
+		assert_ok!(Grant::request_grant(Origin::signed(1), 7 ));
+		
+		run_to_block(5);
 
-		// Ensure we have the coorect winner
-		// ToDO: fix test
-		//assert_eq!(Grant::winner(), 6);
+		// Ensure we have the coorect winner (Repeatable randomness?)
+		assert_eq!(Grant::winner(), 7);
 
 	});
 }
