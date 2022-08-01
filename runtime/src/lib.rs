@@ -320,6 +320,8 @@ parameter_types! {
 	pub const MaxAdditionalInformationLen: u32 = 5000;
 	#[derive(TypeInfo, MaxEncodedLen, Encode)]
 	pub const MaxCompletedTasksLen: u32 = 100;
+
+	pub const RandomnessPalletId: PalletId = PalletId(*b"py/lotto");
 }
 
 // Configure the pallet-profile.
@@ -337,6 +339,9 @@ impl pallet_grant::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type WeightInfo = pallet_grant::weights::SubstrateWeight<Runtime>;
+	type PalletId = RandomnessPalletId;
+	type Randomness = RandomnessCollectiveFlip;
+
 }
 
 impl pallet_did::Config for Runtime {
