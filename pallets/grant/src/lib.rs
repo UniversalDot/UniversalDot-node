@@ -122,8 +122,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn storage_requesters)]
-	/// Stores a Reuesters unique properties in a StorageMap.
+	/// Stores a Requesters unique properties in a StorageMap.
 	pub(super) type StorageRequesters<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Requesters<T>>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn requesters_count)]
+	/// Store requester count
+	pub(super) type RequestersCount<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 
 	#[pallet::event]
@@ -152,6 +157,8 @@ pub mod pallet {
 		RequestAlreadyMade,
 		// You must have empty balance to receive tokens.
 		NonEmptyBalance,
+		// Too many requesters in current block
+		TooManyRequesters
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -209,15 +216,21 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T:Config> Hooks<T::BlockNumber> for Pallet<T> {
+
+		// TODO: Maybe convert on_idle?
 		fn on_initialize(_n: T::BlockNumber) -> frame_support::weights::Weight {
+			
 			let mut weight = 0;
-			//let requests = Self::storage_requesters(Origin);
-			// if requests  {
-			//Self::select_winner();
-			// }
-			//Self::select_winner();
+			let requests = Self::requesters_count();
+
+			// Only select winners when we have requests
+			if requests > 0u32 {
+				Self::select_winner();
+			}
+			
 
 			// TODO: Flush Requests
+			// <RequestersCount<T>>::put(0);
 			
 			weight
 		}
@@ -250,6 +263,8 @@ pub mod pallet {
 			// Insert profile into HashMap
 			<StorageRequesters<T>>::insert(grant_receiver, requesters);
 
+			let new_count = Self::requesters_count().checked_add(1).ok_or(<Error<T>>::TooManyRequesters)?;
+			<RequestersCount<T>>::put(new_count);
 
 			Ok(requesters_id)
 		}
