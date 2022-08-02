@@ -87,6 +87,7 @@ pub mod pallet {
 	pub struct Requesters<T: Config> {
 		pub owner: AccountOf<T>,
 		pub balance: Option<BalanceOf<T>>,
+		pub block_number: <T as frame_system::Config>::BlockNumber,
 	}
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -248,8 +249,10 @@ pub mod pallet {
 			// Populate Requesters struct
 			let requesters = Requesters::<T> {
 				owner: grant_receiver.clone(),
-				balance: Some(balance)
+				balance: Some(balance),
+				block_number: <frame_system::Pallet<T>>::block_number(),
 			};
+			
 
 			// Get hash of profile
 			let requesters_id = T::Hashing::hash_of(&requesters);

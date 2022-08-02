@@ -94,6 +94,9 @@ fn throw_error_when_granting_to_self() {
 fn ensure_request_is_stored() {
 	new_test_ext().execute_with(|| {
 
+		// Go to later block
+		run_to_block(7);
+
 		// Ensure a user can request a grant
 		assert_ok!(Grant::request_grant(Origin::signed(1), 5 ));
 
@@ -103,6 +106,7 @@ fn ensure_request_is_stored() {
         // Ensure we can access the storage requests
         assert_eq!(requests.owner, 5);
         assert_eq!(requests.balance,Some(0));
+		assert_eq!(requests.block_number, 7);
 
 	});
 }
