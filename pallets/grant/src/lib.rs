@@ -28,16 +28,20 @@
 //! The Grant Pallet is used to Grant tokens to new AccountIDs.
 //! In order to create Profile, Tasks, Organizations users need initial tokens. 
 //! 
-//! These tokens are granted through Grant pallet.
+//! The Grant pallet is used to issue tokens to new users that intent to use the dApp.
 //! 
+//! The grants are issued in random fashion, such that requesters are awarded tokens in a random manner.
+//! The intention is that initially, when there are only few users of the platform, every grant_request is
+//! automatically approved. However, later on when the application reaches more use, grants are offered randomly
+//! to requesting accounts. 
+//! 	
 //! 
-//! 
-//! 
+//! 	
 //! ## Interface
 //!
 //! ### Public Functions
 //!
-//! 	
+//! 
 //!
 //! ## Related Modules
 //!
@@ -74,8 +78,6 @@ pub mod pallet {
 	use frame_support::PalletId;
 	use core::convert::TryInto;
 
-
-
 	// Account, Balance
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
 	type BalanceOf<T> =
@@ -106,7 +108,6 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		type Randomness: Randomness<Self::Hash, Self::BlockNumber>;
-
 	}
 
 	#[pallet::pallet]
@@ -140,7 +141,6 @@ pub mod pallet {
 
 		/// Profile was successfully updated.
 		WinnerSelected { who: T::AccountId },
-
 	}
 
 	// Errors inform users that something went wrong.
@@ -172,8 +172,10 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let _account = ensure_signed(origin)?;
 
+			// Generate requests and store them 
 			let _requests = Self::generate_requests(&grant_requester)?;
-			
+
+			// Deposit event for grant requested			
 			Self::deposit_event(Event::GrantRequested{ who:grant_requester });
 
 			// pays no fees
@@ -190,9 +192,10 @@ pub mod pallet {
 			// Ensure no conflicts of interest
 			ensure!(account != grant_receiver, Error::<T>::CantGrantToSelf);
 
+			// Transfer ammount from one account to another
             <T as self::Config>::Currency::transfer(&account, &grant_receiver, amount, ExistenceRequirement::KeepAlive)?;
 
-			// // Emit an event.
+			// Emit an event.
 			Self::deposit_event(Event::GrantIssued{ who:account });
 
 			Ok(())
@@ -205,8 +208,10 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let _account = ensure_signed(origin)?;
 
+			// Get the winner
 			let winner = <Winner<T>>::get();
 			
+			// Deposit event
 			Self::deposit_event(Event::WinnerSelected{ who:winner });
 
 			Ok(())
@@ -216,6 +221,7 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T:Config> Hooks<T::BlockNumber> for Pallet<T> {
 
+		// Each block, chek if there are requests for grants and award a grant to random account
 		fn on_initialize(_n: T::BlockNumber) -> frame_support::weights::Weight {
 			
 			let weight = 10000;
@@ -224,11 +230,13 @@ pub mod pallet {
 			// Only select winners when we have requests
 			if requests > 0u32 {
 				let _winner = Self::select_winner();
-				//  Flush Requests each block
+				
+				// Flush Requests each block
 				<RequestersCount<T>>::kill();
 				<StorageRequesters<T>>::drain();
 			}
 			
+			// return weight
 			weight
 		}
 	}
@@ -241,7 +249,8 @@ pub mod pallet {
 
 			// Get current balance of owner
 			let balance = T::Currency::free_balance(grant_receiver);
-			// Ensure empty balance
+			
+			// Ensure only accounts with empty balance can make grant requests
 			ensure!(balance.is_zero() , Error::<T>::NonEmptyBalance);
 			
 			let _total = T::Currency::total_issuance();
@@ -260,6 +269,7 @@ pub mod pallet {
 			// Insert profile into HashMap
 			<StorageRequesters<T>>::insert(grant_receiver, requesters);
 
+			// Increast count for requesterss
 			let new_count = Self::requesters_count().checked_add(1).ok_or(<Error<T>>::TooManyRequesters)?;
 			<RequestersCount<T>>::put(new_count);
 
