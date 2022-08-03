@@ -157,11 +157,8 @@ pub mod pallet {
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		CompletedTasksStorageFull,
 		/// Cant grant to recieving account
 		CantGrantToSelf,
-		/// No further funds available
-		ZeroAmountAvailable,
 		// User has already made requests
 		RequestAlreadyMade,
 		// You must have empty balance to receive tokens.
@@ -278,7 +275,6 @@ pub mod pallet {
 			// Ensure only accounts with empty balance can make grant requests
 			ensure!(balance.is_zero() , Error::<T>::NonEmptyBalance);
 			
-		
 			// Populate Requesters struct
 			let requesters = Requesters::<T> {
 				owner: grant_receiver.clone(),
@@ -286,7 +282,6 @@ pub mod pallet {
 				block_number: <frame_system::Pallet<T>>::block_number(),
 			};
 			
-
 			// Get hash of profile
 			let requesters_id = T::Hashing::hash_of(&requesters);
 
