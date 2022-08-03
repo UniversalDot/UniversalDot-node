@@ -1,5 +1,3 @@
-// use core::convert::TryInto;
-// use frame_support::storage::bounded_vec::BoundedVec;
 use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
 use frame_support::traits::{Hooks};
@@ -216,7 +214,7 @@ fn winner_can_be_recieve_grant_reward() {
 		
 		run_to_block(5);
 
-		// Ensure money is tranfered
+		// TODO: Ensure money is tranfered
 		//assert_eq!(Balances::free_balance(7), 7);
 	});
 }
