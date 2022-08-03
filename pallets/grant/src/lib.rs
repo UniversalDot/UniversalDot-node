@@ -35,13 +35,24 @@
 //! automatically approved. However, later on when the application reaches more use, grants are offered randomly
 //! to requesting accounts. 
 //! 	
+//! The Process is envisioned as follows:
+//! 1. Anyone can send Funds into a Treasury Account. The Treasury account is used to distribute grant rewards.
+//! 2. Anyone can request a grant each block.	
+//! 3. Each block a grant is offered randomly to selected grant requester.
+//! 
 //! 
 //! 	
 //! ## Interface
 //!
 //! ### Public Functions
+//!  -  request_grant()
+//!		Function used to request grants.
 //!
-//! 
+//!  -  transfer_funds()
+//!		Function used to transfer funds into a Treasury Account. Anyone can transfer into Treasury.
+//!
+//!  -  winner_is()
+//!		Function that announces the winner of the block.
 //!
 //! ## Related Modules
 //!
@@ -67,7 +78,7 @@ pub mod pallet {
 	use frame_support::inherent::Vec;
 	use frame_system::pallet_prelude::*;
 	use frame_support::{ 
-		sp_runtime::traits::{Hash, Zero},
+		sp_runtime::traits::{Hash, Zero, AccountIdConversion,  Saturating},
 		traits::{
 			Currency, 
 			Randomness,
@@ -184,16 +195,16 @@ pub mod pallet {
 
 		/// Dispatchable call that enables transfer of funds
 		#[pallet::weight(<T as Config>::WeightInfo::request_grant())]
-		pub fn transfer_funds(origin: OriginFor<T>, grant_receiver: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+		pub fn transfer_funds(origin: OriginFor<T>, treasury: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
 			// Ensure no conflicts of interest
-			ensure!(account != grant_receiver, Error::<T>::CantGrantToSelf);
+			ensure!(account != treasury, Error::<T>::CantGrantToSelf);
 
-			// Transfer ammount from one account to another
-            <T as self::Config>::Currency::transfer(&account, &grant_receiver, amount, ExistenceRequirement::KeepAlive)?;
+			// Transfer ammount from one account to treasury
+            <T as self::Config>::Currency::transfer(&account, &treasury, amount, ExistenceRequirement::KeepAlive)?;
 
 			// Emit an event.
 			Self::deposit_event(Event::GrantIssued{ who:account });
@@ -221,7 +232,7 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T:Config> Hooks<T::BlockNumber> for Pallet<T> {
 
-		// Each block, chek if there are requests for grants and award a grant to random account
+		// Each block, check if there are requests for grants and award a grant to random account
 		fn on_initialize(_n: T::BlockNumber) -> frame_support::weights::Weight {
 			
 			let weight = 10000;
@@ -243,6 +254,20 @@ pub mod pallet {
 
 	// ** Helper internal functions ** //
 	impl<T:Config> Pallet<T> {
+
+
+		// Generates treasury account
+		pub fn account_id() -> T::AccountId {
+			T::PalletId::get().into_account()
+		}
+
+		fn treasury_account() -> (T::AccountId, BalanceOf<T>) {
+			let account_id = Self::account_id();
+			let balance =
+				T::Currency::free_balance(&account_id).saturating_sub(T::Currency::minimum_balance());
+	
+			(account_id, balance)
+		}
 		
 		// Generates requests in storage
 		pub fn generate_requests(grant_receiver: &T::AccountId) -> Result<T::Hash, DispatchError> {
@@ -253,7 +278,6 @@ pub mod pallet {
 			// Ensure only accounts with empty balance can make grant requests
 			ensure!(balance.is_zero() , Error::<T>::NonEmptyBalance);
 			
-			let _total = T::Currency::total_issuance();
 		
 			// Populate Requesters struct
 			let requesters = Requesters::<T> {
@@ -289,15 +313,34 @@ pub mod pallet {
 
 			<Winner<T>>::put(winner);
 
+			let _ = Self::transfer_funds_to_winner();
+
 			Ok(())
 		}
 
+
+		// Generating randomness
 		fn generate_random_number(seed: u32) -> u32 {
 			let (random_seed, _) = T::Randomness::random(&(T::PalletId::get(), seed).encode());
 			let random_number = <u32>::decode(&mut random_seed.as_ref()).expect("secure hashes should always be bigger than u32; qed");
 			random_number
 		}
 
+		// Function that allows funds to be sent to wiiner
+		pub fn transfer_funds_to_winner() -> Result<(), DispatchError> {
+
+			let (_lottery_account, lottery_balance) = Self::treasury_account();
+
+			let treasury= &Self::account_id();
+
+			// TODO: Implement formula that grants based on total supply and not whole balance
+			let _total = T::Currency::total_issuance();
+
+			let transfer = T::Currency::transfer(treasury, &Self::winner(), lottery_balance, ExistenceRequirement::KeepAlive);
+			debug_assert!(transfer.is_ok());
+
+			Ok(())
+		}
 
 		// Public function that check if user has made requests
 		pub fn has_made_requests(owner: &T::AccountId) -> Result<bool, DispatchError>  {
