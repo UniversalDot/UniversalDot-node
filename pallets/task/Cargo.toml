@@ -12,6 +12,7 @@ repository = 'https://github.com/UniversalDot/pallets'
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
+# dependencies
 [dependencies.codec]
 default-features = false
 features = ['derive']
@@ -37,11 +38,44 @@ git = 'https://github.com/paritytech/substrate.git'
 tag = 'monthly-2021-11'
 version = '4.0.0-dev'
 
+[dependencies.log]
+default-features = false
+version = '0.4.14'
+
+[dependencies.pallet-balances]
+version = '4.0.0-dev'
+git = 'https://github.com/paritytech/substrate.git'
+default-features = false
+tag = 'monthly-2021-11'
+
+[dependencies.pallet-timestamp]
+version = '4.0.0-dev'
+git = 'https://github.com/paritytech/substrate.git'
+default-features = false
+tag = 'monthly-2021-11'
+
 [dependencies.scale-info]
 default-features = false
 features = ['derive']
 version = '1.0'
 
+[dependencies.serde]
+default-features = false
+version = '1.0.119'
+
+[dependencies.sp-std]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'monthly-2021-11'
+version = '4.0.0-dev'
+
+# universal
+[dependencies.pallet-profile]
+default-features = false
+path = '../profile'
+version = '0.7.0'
+
+# dev dependencies
 [dev-dependencies.sp-core]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
@@ -59,38 +93,6 @@ default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 tag = 'monthly-2021-11'
 version = '4.0.0-dev'
-
-[dependencies.serde]
-default-features = false
-version = '1.0.119'
-
-[dependencies.sp-std]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11'
-version = '4.0.0-dev'
-
-# dev dependencies
-[dependencies.log]
-default-features = false
-version = '0.4.14'
-
-[dependencies.pallet-balances]
-version = '4.0.0-dev'
-git = 'https://github.com/paritytech/substrate.git'
-default-features = false
-tag = 'monthly-2021-11'
-
-[dependencies.pallet-timestamp]
-version = '4.0.0-dev'
-git = 'https://github.com/paritytech/substrate.git'
-default-features = false
-tag = 'monthly-2021-11'
-
-[dependencies.pallet-profile]
-default-features = false
-path = '../profile'
-version = '0.7.0'
 
 [features]
 default = ['std']

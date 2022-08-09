@@ -12,23 +12,12 @@ repository = 'https://github.com/UniversalDot/pallets'
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
+# dependencies
 [dependencies.codec]
 default-features = false
 features = ['derive']
 package = 'parity-scale-codec'
 version = '2.0.0'
-
-[dependencies.sp-std]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11'
-version = '4.0.0-dev'
-
-[dependencies.sp-core]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11'
-version = '4.0.0-dev'
 
 [dependencies.frame-benchmarking]
 default-features = false
@@ -49,10 +38,53 @@ git = 'https://github.com/paritytech/substrate.git'
 tag = 'monthly-2021-11'
 version = '4.0.0-dev'
 
+[dependencies.log]
+default-features = false
+version = '0.4.14'
+
+[dependencies.pallet-balances]
+version = '4.0.0-dev'
+git = 'https://github.com/paritytech/substrate.git'
+default-features = false
+tag = 'monthly-2021-11'
+
 [dependencies.scale-info]
 default-features = false
 features = ['derive']
 version = '1.0'
+
+[dependencies.sp-std]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'monthly-2021-11'
+version = '4.0.0-dev'
+
+[dependencies.sp-core]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'monthly-2021-11'
+version = '4.0.0-dev'
+
+# universal
+[dependencies.pallet-did]
+default-features = false
+path = "../did"
+package = 'pallet-did'
+
+[dependencies.pallet-profile]
+default-features = false
+path = '../profile'
+version = '0.7.0'
+
+# dev dependencies
+[dev-dependencies.once_cell]
+version = '1.10.0'
+
+[dev-dependencies.pallet-timestamp]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'monthly-2021-11'
+version = '4.0.0-dev'
 
 [dev-dependencies.sp-core]
 default-features = false
@@ -71,37 +103,6 @@ default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 tag = 'monthly-2021-11'
 version = '4.0.0-dev'
-
-[dev-dependencies.pallet-timestamp]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11'
-version = '4.0.0-dev'
-
-[dev-dependencies.once_cell]
-version = '1.10.0'
-
-# dev dependencies
-[dependencies.log]
-default-features = false
-version = '0.4.14'
-
-[dependencies.pallet-did]
-default-features = false
-path = "../did"
-package = 'pallet-did'
-
-
-[dependencies.pallet-profile]
-default-features = false
-path = '../profile'
-version = '0.7.0'
-
-[dependencies.pallet-balances]
-version = '4.0.0-dev'
-git = 'https://github.com/paritytech/substrate.git'
-default-features = false
-tag = 'monthly-2021-11'
 
 [features]
 default = ['std']

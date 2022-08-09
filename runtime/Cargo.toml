@@ -184,6 +184,7 @@ git = 'https://github.com/paritytech/substrate.git'
 tag = 'monthly-2021-11'
 version = '4.0.0-dev'
 
+# universal
 [dependencies.pallet-profile]
 default-features = false
 path = '../pallets/profile'
