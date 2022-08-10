@@ -202,19 +202,28 @@ fn winner_can_be_selected_per_block() {
 #[test]
 fn winner_can_be_recieve_grant_reward() {
 	new_test_ext().execute_with(|| {
+
+		Balances::mutate_account(&Grant::account_id(), |balance| {
+			balance.free = 100;
+		});
+
+		let treasury = Balances::free_balance(Grant::account_id());
+		assert_eq!(treasury, 100);
+
+		assert_eq!(Balances::free_balance(5), 0);
 		
 		// Request grant and run to block
-		assert_ok!(Grant::request_grant(Origin::signed(1), 5 ));
+		assert_ok!(Grant::request_grant(Origin::signed(1), 5));
 		run_to_block(2);
 
-		assert_eq!(Balances::free_balance(7), 0);
 
 		// Ensure we have selected the correct winner
 		assert_eq!(Grant::winner(), 5);
 		
 		run_to_block(5);
 
-		// TODO: Ensure money is tranfered
-		//assert_eq!(Balances::free_balance(7), 7);
+		dbg!(Balances::free_balance(5));
+		//Ensure money is tranfered todo:: look for minimum balance
+		assert!(Balances::free_balance(5) == 100 - 1);
 	});
 }
