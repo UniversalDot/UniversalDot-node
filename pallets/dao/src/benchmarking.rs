@@ -104,13 +104,12 @@ benchmarks! {
 		let caller: T::AccountId = whitelisted_caller();
 
 		let s in 1 .. u8::MAX.into();
-		let name = vec![0u8, s as u8];
-		let description = vec![0u8, s as u8];
-		let vision = vec![0u8, s as u8];
+		let name = vec![0u8, s as u8].try_into().unwrap();
+		let description = vec![0u8, s as u8].try_into().unwrap();
+		let vision = vec![0u8, s as u8].try_into().unwrap();
 
 
-	}: create_organization(RawOrigin::Signed(caller.clone()), name.clone(), description.clone(),
-	vision.clone())
+	}: create_organization(RawOrigin::Signed(caller.clone()), name, description, vision)
 	verify {
 		// let hash = PalletDao::<T>::get_hash_for_dao(&caller, &name, &description, &vision, 1_u32.into(), 1_u32.into());
 		let hash = PalletDao::<T>::member_of(&caller)[0];
@@ -126,10 +125,11 @@ benchmarks! {
 		let description = vec![0u8, s as u8];
 		let vision = vec![0u8, s as u8];
 
-		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name.clone(), description.clone(), vision.clone());
+		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name.clone().try_into().unwrap(),
+			description.clone().try_into().unwrap(), vision.clone().try_into().unwrap());
 		let org_id = PalletDao::<T>::member_of(&caller)[0];
 
-	}: update_organization(RawOrigin::Signed(caller.clone()), org_id, Some(name.clone()), Some(description.clone()), Some(vision.clone()))
+	}: update_organization(RawOrigin::Signed(caller.clone()), org_id, Some(name.try_into().unwrap()), Some(description.try_into().unwrap()), Some(vision.try_into().unwrap()))
 	verify {
 		let hash = PalletDao::<T>::member_of(&caller)[0];
 		assert_last_event::<T>(Event::<T>::OrganizationUpdated(caller, hash.into()).into())
@@ -140,11 +140,11 @@ benchmarks! {
 		let caller: T::AccountId = whitelisted_caller();
 
 		let s in 1 .. u8::MAX.into();
-		let name = vec![0u8, s as u8];
-		let description = vec![0u8, s as u8];
-		let vision = vec![0u8, s as u8];
+		let name = vec![0u8, s as u8].try_into().unwrap();
+		let description = vec![0u8, s as u8].try_into().unwrap();
+		let vision = vec![0u8, s as u8].try_into().unwrap();
 
-		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name.clone(), description.clone(), vision.clone());
+		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name, description, vision);
 		let org_id = PalletDao::<T>::member_of(&caller)[0];
 
 	}: transfer_ownership(RawOrigin::Signed(caller.clone()), org_id, caller.clone())
@@ -158,12 +158,12 @@ benchmarks! {
 		let caller: T::AccountId = whitelisted_caller();
 
 		let s in 1 .. u8::MAX.into();
-		let name = vec![0u8, s as u8];
-		let description = vec![0u8, s as u8];
-		let vision = vec![0u8, s as u8];
+		let name = vec![0u8, s as u8].try_into().unwrap();
+		let description = vec![0u8, s as u8].try_into().unwrap();
+		let vision = vec![0u8, s as u8].try_into().unwrap();
 
 		// Create organization before dissolving it
-		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name.clone(), description.clone(), vision.clone());
+		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name, description, vision);
 		// let org_id = PalletDao::<T>::get_hash_for_dao(&caller, &name, &description, &vision, 0_u32.into(), 0_u32.into());
 		let org_id = PalletDao::<T>::member_of(&caller)[0];
 
@@ -180,15 +180,15 @@ benchmarks! {
 		let caller: T::AccountId = whitelisted_caller();
 
 		let s in 1 .. u8::MAX.into();
-		let name = vec![0u8, s as u8];
-		let description = vec![0u8, s as u8];
-		let vision = vec![0u8, s as u8];
+		let name = vec![0u8, s as u8].try_into().unwrap();
+		let description = vec![0u8, s as u8].try_into().unwrap();
+		let vision = vec![0u8, s as u8].try_into().unwrap();
 
 		// Create account for member
 		let account: T::AccountId = account("member", s, SEED);
 
 		// Create organization before adding members to it
-		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name.clone(), description.clone(), vision.clone());
+		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name, description, vision);
 		// let org_id = PalletDao::<T>::get_hash_for_dao(&caller, &name, &description, &vision, 0_u32.into(), 0_u32.into());
 		let org_id = PalletDao::<T>::member_of(&caller)[0];
 
@@ -204,16 +204,16 @@ benchmarks! {
 		let caller: T::AccountId = whitelisted_caller();
 
 		let s in 1 .. u8::MAX.into();
-		let name = vec![0u8, s as u8];
-		let description = vec![0u8, s as u8];
-		let vision = vec![0u8, s as u8];
+		let name = vec![0u8, s as u8].try_into().unwrap();
+		let description = vec![0u8, s as u8].try_into().unwrap();
+		let vision = vec![0u8, s as u8].try_into().unwrap();
 
 		// Create hash
 		let task_hash_h256 = "task hash";
 		let hash = T::Hashing::hash_of(&task_hash_h256);
 
 		// Create organization before adding members to it
-		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name.clone(), description.clone(), vision.clone());
+		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name, description, vision);
 		// let org_id = PalletDao::<T>::get_hash_for_dao(&caller, &name, &description, &vision, 0_u32.into(), 0_u32.into());
 		let org_id = PalletDao::<T>::member_of(&caller)[0];
 
@@ -229,16 +229,16 @@ benchmarks! {
 		let caller: T::AccountId = whitelisted_caller();
 
 		let s in 1 .. u8::MAX.into();
-		let name = vec![0u8, s as u8];
-		let description = vec![0u8, s as u8];
-		let vision = vec![0u8, s as u8];
+		let name = vec![0u8, s as u8].try_into().unwrap();
+		let description = vec![0u8, s as u8].try_into().unwrap();
+		let vision = vec![0u8, s as u8].try_into().unwrap();
 
 		// Create account for member
 		let u:u32 = 7;
 		let account: T::AccountId = account("member", u, SEED);
 
 		// Create organization before adding members to it
-		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name.clone(), description.clone(), vision.clone());
+		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name, description, vision);
 		// let org_id = PalletDao::<T>::get_hash_for_dao(&caller, &name, &description, &vision, 0_u32.into(), 0_u32.into());
 		let org_id = PalletDao::<T>::member_of(&caller)[0];
 		let _ = PalletDao::<T>::add_members(RawOrigin::Signed(caller.clone()).into(), org_id.clone(), account.clone());
@@ -257,16 +257,16 @@ benchmarks! {
 		let caller: T::AccountId = whitelisted_caller();
 
 		let s in 1 .. u8::MAX.into();
-		let name = vec![0u8, s as u8];
-		let description = vec![0u8, s as u8];
-		let vision = vec![0u8, s as u8];
+		let name = vec![0u8, s as u8].try_into().unwrap();
+		let description = vec![0u8, s as u8].try_into().unwrap();
+		let vision = vec![0u8, s as u8].try_into().unwrap();
 
 		// Create hash
 		let task_hash_h256 = "task hash";
 		let hash = T::Hashing::hash_of(&task_hash_h256);
 
 		// Create organization
-		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name.clone(), description.clone(), vision.clone());
+		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name, description, vision);
 		// let org_id = PalletDao::<T>::get_hash_for_dao(&caller, &name, &description, &vision, 0_u32.into(), 0_u32.into());
 		let org_id = PalletDao::<T>::member_of(&caller)[0];
 		// Add task to be removed
