@@ -1,6 +1,7 @@
 use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
-use sp_core::{sr25519, H256};
+use sp_core::H256;
+use sp_runtime::BoundedVec;
 
 
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  Constants and Functions used in TESTS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -45,7 +46,10 @@ fn last_event() -> OrgEvent {
 fn create_organization_1() -> H256 {
 
 		// Ensure organization can be created
-		assert_ok!(Dao::create_organization(Origin::signed(*ALICE), name(),description(), vision()));
+		let name : BoundedVec<u8, MaxDaoNameLen> = name().try_into().unwrap();
+		let description : BoundedVec<u8, MaxDescriptionLen> = description().try_into().unwrap();
+		let vision : BoundedVec<u8, MaxVisionLen> = vision().try_into().unwrap();
+		assert_ok!(Dao::create_organization(Origin::signed(*ALICE), name, description, vision));
 
 		let event = last_event();
 		if let crate::Event::OrganizationCreated(_creator, org_id) = event {
@@ -59,7 +63,10 @@ fn create_organization_1() -> H256 {
 fn create_organization_2() -> H256 {
 
 		// Ensure organization can be created
-		assert_ok!(Dao::create_organization(Origin::signed(*ALICE), name2(),description2(), vision()));
+		let name : BoundedVec<u8, MaxDaoNameLen> = name2().try_into().unwrap();
+		let description : BoundedVec<u8, MaxDescriptionLen> = description2().try_into().unwrap();
+		let vision : BoundedVec<u8, MaxVisionLen> = vision().try_into().unwrap();
+		assert_ok!(Dao::create_organization(Origin::signed(*ALICE), name, description, vision));
 		let event = last_event();
 		if let crate::Event::OrganizationCreated(_creator, org_id) = event {
 			return org_id;
@@ -116,7 +123,8 @@ fn can_remove_vision() {
 		assert_ok!(Dao::remove_vision(Origin::signed(*ALICE), vision()));
 
 		// TODO: Enforce stronger check on Vision test
-		assert_eq!(Dao::vision(vision()).0, sr25519::Public::from_raw([0_u8; 32]));
+		//assert_eq!(Dao::vision(vision()).0, sr25519::Public::from_raw([0_u8; 32]));
+		assert_eq!(Dao::vision(vision()), None);
 	});
 }
 
@@ -268,10 +276,13 @@ fn cant_create_an_organization_more_than_once_in_same_block() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure organization can be created
-		assert_ok!(Dao::create_organization(Origin::signed(*ALICE), name(), description(), vision()));
+		let name : BoundedVec<u8, MaxDaoNameLen> = name().try_into().unwrap();
+		let description : BoundedVec<u8, MaxDescriptionLen> = description().try_into().unwrap();
+		let vision : BoundedVec<u8, MaxVisionLen> = vision().try_into().unwrap();
+		assert_ok!(Dao::create_organization(Origin::signed(*ALICE), name.clone(), description.clone(), vision.clone()));
 
 		// Ensure that you can't create org with same data in same block
-		assert_noop!(Dao::create_organization(Origin::signed(*ALICE), name(), description(), vision()), crate::Error::<Test>::OrganizationAlreadyExists);
+		assert_noop!(Dao::create_organization(Origin::signed(*ALICE), name, description, vision), crate::Error::<Test>::OrganizationAlreadyExists);
 	});
 }
 
@@ -614,7 +625,9 @@ fn can_update_an_organization() {
 		System::set_block_number(5);
 
 		// Ensure organization can be updated
-		assert_ok!(Dao::update_organization(Origin::signed(*ALICE), org_id, Some(name()), Some(description()), None));
+		let name : BoundedVec<u8, MaxDaoNameLen> = name().try_into().unwrap();
+		let description : BoundedVec<u8, MaxDescriptionLen> = description().try_into().unwrap();
+		assert_ok!(Dao::update_organization(Origin::signed(*ALICE), org_id, Some(name), Some(description), None));
 		assert_eq!(Dao::member_of(*ALICE)[0], org_id);
 		let event = last_event();
 
@@ -637,7 +650,9 @@ fn only_owner_can_update_an_organization() {
 		System::set_block_number(5);
 
 		// Ensure only owner can update organization
-		assert_noop!(Dao::update_organization(Origin::signed(*EVE), org_id, Some(name()), Some(description()), None), Error::<Test>::NotOrganizationOwner);
+		let name : BoundedVec<u8, MaxDaoNameLen> = name().try_into().unwrap();
+		let description : BoundedVec<u8, MaxDescriptionLen> = description().try_into().unwrap();
+		assert_noop!(Dao::update_organization(Origin::signed(*EVE), org_id, Some(name), Some(description), None), Error::<Test>::NotOrganizationOwner);
 	});
 }
 
@@ -661,8 +676,10 @@ fn can_transfer_ownership_of_an_organization() {
 		}
 
 		// Ensure only owner can change org
+		let name : BoundedVec<u8, MaxDaoNameLen> = name().try_into().unwrap();
+		let description : BoundedVec<u8, MaxDescriptionLen> = description().try_into().unwrap();
 		System::set_block_number(7);
-		assert_noop!(Dao::update_organization(Origin::signed(*ALICE), org_id, Some(name()), Some(description()), None), Error::<Test>::NotOrganizationOwner);
+		assert_noop!(Dao::update_organization(Origin::signed(*ALICE), org_id, Some(name), Some(description), None), Error::<Test>::NotOrganizationOwner);
 
 	});
 }

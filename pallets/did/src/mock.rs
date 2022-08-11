@@ -7,7 +7,10 @@ use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
     Perbill,
+    traits::ConstU32
 };
+use scale_info::TypeInfo;
+use codec::{Encode, MaxEncodedLen};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -58,6 +61,7 @@ impl frame_system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = ();
     type OnSetCode = ();
+    type MaxConsumers = ConstU32<16>;
 }
 
 impl timestamp::Config for Test {
@@ -67,8 +71,17 @@ impl timestamp::Config for Test {
     type WeightInfo = ();
 }
 
+parameter_types! {
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxNameLen: u32 = 64;
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxValueLen: u32 = 64;
+}
+
 impl Config for Test {
     type Event = Event;
+    type MaxNameLen = MaxNameLen;
+    type MaxValueLen = MaxValueLen;
     type Public = sr25519::Public;
     type Signature = sr25519::Signature;
     type Time = Timestamp;

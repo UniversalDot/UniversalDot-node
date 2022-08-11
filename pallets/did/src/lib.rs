@@ -30,6 +30,7 @@ mod benchmarking;
 // use crate::did::Did;
 use crate::types::{Attribute, AttributeTransaction, AttributedId};
 use codec::{Decode, Encode};
+use frame_support::BoundedVec;
 pub use did::Did;
 pub use weights::WeightInfo;
 
@@ -42,6 +43,9 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
+
+type BoundedNameOf<T> = BoundedVec<u8, <T as Config>::MaxNameLen>;
+type BoundedValueOf<T> = BoundedVec<u8, <T as Config>::MaxValueLen>;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -63,12 +67,20 @@ pub mod pallet {
         // /// The origin which may forcibly set or remove a name. Root can always do this.
         // type ForceOrigin: EnsureOrigin<Self::Origin>;
 
-        /// Weight information
-        type WeightInfo: WeightInfo;
+        /// A bound on name field of Attribute/AttributeTransaction structs.
+        #[pallet::constant]
+        type MaxNameLen: Get<u32> + MaxEncodedLen + TypeInfo;
+
+        /// A bound on value field of Attribute/AttributeTransaction structs.
+        #[pallet::constant]
+        type MaxValueLen: Get<u32> + MaxEncodedLen + TypeInfo;
 
         type Public: IdentifyAccount<AccountId = Self::AccountId>;
         type Signature: Verify<Signer = Self::Public> + Member + Decode + Encode + TypeInfo;
         type Time: Time;
+
+        /// Weight information
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::error]
@@ -86,6 +98,7 @@ pub mod pallet {
         Overflow,
         BadTransaction,
         TransactionNameTooLong,
+        AttributeValueTooLong,
     }
 
     #[pallet::event]
@@ -98,12 +111,13 @@ pub mod pallet {
         AttributeAdded(T::AccountId, Vec<u8>, Option<T::BlockNumber>),
         AttributeRevoked(T::AccountId, Vec<u8>, T::BlockNumber),
         AttributeDeleted(T::AccountId, Vec<u8>, T::BlockNumber),
-        AttributeTransactionExecuted(AttributeTransaction<T::Signature, T::AccountId>),
+        AttributeTransactionExecuted(AttributeTransaction<T::Signature, T::AccountId, BoundedNameOf<T>, BoundedValueOf<T>>),
     }
 
     /// Delegates are only valid for a specific period defined as blocks number.
     #[pallet::storage]
     #[pallet::getter(fn delegate_of)]
+    #[pallet::unbounded]
     pub type DelegateOf<T: Config> =
         StorageMap<_, Blake2_128Concat, (T::AccountId, Vec<u8>, T::AccountId), T::BlockNumber>;
 
@@ -114,12 +128,13 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         (T::AccountId, [u8; 32]),
-        Attribute<T::BlockNumber, <<T as Config>::Time as Time>::Moment>,
+        Attribute<T::BlockNumber, <<T as Config>::Time as Time>::Moment, BoundedNameOf<T>, BoundedValueOf<T>>,
     >;
 
     /// Attribute nonce used to generate a unique hash even if the attribute is deleted and recreated.
     #[pallet::storage]
     #[pallet::getter(fn nonce_of)]
+    #[pallet::unbounded]
     pub type AttributeNonce<T: Config> = StorageMap<_, Twox64Concat, (T::AccountId, Vec<u8>), u64>;
 
     /// Identity owner.
@@ -277,7 +292,7 @@ pub mod pallet {
         #[pallet::weight(20_000_000)]
         pub fn execute(
             origin: OriginFor<T>,
-            transaction: AttributeTransaction<T::Signature, T::AccountId>,
+            transaction: AttributeTransaction<T::Signature, T::AccountId, BoundedNameOf<T>, BoundedValueOf<T>>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
@@ -386,7 +401,7 @@ impl<T: Config> Pallet<T> {
     fn signed_attribute(
         who: T::AccountId,
         encoded: &[u8],
-        transaction: &AttributeTransaction<T::Signature, T::AccountId>,
+        transaction: &AttributeTransaction<T::Signature, T::AccountId, BoundedNameOf<T>, BoundedValueOf<T>>,
     ) -> DispatchResult {
         // Verify that the Data was signed by the owner or a not expired signer delegate.
         Self::valid_signer(
@@ -422,7 +437,7 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config>
-    Did<T::AccountId, T::BlockNumber, <<T as Config>::Time as Time>::Moment, T::Signature>
+    Did<T::AccountId, T::BlockNumber, <<T as Config>::Time as Time>::Moment, T::Signature, BoundedNameOf<T>, BoundedValueOf<T>>
     for Pallet<T>
 {
     /// Validates if the AccountId 'actual_owner' owns the identity.
@@ -550,10 +565,15 @@ impl<T: Config>
 
             let mut nonce = Self::get_nonce(identity, name);
 
+            let bounded_name: BoundedVec<_, _> =
+                name.to_vec().try_into().map_err(|()| Error::<T>::AttributeNameTooLong)?;
+            let bounded_value: BoundedVec<_, _> =
+                value.to_vec().try_into().map_err(|()| Error::<T>::AttributeValueTooLong)?;
+
             let id = (&identity, name, nonce).using_encoded(blake2_256);
             let new_attribute = Attribute {
-                name: (&name).to_vec(),
-                value: (&value).to_vec(),
+                name: bounded_name,
+                value: bounded_value,
                 validity,
                 creation: now_timestamp,
                 nonce,
@@ -619,7 +639,7 @@ impl<T: Config>
     fn attribute_and_id(
         identity: &T::AccountId,
         name: &[u8],
-    ) -> Option<AttributedId<T::BlockNumber, <<T as Config>::Time as Time>::Moment>> {
+    ) -> Option<AttributedId<T::BlockNumber, <<T as Config>::Time as Time>::Moment, BoundedNameOf<T>, BoundedValueOf<T>>> {
         let nonce = Self::nonce_of((&identity, name.to_vec())).unwrap_or(0u64);
 
         // Used for first time attribute creation

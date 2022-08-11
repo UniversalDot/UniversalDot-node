@@ -4,7 +4,7 @@ version = '0.7.0'
 description = "Decentralized identifiers (DIDs) pallet."
 authors = ['UNIVERSALDOT FOUNDATION <https://github.com/UniversalDot>']
 homepage = 'https://universaldot.foundation'
-edition = '2018'
+edition = '2021'
 license = 'Apache-2.0'
 publish = false
 repository = "https://github.com/UniversalDot/universal-dot-node"
@@ -15,37 +15,37 @@ targets = ["x86_64-unknown-linux-gnu"]
 # dependencies
 [dependencies.codec]
 package = "parity-scale-codec"
-version = "2.0.0"
+version = "3.0.0"
 default-features = false
 features = ["derive"]
 
 [dependencies.frame-benchmarking]
 version = "4.0.0-dev"
-tag = 'monthly-2021-11'
+branch = "polkadot-v0.9.27"
 git = 'https://github.com/paritytech/substrate.git'
 default-features = false
 optional = true
 
 [dependencies.frame-system]
 version = "4.0.0-dev"
-tag = 'monthly-2021-11'
+branch = "polkadot-v0.9.27"
 git = 'https://github.com/paritytech/substrate.git'
 default-features = false
 
 [dependencies.frame-support]
 version = "4.0.0-dev"
-tag = 'monthly-2021-11'
+branch = "polkadot-v0.9.27"
 git = 'https://github.com/paritytech/substrate.git'
 default-features = false
 
 [dependencies.pallet-timestamp]
 version = "4.0.0-dev"
-tag = 'monthly-2021-11'
+branch = "polkadot-v0.9.27"
 git = 'https://github.com/paritytech/substrate.git'
 default-features = false
 
 [dependencies.scale-info]
-version = "1.0"
+version = "2.1.1"
 default-features = false
 features = ["derive",]
 
@@ -54,38 +54,38 @@ version = "1.0.101"
 optional = true
 
 [dependencies.sp-core]
-version = "4.0.0-dev"
-tag = 'monthly-2021-11'
+version = "6.0.0"
+branch = "polkadot-v0.9.27"
 git = 'https://github.com/paritytech/substrate.git'
 default-features = false
 
 [dependencies.sp-io]
-version = "4.0.0-dev"
-tag = 'monthly-2021-11'
+version = "6.0.0"
+branch = "polkadot-v0.9.27"
 git = 'https://github.com/paritytech/substrate.git'
 default-features = false
 
 [dependencies.sp-runtime]
-version = "4.0.0-dev"
-tag = 'monthly-2021-11'
+version = "6.0.0"
+branch = "polkadot-v0.9.27"
 git = 'https://github.com/paritytech/substrate.git'
 default-features = false
 
 [dependencies.sp-std]
 version = "4.0.0-dev"
-tag = 'monthly-2021-11'
+branch = "polkadot-v0.9.27"
 git = 'https://github.com/paritytech/substrate.git'
 default-features = false
 
 # dev dependencies
 [dev-dependencies.pallet-balances]
 version = "4.0.0-dev"
-tag = 'monthly-2021-11'
+branch = "polkadot-v0.9.27"
 git = 'https://github.com/paritytech/substrate.git'
 
 [dev-dependencies.sp-core]
-version = "4.0.0-dev"
-tag = 'monthly-2021-11'
+version = "6.0.0"
+branch = "polkadot-v0.9.27"
 git = 'https://github.com/paritytech/substrate.git'
 
 [features]

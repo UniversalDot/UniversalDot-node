@@ -17,7 +17,7 @@
 
 
 //! # Task Pallet
-//! 
+//!
 //! ## Version: 0.7.0
 //!
 //! - [`Config`]
@@ -35,7 +35,7 @@
 //!
 //! Anybody can become an Initiator or Volunteer. In other words,
 //! one doesn't need permission to become an Initiator or Volunteer.
-//! 
+//!
 //! Budget funds are locked in escrow when task is created.
 //! Funds are removed from escrow when task is deleted.
 //!
@@ -86,12 +86,12 @@
 //! 	Inputs:
 //! 	- task_id: T::Hash,
 //! 	- feedback : BoundedVec
-//! 
+//!
 //! Storage Items:
 //! 	Tasks: Stores Task related information
 //! 	TaskCount: Counts the total number of Tasks in the ecosystem
 //! 	TasksOwned: Keeps track of how many tasks are owned per account
-//! 
+//!
 //!
 //! ## Related Modules
 //!
@@ -114,7 +114,7 @@ pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use crate::TaskStatus::Created; 
+	use crate::TaskStatus::Created;
 	use frame_support::{dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime, PalletId};
 	use frame_system::pallet_prelude::*;
 	use frame_support::{
@@ -134,7 +134,7 @@ pub mod pallet {
 	type BalanceOf<T> =<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	// Struct for holding Task information.
-	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
 	pub struct Task<T: Config> {
 		pub title: BoundedVec<u8, T::MaxTitleLen>,
@@ -154,7 +154,7 @@ pub mod pallet {
 	}
 
 	// Set TaskStatus enum.
-	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
   	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
   	pub enum TaskStatus {
@@ -716,8 +716,10 @@ pub mod pallet {
 		}
 
 		// Function that generates escrow account based on TaskID
+		// todo: ensure that usage of into_account_truncating is correct
+		// See: https://paritytech.github.io/substrate/master/sp_runtime/traits/trait.AccountIdConversion.html#tymethod.into_sub_account_truncating
 		pub fn account_id(task_id: &T::Hash) -> T::AccountId {
-			T::PalletId::get().into_sub_account(task_id)
+			T::PalletId::get().into_sub_account_truncating(task_id)
 		}
 
 		// Handles reputation update for profiles
