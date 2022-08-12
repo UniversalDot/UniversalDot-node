@@ -251,6 +251,8 @@ fn task_can_be_updated_after_it_is_created(){
 fn check_balance_after_update_task(){
 	new_test_ext().execute_with( || {
 
+		let initial_balance_of_sender = Balances::free_balance(&10);
+
 		// Create profle and task
 		assert_ok!(Profile::create_profile(Origin::signed(10), username(), interests(), HOURS, Some(additional_info())));
 		assert_ok!(Task::create_task(Origin::signed(10), title(), spec(), BUDGET, get_deadline(), attachments(), keywords()));
@@ -259,22 +261,20 @@ fn check_balance_after_update_task(){
 		let hash = Task::tasks_owned(10)[0];
 		assert_ok!(Task::update_task(Origin::signed(10), hash, title2(), spec2(), BUDGET2, get_deadline(), attachments2(), keywords2()));
 
-		// Ensure the new budget is transfered to escrow_account and assigned correctly
+		// Ensure the new budget is reserved
 		let hash = Task::tasks_owned(10)[0];
-		let task = Task::tasks(hash).expect("should found the task");
-		let task_account = Task::account_id(&hash);
-		assert_eq!(Balances::balance(&task_account), BUDGET2);
+		let task = Task::tasks(hash).expect("should find the task");
+		
+		let new_balance_of_sender = Balances::free_balance(&10);
+		assert_eq!(new_balance_of_sender + BUDGET2, initial_balance_of_sender);
 		assert_eq!(task.budget, BUDGET2);
 
 		// Update task again with previous budget
+		//	can use reserved balance here because there is only one task to play with.
 		assert_ok!(Task::update_task(Origin::signed(10), hash, title2(), spec2(), BUDGET, get_deadline(), attachments2(), keywords2()));
-		let hash = Task::tasks_owned(10)[0];
-		let task = Task::tasks(hash).expect("should found the task");
-		let task_account = Task::account_id(&hash);
-
-		// Ensure new budget is assigned correctly
-		assert_eq!(Balances::balance(&task_account), BUDGET);
-		assert_eq!(task.budget, BUDGET);
+		let reserved_balance = Balances::reserved_balance(&10);
+		assert_eq!(reserved_balance, BUDGET);
+		//assert_eq!(task.budget, BUDGET);
 	});
 }
 

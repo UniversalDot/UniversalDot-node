@@ -695,7 +695,7 @@ pub mod pallet {
 			<Tasks<T>>::remove(task_id);
 			
 			// Unreserve balance amount from task creator
-			<T as self::Config>::Currency::unreserve(&task_initiator, task.budget)
+			<T as self::Config>::Currency::unreserve(&task_initiator, task.budget);
 
 			// Reduce task count
 			let new_count = Self::task_count().saturating_sub(1);
