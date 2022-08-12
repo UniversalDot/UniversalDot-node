@@ -171,7 +171,7 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Currency type that is linked with AccountID
-		type Currency: Currency<Self::AccountId>;
+		type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
 
 		/// Time provider type
 		type Time: UnixTime;
@@ -295,8 +295,13 @@ pub mod pallet {
 			// Update storage.
 			let task_id = Self::new_task(&signer, title, specification, &budget, deadline, attachments, keywords)?;
 
-			// Transfer balance amount to escrow account
+
+			//todo! create_task
+			// Reserve currency of task creator
+			
+			T::Currency::reserve(&signer, stake.into());
 			let sub_account = Self::account_id(&task_id);
+
 			<T as self::Config>::Currency::transfer(&signer, &sub_account, budget,
 				ExistenceRequirement::KeepAlive)?;
 
@@ -704,6 +709,7 @@ pub mod pallet {
 			let new_count = Self::task_count().saturating_sub(1);
 			<TaskCount<T>>::put(new_count);
 
+	
 			Ok(())
 		}
 
