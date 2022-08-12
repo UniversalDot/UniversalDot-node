@@ -17,7 +17,7 @@
 
 
 //! # Task Pallet
-//! 
+//!
 //! ## Version: 0.7.0
 //!
 //! - [`Config`]
@@ -35,7 +35,7 @@
 //!
 //! Anybody can become an Initiator or Volunteer. In other words,
 //! one doesn't need permission to become an Initiator or Volunteer.
-//! 
+//!
 //! Budget funds are locked in escrow when task is created.
 //! Funds are removed from escrow when task is deleted.
 //!
@@ -86,12 +86,12 @@
 //! 	Inputs:
 //! 	- task_id: T::Hash,
 //! 	- feedback : BoundedVec
-//! 
+//!
 //! Storage Items:
 //! 	Tasks: Stores Task related information
 //! 	TaskCount: Counts the total number of Tasks in the ecosystem
 //! 	TasksOwned: Keeps track of how many tasks are owned per account
-//! 
+//!
 //!
 //! ## Related Modules
 //!
@@ -114,7 +114,7 @@ pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use crate::TaskStatus::Created; 
+	use crate::TaskStatus::Created;
 	use frame_support::{dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime, PalletId};
 	use frame_system::pallet_prelude::*;
 	use frame_support::{
@@ -134,7 +134,7 @@ pub mod pallet {
 	type BalanceOf<T> =<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	// Struct for holding Task information.
-	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
 	pub struct Task<T: Config> {
 		pub title: BoundedVec<u8, T::MaxTitleLen>,
@@ -154,15 +154,15 @@ pub mod pallet {
 	}
 
 	// Set TaskStatus enum.
-	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
-  	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-  	pub enum TaskStatus {
-    	Created,
-    	InProgress,
+	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+	pub enum TaskStatus {
+		Created,
+		InProgress,
 		Completed,
 		Accepted,
-  	}
+	}
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -287,7 +287,7 @@ pub mod pallet {
 		/// Function call that creates tasks.  [ origin, specification, budget, deadline]
 		#[pallet::weight(<T as Config>::WeightInfo::create_task(0,0))]
 		pub fn create_task(origin: OriginFor<T>, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: BalanceOf<T>,
-			deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> DispatchResultWithPostInfo {
+						   deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> DispatchResultWithPostInfo {
 
 			// Check that the extrinsic was signed and get the signer.
 			let signer = ensure_signed(origin)?;
@@ -298,7 +298,7 @@ pub mod pallet {
 			// Transfer balance amount to escrow account
 			let sub_account = Self::account_id(&task_id);
 			<T as self::Config>::Currency::transfer(&signer, &sub_account, budget,
-				ExistenceRequirement::KeepAlive)?;
+													ExistenceRequirement::KeepAlive)?;
 
 			// Emit a Task Created Event.
 			Self::deposit_event(Event::TaskCreated(signer, task_id));
@@ -309,7 +309,7 @@ pub mod pallet {
 		/// Function call that updates a created task.  [ origin, specification, budget, deadline]
 		#[pallet::weight(<T as Config>::WeightInfo::update_task(0,0))]
 		pub fn update_task(origin: OriginFor<T>, task_id: T::Hash, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>,
-			budget: BalanceOf<T>, deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> DispatchResultWithPostInfo {
+						   budget: BalanceOf<T>, deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> DispatchResultWithPostInfo {
 
 			// Check that the extrinsic was signed and get the signer.
 			let signer = ensure_signed(origin)?;
@@ -325,11 +325,11 @@ pub mod pallet {
 				if task.budget > budget {
 					let difference = task.budget - budget;
 					<T as self::Config>::Currency::transfer(&sub_account, &signer, difference,
-						ExistenceRequirement::KeepAlive)?;
+															ExistenceRequirement::KeepAlive)?;
 				} else {
 					let difference = budget - task.budget;
 					<T as self::Config>::Currency::transfer(&signer, &sub_account, difference,
-						ExistenceRequirement::KeepAlive)?;
+															ExistenceRequirement::KeepAlive)?;
 				}
 			}
 
@@ -402,7 +402,7 @@ pub mod pallet {
 			// Transfer escrow funds to volunteer
 			let sub_account = Self::account_id(&task_id);
 			<T as self::Config>::Currency::transfer(&sub_account, &task.volunteer, task.budget,
-				ExistenceRequirement::AllowDeath)?;
+													ExistenceRequirement::AllowDeath)?;
 
 			// Accept task and update storage.
 			Self::accept_completed_task(&signer, &task_id)?;
@@ -458,7 +458,7 @@ pub mod pallet {
 	impl<T:Config> Pallet<T> {
 
 		pub fn new_task(from_initiator: &T::AccountId, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: &BalanceOf<T>,
-			 deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<T::Hash, DispatchError> {
+						deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<T::Hash, DispatchError> {
 
 			// Ensure user has a profile before creating a task
 			ensure!(pallet_profile::Pallet::<T>::has_profile(from_initiator).unwrap(), <Error<T>>::NoProfile);
@@ -503,7 +503,7 @@ pub mod pallet {
 
 		// Task can be updated only after it has been created. Task that is already in progress can't be updated.
 		pub fn update_created_task(from_initiator: &T::AccountId, task_id: &T::Hash, new_title: BoundedVec<u8, T::MaxTitleLen>, new_specification: BoundedVec<u8, T::MaxSpecificationLen>, new_budget: &BalanceOf<T>,
-			new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<(), DispatchError> {
+								   new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<(), DispatchError> {
 
 			// Check if task exists
 			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
@@ -698,7 +698,7 @@ pub mod pallet {
 			// Transfer balance amount from escrow account to task creator
 			let sub_account = Self::account_id(&task_id);
 			<T as self::Config>::Currency::transfer(&sub_account, &task_initiator, task.budget,
-				ExistenceRequirement::AllowDeath)?;
+													ExistenceRequirement::AllowDeath)?;
 
 			// Reduce task count
 			let new_count = Self::task_count().saturating_sub(1);
@@ -716,8 +716,10 @@ pub mod pallet {
 		}
 
 		// Function that generates escrow account based on TaskID
+		// todo: ensure that usage of into_account_truncating is correct
+		// See: https://paritytech.github.io/substrate/master/sp_runtime/traits/trait.AccountIdConversion.html#tymethod.into_sub_account_truncating
 		pub fn account_id(task_id: &T::Hash) -> T::AccountId {
-			T::PalletId::get().into_sub_account(task_id)
+			T::PalletId::get().into_sub_account_truncating(task_id)
 		}
 
 		// Handles reputation update for profiles

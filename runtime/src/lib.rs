@@ -195,7 +195,7 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = SS58Prefix;
 	/// The set code logic, just the default since we're not a parachain.
 	type OnSetCode = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	type MaxConsumers = ConstU32<16>;
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
@@ -213,7 +213,7 @@ impl pallet_grandpa::Config for Runtime {
 	type KeyOwnerProofSystem = ();
 
 	type KeyOwnerProof =
-		<Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
+	<Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
 
 	type KeyOwnerIdentification = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
 		KeyTypeId,
@@ -299,6 +299,10 @@ impl pallet_task::Config for Runtime {
 // Configure the pallet-dao.
 impl pallet_dao::Config for Runtime {
 	type Event = Event;
+	// todo: set lengths
+	type MaxDescriptionLen =();
+	type MaxNameLen = ();
+	type MaxVisionLen = ();
 	type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
 }
 
@@ -324,8 +328,17 @@ impl pallet_profile::Config for Runtime {
 	type MaxCompletedTasksLen = MaxCompletedTasksLen;
 }
 
+parameter_types! {
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxNameLen: u32 = 64; // Value used from existing length checks in did pallet
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxValueLen: u32 = 64; // Value used from existing length checks in did pallet
+}
+
 impl pallet_did::Config for Runtime {
 	type Event = Event;
+	type MaxNameLen = MaxNameLen;
+	type MaxValueLen = MaxValueLen;
 	type Public = <Signature as Verify>::Signer;
 	type Signature = Signature;
 	type Time = Timestamp;
