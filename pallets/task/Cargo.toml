@@ -4,7 +4,7 @@ version = '0.7.0'
 description = 'FRAME pallet for creating tasks'
 authors = ['UNIVERSALDOT FOUNDATION <https://github.com/UniversalDot>']
 homepage = 'https://universaldot.foundation'
-edition = '2018'
+edition = '2021'
 license = 'Apache-2.0'
 publish = false
 repository = 'https://github.com/UniversalDot/pallets'
@@ -12,65 +12,32 @@ repository = 'https://github.com/UniversalDot/pallets'
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
+# dependencies
 [dependencies.codec]
 default-features = false
 features = ['derive']
 package = 'parity-scale-codec'
-version = '2.0.0'
+version = '3.0.0'
 
 [dependencies.frame-benchmarking]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 optional = true
-tag = 'monthly-2021-11'
+branch = "polkadot-v0.9.27"
 version = '4.0.0-dev'
 
 [dependencies.frame-support]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11'
+branch = "polkadot-v0.9.27"
 version = '4.0.0-dev'
 
 [dependencies.frame-system]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11'
+branch = "polkadot-v0.9.27"
 version = '4.0.0-dev'
 
-[dependencies.scale-info]
-default-features = false
-features = ['derive']
-version = '1.0'
-
-[dev-dependencies.sp-core]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11'
-version = '4.0.0-dev'
-
-[dev-dependencies.sp-io]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11'
-version = '4.0.0-dev'
-
-[dev-dependencies.sp-runtime]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11'
-version = '4.0.0-dev'
-
-[dependencies.serde]
-default-features = false
-version = '1.0.119'
-
-[dependencies.sp-std]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11'
-version = '4.0.0-dev'
-
-# dev dependencies
 [dependencies.log]
 default-features = false
 version = '0.4.14'
@@ -79,18 +46,53 @@ version = '0.4.14'
 version = '4.0.0-dev'
 git = 'https://github.com/paritytech/substrate.git'
 default-features = false
-tag = 'monthly-2021-11'
+branch = "polkadot-v0.9.27"
 
 [dependencies.pallet-timestamp]
 version = '4.0.0-dev'
 git = 'https://github.com/paritytech/substrate.git'
 default-features = false
-tag = 'monthly-2021-11'
+branch = "polkadot-v0.9.27"
 
+[dependencies.scale-info]
+default-features = false
+features = ['derive']
+version = '2.1.1'
+
+[dependencies.serde]
+default-features = false
+version = '1.0.119'
+
+[dependencies.sp-std]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = "polkadot-v0.9.27"
+version = '4.0.0-dev'
+
+# universal
 [dependencies.pallet-profile]
 default-features = false
 path = '../profile'
 version = '0.7.0'
+
+# dev dependencies
+[dev-dependencies.sp-core]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = "polkadot-v0.9.27"
+version = '6.0.0'
+
+[dev-dependencies.sp-io]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = "polkadot-v0.9.27"
+version = '6.0.0'
+
+[dev-dependencies.sp-runtime]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = "polkadot-v0.9.27"
+version = '6.0.0'
 
 [features]
 default = ['std']
@@ -103,6 +105,6 @@ std = [
     'frame-support/std',
     'frame-system/std',
     'frame-benchmarking/std',
-	'pallet-timestamp/std',
+    'pallet-timestamp/std',
 ]
 try-runtime = ['frame-support/try-runtime']
