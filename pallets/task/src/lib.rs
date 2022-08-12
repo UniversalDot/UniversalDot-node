@@ -119,7 +119,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use frame_support::{
 		sp_runtime::traits::{Hash, SaturatedConversion, AccountIdConversion},
-		traits::{Currency, tokens::ExistenceRequirement},
+		traits::{Currency, ReservableCurrency, tokens::ExistenceRequirement},
 		transactional};
 	use scale_info::TypeInfo;
 	use sp_std::vec::Vec;
@@ -171,7 +171,7 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Currency type that is linked with AccountID
-		type Currency: Currency<Self::AccountId> + ReservableCurrency<Self::AccountId>;
+		type Currency: ReservableCurrency<Self::AccountId>;
 
 		/// Time provider type
 		type Time: UnixTime;
@@ -295,15 +295,9 @@ pub mod pallet {
 			// Update storage.
 			let task_id = Self::new_task(&signer, title, specification, &budget, deadline, attachments, keywords)?;
 
-
-			//todo! create_task
-			// Reserve currency of task creator
-			
-			T::Currency::reserve(&signer, stake.into());
-			let sub_account = Self::account_id(&task_id);
-
-			<T as self::Config>::Currency::transfer(&signer, &sub_account, budget,
-				ExistenceRequirement::KeepAlive)?;
+			// need esistential deposit check? 
+			// Reserve currency of the task creator.
+			<T as self::Config>::Currency::reserve(&signer, budget.into());
 
 			// Emit a Task Created Event.
 			Self::deposit_event(Event::TaskCreated(signer, task_id));
@@ -312,6 +306,7 @@ pub mod pallet {
 		}
 
 		/// Function call that updates a created task.  [ origin, specification, budget, deadline]
+		//	todo: minimum change amount?
 		#[pallet::weight(<T as Config>::WeightInfo::update_task(0,0))]
 		pub fn update_task(origin: OriginFor<T>, task_id: T::Hash, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>,
 			budget: BalanceOf<T>, deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> DispatchResultWithPostInfo {
@@ -319,24 +314,39 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let signer = ensure_signed(origin)?;
 
-			let task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
+			// Check if task exists
+			let mut old_task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
 
-			// Update storage.
-			let _task_id = Self::update_created_task(&signer, &task_id, title, specification, &budget, deadline, attachments, keywords)?;
+			// Check if the owner is the one who created task
+			ensure!(Self::is_task_initiator(&task_id, &signer)?, <Error<T>>::OnlyInitiatorUpdatesTask);
 
-			if task.budget != budget {
-				// Update balance of escrow account
-				let sub_account = Self::account_id(&task_id);
-				if task.budget > budget {
-					let difference = task.budget - budget;
-					<T as self::Config>::Currency::transfer(&sub_account, &signer, difference,
-						ExistenceRequirement::KeepAlive)?;
+			// Ensure user has a profile before creating a task
+			ensure!(pallet_profile::Pallet::<T>::has_profile(&signer).unwrap(), <Error<T>>::NoProfile);
+
+			// Check if task is in created status. Tasks can be updated only before work has been started.
+			ensure!(TaskStatus::Created == old_task.status, <Error<T>>::NoPermissionToUpdate);
+
+			// Ensure deadline is in the future
+			let deadline_duration = Duration::from_millis(old_task.deadline.saturated_into::<u64>());
+			ensure!(T::Time::now() < deadline_duration, Error::<T>::IncorrectDeadlineTimestamp);
+
+			if old_task.budget != budget {
+				// Check that sender can reserve.
+				// Reserve difference if the budget has increased.
+				if budget > old_task.budget {
+					let diff = budget - old_task.budget;
+					ensure!(<T as self::Config>::Currency::can_reserve(&signer, diff), Error::<T>::NotEnoughBalance);
+					<T as self::Config>::Currency::reserve(&signer, diff).expect("can_reserve has been called; qed");
+
+				// Unreserve difference if the budget has decreased.
 				} else {
-					let difference = budget - task.budget;
-					<T as self::Config>::Currency::transfer(&signer, &sub_account, difference,
-						ExistenceRequirement::KeepAlive)?;
+					let diff = old_task.budget - budget;
+					<T as self::Config>::Currency::unreserve(&signer, diff);
 				}
 			}
+			
+			//Update storage after as we need to check if sender can reserve new amount.
+			let _task_id = Self::update_created_task(old_task, &task_id, title, specification, &budget, deadline, attachments, keywords)?;
 
 			// Emit a Task Updated Event.
 			Self::deposit_event(Event::TaskUpdated(signer, task_id));
@@ -507,36 +517,22 @@ pub mod pallet {
 		}
 
 		// Task can be updated only after it has been created. Task that is already in progress can't be updated.
-		pub fn update_created_task(from_initiator: &T::AccountId, task_id: &T::Hash, new_title: BoundedVec<u8, T::MaxTitleLen>, new_specification: BoundedVec<u8, T::MaxSpecificationLen>, new_budget: &BalanceOf<T>,
+		//  Private helper function.
+		fn update_created_task(old_task:Task<T>, task_id: &T::Hash, new_title: BoundedVec<u8, T::MaxTitleLen>, new_specification: BoundedVec<u8, T::MaxSpecificationLen>, new_budget: &BalanceOf<T>,
 			new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<(), DispatchError> {
-
-			// Check if task exists
-			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
-
-			// Check if the owner is the one who created task
-			ensure!(Self::is_task_initiator(task_id, from_initiator)?, <Error<T>>::OnlyInitiatorUpdatesTask);
-
-			// Ensure user has a profile before creating a task
-			ensure!(pallet_profile::Pallet::<T>::has_profile(from_initiator).unwrap(), <Error<T>>::NoProfile);
-
-			// Check if task is in created status. Tasks can be updated only before work has been started.
-			ensure!(TaskStatus::Created == task.status, <Error<T>>::NoPermissionToUpdate);
-
-			// Ensure deadline is in the future
-			let deadline_duration = Duration::from_millis(task.deadline.saturated_into::<u64>());
-			ensure!(T::Time::now() < deadline_duration, Error::<T>::IncorrectDeadlineTimestamp);
-
+			
+			let mut new_task: Task<T> = old_task;
 			// Init Task Object
-			task.title = new_title.clone();
-			task.specification = new_specification.clone();
-			task.budget = *new_budget;
-			task.deadline = new_deadline;
-			task.attachments = attachments.clone();
-			task.keywords = keywords.clone();
-			task.updated_at = <frame_system::Pallet<T>>::block_number();
+			new_task.title = new_title.clone();
+			new_task.specification = new_specification.clone();
+			new_task.budget = *new_budget;
+			new_task.deadline = new_deadline;
+			new_task.attachments = attachments.clone();
+			new_task.keywords = keywords.clone();
+			new_task.updated_at = <frame_system::Pallet<T>>::block_number();
 
 			// Insert task into Hashmap
-			<Tasks<T>>::insert(task_id, task);
+			<Tasks<T>>::insert(task_id, new_task);
 
 			Ok(())
 		}
