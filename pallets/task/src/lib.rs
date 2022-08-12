@@ -325,11 +325,11 @@ pub mod pallet {
 				if task.budget > budget {
 					let difference = task.budget - budget;
 					<T as self::Config>::Currency::transfer(&sub_account, &signer, difference,
-															ExistenceRequirement::KeepAlive)?;
+						ExistenceRequirement::KeepAlive)?;
 				} else {
 					let difference = budget - task.budget;
 					<T as self::Config>::Currency::transfer(&signer, &sub_account, difference,
-															ExistenceRequirement::KeepAlive)?;
+						ExistenceRequirement::KeepAlive)?;
 				}
 			}
 
@@ -402,7 +402,7 @@ pub mod pallet {
 			// Transfer escrow funds to volunteer
 			let sub_account = Self::account_id(&task_id);
 			<T as self::Config>::Currency::transfer(&sub_account, &task.volunteer, task.budget,
-													ExistenceRequirement::AllowDeath)?;
+				ExistenceRequirement::AllowDeath)?;
 
 			// Accept task and update storage.
 			Self::accept_completed_task(&signer, &task_id)?;
@@ -458,7 +458,7 @@ pub mod pallet {
 	impl<T:Config> Pallet<T> {
 
 		pub fn new_task(from_initiator: &T::AccountId, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: &BalanceOf<T>,
-						deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<T::Hash, DispatchError> {
+			deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<T::Hash, DispatchError> {
 
 			// Ensure user has a profile before creating a task
 			ensure!(pallet_profile::Pallet::<T>::has_profile(from_initiator).unwrap(), <Error<T>>::NoProfile);
@@ -503,7 +503,7 @@ pub mod pallet {
 
 		// Task can be updated only after it has been created. Task that is already in progress can't be updated.
 		pub fn update_created_task(from_initiator: &T::AccountId, task_id: &T::Hash, new_title: BoundedVec<u8, T::MaxTitleLen>, new_specification: BoundedVec<u8, T::MaxSpecificationLen>, new_budget: &BalanceOf<T>,
-								   new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<(), DispatchError> {
+		    new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<(), DispatchError> {
 
 			// Check if task exists
 			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
@@ -698,7 +698,7 @@ pub mod pallet {
 			// Transfer balance amount from escrow account to task creator
 			let sub_account = Self::account_id(&task_id);
 			<T as self::Config>::Currency::transfer(&sub_account, &task_initiator, task.budget,
-													ExistenceRequirement::AllowDeath)?;
+				ExistenceRequirement::AllowDeath)?;
 
 			// Reduce task count
 			let new_count = Self::task_count().saturating_sub(1);

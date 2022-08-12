@@ -80,13 +80,10 @@ pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{dispatch::DispatchResult,
-						storage::bounded_vec::BoundedVec,
-						pallet_prelude::*};
+	use frame_support::{dispatch::DispatchResult, storage::bounded_vec::BoundedVec, pallet_prelude::*};
 	use frame_system::pallet_prelude::*;
-	use frame_support::{
-		sp_runtime::traits::Hash,
-		traits::Currency};
+	use frame_support::sp_runtime::traits::Hash;
+	use frame_support::traits::Currency;
 	use scale_info::TypeInfo;
 	use crate::weights::WeightInfo;
 
@@ -94,7 +91,7 @@ pub mod pallet {
 	// Account, Balance are used in Profile Struct
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
 	type BalanceOf<T> =
-	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 
 	// Struct for holding Profile information.
@@ -199,14 +196,14 @@ pub mod pallet {
 		/// Dispatchable call that enables every new actor to create personal profile in storage.
 		#[pallet::weight(<T as Config>::WeightInfo::create_profile(0,0))]
 		pub fn create_profile(origin: OriginFor<T>, username: BoundedVec<u8, T::MaxUsernameLen>, interests: BoundedVec<u8, T::MaxInterestsLen>, available_hours_per_week: u8,
-							  additional_information : Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>) -> DispatchResult {
+			additional_information : Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
 			// Call helper function to generate Profile Struct
 			let _profile_id = Self::generate_profile(&account, username, interests,
-													 available_hours_per_week, additional_information)?;
+				 available_hours_per_week, additional_information)?;
 
 			// Emit an event.
 			Self::deposit_event(Event::ProfileCreated{ who:account });
@@ -217,14 +214,14 @@ pub mod pallet {
 		/// Dispatchable call that ensures user can update existing personal profile in storage.
 		#[pallet::weight(<T as Config>::WeightInfo::update_profile(0))]
 		pub fn update_profile(origin: OriginFor<T>, username: BoundedVec<u8, T::MaxUsernameLen>, interests: BoundedVec<u8, T::MaxInterestsLen>, available_hours_per_week: u8,
-							  additional_information : Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>) -> DispatchResult {
+			additional_information : Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
 			// Since Each account can have one profile, we call into generate profile again
 			let _profile_id = Self::change_profile(&account, username, interests,
-												   available_hours_per_week, additional_information)?;
+				available_hours_per_week, additional_information)?;
 
 			// Emit an event.
 			Self::deposit_event(Event::ProfileUpdated{ who: account });
@@ -353,7 +350,7 @@ pub mod pallet {
 		}
 
 		pub fn add_task_to_completed_tasks(owner: &T::AccountId, task: T::Hash) -> Result<(),
-			DispatchError> {
+		DispatchError> {
 			<CompletedTasks<T>>::mutate(owner, |completed_tasks| -> Result<(), DispatchError> {
 				if let Some(ct) = completed_tasks {
 					ct.try_push(task).map_err(|_|
