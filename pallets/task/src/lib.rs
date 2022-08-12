@@ -693,15 +693,13 @@ pub mod pallet {
 
 			// remove task from storage
 			<Tasks<T>>::remove(task_id);
-			// Transfer balance amount from escrow account to task creator
-			let sub_account = Self::account_id(&task_id);
-			<T as self::Config>::Currency::transfer(&sub_account, &task_initiator, task.budget,
-				ExistenceRequirement::AllowDeath)?;
+			
+			// Unreserve balance amount from task creator
+			<T as self::Config>::Currency::unreserve(&task_initiator, task.budget)
 
 			// Reduce task count
 			let new_count = Self::task_count().saturating_sub(1);
 			<TaskCount<T>>::put(new_count);
-
 	
 			Ok(())
 		}
