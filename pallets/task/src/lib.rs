@@ -36,8 +36,8 @@
 //! Anybody can become an Initiator or Volunteer. In other words,
 //! one doesn't need permission to become an Initiator or Volunteer.
 //! 
-//! Budget funds are locked in escrow when task is created.
-//! Funds are removed from escrow when task is deleted.
+//! Budget funds reserved using ReservableCurrency.
+//! Funds are unreserved when a task is completed or removed.
 //!
 //! Tasks with expired deadline are automatically removed from storage.
 //!
@@ -315,7 +315,7 @@ pub mod pallet {
 			let signer = ensure_signed(origin)?;
 
 			// Check if task exists
-			let mut old_task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
+			let old_task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
 
 			// Check if the owner is the one who created task
 			ensure!(Self::is_task_initiator(&task_id, &signer)?, <Error<T>>::OnlyInitiatorUpdatesTask);
@@ -412,15 +412,17 @@ pub mod pallet {
 			let signer = ensure_signed(origin)?;
 
 			// Check if task exists
-			let task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
+			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
 
-			// Transfer escrow funds to volunteer
-			let sub_account = Self::account_id(&task_id);
-			<T as self::Config>::Currency::transfer(&sub_account, &task.volunteer, task.budget,
-				ExistenceRequirement::AllowDeath)?;
+			//todo ensure that the sending extrinsic owns the task!
+			ensure!(&task.current_owner == &signer, Error::<T>::OnlyInitiatorAcceptsTask);
+
+			// Transfer reserved funds of task amount  to volunteer.
+			<T as self::Config>::Currency::unreserve(&signer, task.budget);
+			<T as self::Config>::Currency::transfer(&signer, &task.volunteer, task.budget, ExistenceRequirement::AllowDeath)?;
 
 			// Accept task and update storage.
-			Self::accept_completed_task(&signer, &task_id)?;
+			Self::accept_completed_task(&signer, &mut task, &task_id)?;
 
 			// Add task to completed tasks list of volunteer's profile.
 			pallet_profile::Pallet::<T>::add_task_to_completed_tasks(&task.volunteer, task_id)?;
@@ -610,13 +612,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub fn accept_completed_task(task_initiator: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
-
-			// Check if task exists
-			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
-
-			// Check if the owner is the one who created task
-			ensure!(Self::is_task_initiator(task_id, task_initiator)?, <Error<T>>::OnlyInitiatorAcceptsTask);
+		// Internal helper function, checks Must be called before calling this function.
+		fn accept_completed_task(task_initiator: &T::AccountId, task: &mut Task<T>, task_id: &T::Hash) -> Result<(), DispatchError> {
 
 			// Remove from ownership
 			<TasksOwned<T>>::try_mutate(&task_initiator, |owned| {
