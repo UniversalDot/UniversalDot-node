@@ -108,12 +108,13 @@ fn fund_transfer_on_create_task(){
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info())));
 
-		assert_eq!(Balances::balance(&1), 1000);
+		assert_eq!(Balances::free_balance(&1), 1000);
 		// Ensure new task can be created.
 		assert_ok!(Task::create_task(Origin::signed(1), title(), spec() , BUDGET, get_deadline(), attachments(), keywords()));
-		assert_eq!(Balances::balance(&1), 993);
+
+		assert_eq!(Balances::free_balance(&1), 993);
 		let task_id = Task::tasks_owned(&1)[0];
-		assert_eq!(Balances::balance(&Task::account_id(&task_id)), BUDGET);
+		assert_eq!(Balances::reserved_balance(&1), BUDGET);
 	});
 }
 
@@ -882,23 +883,22 @@ fn balance_check_after_delete_task() {
 		assert_ok!(Task::create_task(Origin::signed(1), title(), spec(), BUDGET, get_deadline(), attachments(), keywords()));
 		
 		// Assign balances to task creator and escrow after task creation
-		let signer_balance_after_task_creation = Balances::balance(&1);
+		let signer_free_balance = Balances::free_balance(&1);
 		let hash = Task::tasks_owned(1)[0];
-		let task_account = Task::account_id(&hash);
-		let task_balance = Balances::balance(&task_account);
+		let signer_reserved_balance = Balances::reserved_balance(&1);
 		
 		// Ensure balances are correct
-		assert_eq!(task_balance, BUDGET);
-		assert_eq!(signer_balance, signer_balance_after_task_creation + task_balance);
+		assert_eq!(signer_reserved_balance, BUDGET);
+		assert_eq!(signer_balance, signer_reserved_balance + signer_free_balance);
 
 		// Ensure task can be removed
 		assert_ok!(Task::remove_task(Origin::signed(1), hash));
-		let signer_balance_after_task_deletion = Balances::balance(&1);
-		let task_balance = Balances::balance(&task_account);
+		let signer_free_balance_post_removal = Balances::free_balance(&1);
+		let signer_reserved_balance_post_removal = Balances::reserved_balance(&1);
 
-		// Ensure balances are correct after task removal
-		assert_eq!(signer_balance, signer_balance_after_task_deletion);
-		assert_eq!(task_balance, 0);
+		//// Ensure balances are correct after task removal
+		assert_eq!(signer_balance, signer_free_balance_post_removal);
+		assert_eq!(signer_reserved_balance_post_removal, 0);
 	});
 }
 
