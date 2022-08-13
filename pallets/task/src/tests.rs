@@ -937,3 +937,40 @@ fn block_time_is_added_when_task_is_updated() {
 
 	})
 }
+
+#[test]
+fn test_multiple_tasks_and_reserveamounts() {
+	new_test_ext().execute_with( || {
+
+		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info())));
+
+		//create 2 tasks of budgets 7 and 10
+		assert_ok!(Task::create_task(Origin::signed(1), title(), spec(), BUDGET, get_deadline(), attachments(), keywords()));
+		assert_ok!(Task::create_task(Origin::signed(1), title2(), spec2(), BUDGET2, get_deadline(), attachments2(), keywords2()));
+
+		// Assert that the reserved balances add up
+		assert_eq!(Balances::reserved_balance(&1), BUDGET + BUDGET2);
+
+		//swap around budgets
+		let hash = Task::tasks_owned(1)[0];
+		assert_ok!(Task::update_task(Origin::signed(1), hash, title(), spec(), BUDGET2, get_deadline(), attachments(), keywords()));
+
+		assert_eq!(Balances::reserved_balance(&1), BUDGET2 + BUDGET2);
+
+		//let hash = Task::tasks_owned(1)[1];
+		assert_ok!(Task::update_task(Origin::signed(1), hash, title2(), spec2(), BUDGET, get_deadline(), attachments2(), keywords2()));
+
+		assert_eq!(Balances::reserved_balance(&1), BUDGET2 + BUDGET);
+	})
+
+}
+
+#[test]
+fn test_create_not_enough_funds_to_reserve() {
+	new_test_ext().execute_with( || {
+		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info())));
+		assert_noop!(Task::create_task(Origin::signed(1), title(), spec2(), Balances::free_balance(&1) + 1000, get_deadline(), attachments(), keywords()), Error::<Test>::NotEnoughBalance);
+
+	})
+}
+	
