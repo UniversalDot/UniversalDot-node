@@ -969,7 +969,10 @@ fn test_multiple_tasks_and_reserveamounts() {
 fn test_create_not_enough_funds_to_reserve() {
 	new_test_ext().execute_with( || {
 		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info())));
-		assert_noop!(Task::create_task(Origin::signed(1), title(), spec2(), Balances::free_balance(&1) + 1000, get_deadline(), attachments(), keywords()), Error::<Test>::NotEnoughBalance);
+		let res = Task::create_task(Origin::signed(1), title(), spec2(), Balances::free_balance(&1) + 1000, get_deadline(), attachments(), keywords());
+		if let Err(n) = res {
+			assert_eq!(n.error, Error::<Test>::NotEnoughBalance.into());	
+		}
 
 	})
 }
