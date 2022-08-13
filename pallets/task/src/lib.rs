@@ -336,7 +336,7 @@ pub mod pallet {
 				// Reserve difference if the budget has increased.
 				if budget > old_task.budget {
 					let diff = budget - old_task.budget;
-					ensure!(<T as self::Config>::Currency::can_reserve(&signer, diff), Error::<T>::NotEnoughBalance);
+					ensure!(<T as self::Config>::Currency::can_reserve(&signer, diff));
 					<T as self::Config>::Currency::reserve(&signer, diff).expect("can_reserve has been called; qed");
 
 				// Unreserve difference if the budget has decreased.
@@ -415,10 +415,10 @@ pub mod pallet {
 			// Check if task exists
 			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
 
-			//todo ensure that the sending extrinsic owns the task!
+			// Ensure owner
 			ensure!(&task.current_owner == &signer, Error::<T>::OnlyInitiatorAcceptsTask);
 
-			// Transfer reserved funds of task amount  to volunteer.
+			// Transfer reserved funds of task amount to volunteer.
 			<T as self::Config>::Currency::unreserve(&signer, task.budget);
 			<T as self::Config>::Currency::transfer(&signer, &task.volunteer, task.budget, ExistenceRequirement::AllowDeath)?;
 
