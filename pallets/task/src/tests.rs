@@ -969,11 +969,51 @@ fn test_multiple_tasks_and_reserveamounts() {
 fn test_create_not_enough_funds_to_reserve() {
 	new_test_ext().execute_with( || {
 		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info())));
+		
+		//Create a task with more tokens than the signer has
 		let res = Task::create_task(Origin::signed(1), title(), spec2(), Balances::free_balance(&1) + 1000, get_deadline(), attachments(), keywords());
+		
+		//hack to make work
 		if let Err(n) = res {
 			assert_eq!(n.error, Error::<Test>::NotEnoughBalance.into());	
 		}
 
 	})
 }
-	
+#[test]
+fn test_update_not_enough_funds_to_reserve() {
+	new_test_ext().execute_with( || {
+		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info())));
+		
+		//Create task that should be ok
+		assert_ok!(Task::create_task(Origin::signed(1), title(), spec2(), Balances::free_balance(&1) - 1000, get_deadline(), attachments(), keywords()));
+		
+		let hash = Task::tasks_owned(1)[0];
+
+		//update that task with a balance more than signer has
+		let res = Task::update_task(Origin::signed(1), hash, title2(), spec2(), Balances::free_balance(&1) + 1000, get_deadline(), attachments2(), keywords2());
+		if let Err(n) = res {
+			assert_eq!(n.error, Error::<Test>::NotEnoughBalance.into());	
+		}
+
+	})
+}	
+
+#[test]
+fn test_create_two_task_not_enough_balance() {
+	new_test_ext().execute_with( || {
+		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info())));
+
+		//create a task with an ok balance
+		assert_ok!(Task::create_task(Origin::signed(1), title(), spec2(), Balances::free_balance(&1) - 1000, get_deadline(), attachments(), keywords()));
+		
+		//create a task with a balance not possible
+		let res = Task::create_task(Origin::signed(1), title(), spec2(), Balances::balance(&1), get_deadline(), attachments(), keywords());
+		
+		let hash = Task::tasks_owned(1)[0];
+		if let Err(n) = res {
+			assert_eq!(n.error, Error::<Test>::NotEnoughBalance.into());	
+		}
+
+	})
+}
