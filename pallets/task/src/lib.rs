@@ -336,7 +336,7 @@ pub mod pallet {
 				// Reserve difference if the budget has increased.
 				if budget > old_task.budget {
 					let diff = budget - old_task.budget;
-					ensure!(<T as self::Config>::Currency::can_reserve(&signer, diff));
+					ensure!(<T as self::Config>::Currency::can_reserve(&signer, diff), Error::<T>::NotEnoughBalance);
 					<T as self::Config>::Currency::reserve(&signer, diff).expect("can_reserve has been called; qed");
 
 				// Unreserve difference if the budget has decreased.
