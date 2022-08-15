@@ -275,7 +275,6 @@ fn check_balance_after_update_task(){
 		assert_ok!(Task::update_task(Origin::signed(10), hash, title2(), spec2(), BUDGET, get_deadline(), attachments2(), keywords2()));
 		let reserved_balance = Balances::reserved_balance(&10);
 		assert_eq!(reserved_balance, BUDGET);
-		//assert_eq!(task.budget, BUDGET);
 	});
 }
 
