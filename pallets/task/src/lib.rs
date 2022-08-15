@@ -37,7 +37,7 @@
 //! one doesn't need permission to become an Initiator or Volunteer.
 //! 
 //! Budget funds reserved using ReservableCurrency.
-//! Funds are unreserved when a task is completed or removed.
+//! Funds are unreserved and sent to volunteer when a task is completed or removed.
 //!
 //! Tasks with expired deadline are automatically removed from storage.
 //!
