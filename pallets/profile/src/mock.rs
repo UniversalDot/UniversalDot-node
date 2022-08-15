@@ -8,6 +8,7 @@ use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 	BuildStorage,
+	traits::ConstU32
 };
 
 
@@ -56,6 +57,7 @@ impl system::Config for Test {
 	type SS58Prefix = SS58Prefix;
 	type SystemWeightInfo = ();
 	type Version = ();
+	type MaxConsumers = ConstU32<16>;
 }
 
 parameter_types! {
