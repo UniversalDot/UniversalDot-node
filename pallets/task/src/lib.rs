@@ -475,7 +475,7 @@ pub mod pallet {
 	// *** Helper functions *** //
 	impl<T:Config> Pallet<T> {
 
-		pub fn new_task(from_initiator: &T::AccountId, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: &BalanceOf<T>,
+		fn new_task(from_initiator: &T::AccountId, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: &BalanceOf<T>,
 			 deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<T::Hash, DispatchError> {
 
 			// Ensure user has a profile before creating a task
@@ -540,7 +540,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub fn assign_task(volunteer: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
+		fn assign_task(volunteer: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
 
 			// Check if task exists
 			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
@@ -576,7 +576,7 @@ pub mod pallet {
 		}
 
 
-		pub fn mark_finished(to: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
+		fn mark_finished(to: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
 
 			// Check if task exists
 			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
@@ -643,7 +643,7 @@ pub mod pallet {
 		}
 
 		// Task can be rejected by the creator, which places the task back into progress.
-		pub fn reject_completed_task(task_initiator: &T::AccountId, task_id: &T::Hash, feedback: BoundedVec<u8, T::MaxFeedbackLen>) -> Result<(), DispatchError> {
+		fn reject_completed_task(task_initiator: &T::AccountId, task_id: &T::Hash, feedback: BoundedVec<u8, T::MaxFeedbackLen>) -> Result<(), DispatchError> {
 
 			// Check if task exists
 			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
@@ -681,7 +681,7 @@ pub mod pallet {
 		}
 
 
-		pub fn delete_task(task_initiator: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
+		fn delete_task(task_initiator: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
 
 			// Check if task exists
 			let task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
@@ -706,7 +706,7 @@ pub mod pallet {
 		}
 
 		// Function to check if the current signer is the task_initiator
-		pub fn is_task_initiator(task_id: &T::Hash, task_acceptor: &T::AccountId) -> Result<bool, DispatchError> {
+		fn is_task_initiator(task_id: &T::Hash, task_acceptor: &T::AccountId) -> Result<bool, DispatchError> {
 			match Self::tasks(task_id) {
 				Some(task) => Ok(task.initiator == *task_acceptor),
 				None => Err(<Error<T>>::TaskNotExist.into())
@@ -714,12 +714,12 @@ pub mod pallet {
 		}
 
 		// Function that generates escrow account based on TaskID
-		pub fn account_id(task_id: &T::Hash) -> T::AccountId {
+		fn account_id(task_id: &T::Hash) -> T::AccountId {
 			T::PalletId::get().into_sub_account(task_id)
 		}
 
 		// Handles reputation update for profiles
-		pub fn handle_reputation(task_id: &T::Hash) -> Result<(), DispatchError> {
+		fn handle_reputation(task_id: &T::Hash) -> Result<(), DispatchError> {
 
 			// Check if task exists
 			let task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
