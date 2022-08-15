@@ -938,7 +938,7 @@ fn block_time_is_added_when_task_is_updated() {
 }
 
 #[test]
-fn test_multiple_tasks_and_reserveamounts() {
+fn test_multiple_tasks_and_reserve_amounts() {
 	new_test_ext().execute_with( || {
 
 		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info())));
