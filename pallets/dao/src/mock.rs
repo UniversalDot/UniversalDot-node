@@ -8,6 +8,7 @@ use sp_core::{sr25519, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
+	traits::ConstU32
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -63,6 +64,7 @@ impl system::Config for Test {
 	type SystemWeightInfo = ();
 	type SS58Prefix = SS58Prefix;
 	type OnSetCode = ();
+	type MaxConsumers = ConstU32<16>;
 }
 
 impl pallet_timestamp::Config for Test {
@@ -72,16 +74,37 @@ impl pallet_timestamp::Config for Test {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxNameLen: u32 = 64;
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxValueLen: u32 = 64;
+}
+
 impl pallet_did::Config for Test {
 	type Event = Event;
+	type MaxNameLen = MaxNameLen;
+	type MaxValueLen = MaxValueLen;
 	type Public = sr25519::Public;
 	type Signature = sr25519::Signature;
 	type Time = Timestamp;
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxDescriptionLen: u32 = 64;
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxDaoNameLen: u32 = 64;
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxVisionLen: u32 = 64;
+}
+
 impl pallet_dao::Config for Test {
 	type Event = Event;
+	type MaxDescriptionLen = MaxDescriptionLen;
+	type MaxNameLen = MaxDaoNameLen;
+	type MaxVisionLen = MaxVisionLen;
 	type WeightInfo = ();
 }
 

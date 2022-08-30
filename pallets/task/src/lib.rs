@@ -134,7 +134,7 @@ pub mod pallet {
 	type BalanceOf<T> =<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	// Struct for holding Task information.
-	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
 	pub struct Task<T: Config> {
 		pub title: BoundedVec<u8, T::MaxTitleLen>,
@@ -154,7 +154,7 @@ pub mod pallet {
 	}
 
 	// Set TaskStatus enum.
-	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
   	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
   	pub enum TaskStatus {
@@ -345,7 +345,7 @@ pub mod pallet {
 					<T as self::Config>::Currency::unreserve(&signer, diff);
 				}
 			}
-			
+
 			//Update storage after as we need to check if sender can reserve new amount.
 			let _task_id = Self::update_created_task(old_task, &task_id, title, specification, &budget, deadline, attachments, keywords)?;
 
@@ -523,7 +523,7 @@ pub mod pallet {
 		//  Private helper function.
 		fn update_created_task(old_task:Task<T>, task_id: &T::Hash, new_title: BoundedVec<u8, T::MaxTitleLen>, new_specification: BoundedVec<u8, T::MaxSpecificationLen>, new_budget: &BalanceOf<T>,
 			new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<(), DispatchError> {
-			
+
 			let mut new_task: Task<T> = old_task;
 			// Init Task Object
 			new_task.title = new_title.clone();
@@ -694,14 +694,14 @@ pub mod pallet {
 
 			// remove task from storage
 			<Tasks<T>>::remove(task_id);
-			
+
 			// Unreserve balance amount from task creator
 			<T as self::Config>::Currency::unreserve(&task_initiator, task.budget);
 
 			// Reduce task count
 			let new_count = Self::task_count().saturating_sub(1);
 			<TaskCount<T>>::put(new_count);
-	
+
 			Ok(())
 		}
 
@@ -714,8 +714,10 @@ pub mod pallet {
 		}
 
 		// Function that generates escrow account based on TaskID
+		// todo: ensure that usage of into_account_truncating is correct
+		// See: https://paritytech.github.io/substrate/master/sp_runtime/traits/trait.AccountIdConversion.html#tymethod.into_sub_account_truncating
 		fn account_id(task_id: &T::Hash) -> T::AccountId {
-			T::PalletId::get().into_sub_account(task_id)
+			T::PalletId::get().into_sub_account_truncating(task_id)
 		}
 
 		// Handles reputation update for profiles

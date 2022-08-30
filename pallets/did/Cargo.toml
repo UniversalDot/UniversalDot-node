@@ -4,7 +4,7 @@ version = '0.7.0'
 description = "Decentralized identifiers (DIDs) pallet."
 authors = ['UNIVERSALDOT FOUNDATION <https://github.com/UniversalDot>']
 homepage = 'https://universaldot.foundation'
-edition = '2018'
+edition = '2021'
 license = 'Apache-2.0'
 publish = false
 repository = "https://github.com/UniversalDot/universal-dot-node"
@@ -12,22 +12,25 @@ repository = "https://github.com/UniversalDot/universal-dot-node"
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
+# dependencies
 [dependencies]
-serde = { version = "1.0.101", optional = true }
-codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
-sp-std = { version = "4.0.0-dev", tag = 'monthly-2021-11', git = 'https://github.com/paritytech/substrate.git', default-features = false }
-sp-core = { version = "4.0.0-dev", tag = 'monthly-2021-11', git = 'https://github.com/paritytech/substrate.git', default-features = false }
-sp-io = { version = "4.0.0-dev", tag = 'monthly-2021-11', git = 'https://github.com/paritytech/substrate.git', default-features = false }
-sp-runtime = { version = "4.0.0-dev", tag = 'monthly-2021-11', git = 'https://github.com/paritytech/substrate.git', default-features = false }
-frame-benchmarking = { version = "4.0.0-dev", tag = 'monthly-2021-11', git = 'https://github.com/paritytech/substrate.git', default-features = false, optional = true }
-frame-support = { version = "4.0.0-dev", tag = 'monthly-2021-11', git = 'https://github.com/paritytech/substrate.git', default-features = false }
-frame-system = { version = "4.0.0-dev", tag = 'monthly-2021-11', git = 'https://github.com/paritytech/substrate.git', default-features = false }
-pallet-timestamp = { version = "4.0.0-dev", tag = 'monthly-2021-11', git = 'https://github.com/paritytech/substrate.git', default-features = false }
-scale-info = { version = "1.0", default-features = false, features = ["derive",] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 
+frame-benchmarking = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", optional = true , branch = "polkadot-v0.9.27" }
+frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+frame-system = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+pallet-timestamp = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+serde = { version = "1.0.142", optional = true }
+sp-core = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-io = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-std = { version = "4.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+
+# dev dependencies
 [dev-dependencies]
-sp-core = { version = "4.0.0-dev", tag = 'monthly-2021-11', git = 'https://github.com/paritytech/substrate.git' }
-pallet-balances = { version = "4.0.0-dev", tag = 'monthly-2021-11', git = 'https://github.com/paritytech/substrate.git' }
+pallet-balances = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
+sp-core = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
 [features]
 default = ["std"]
@@ -43,4 +46,3 @@ std = [
 	"frame-system/std",
 ]
 runtime-benchmarks = ["frame-benchmarking"]
-

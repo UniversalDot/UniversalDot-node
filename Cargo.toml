@@ -1,11 +1,11 @@
 [workspace]
 members = [
-    'node',
-    'pallets/profile',
-    'pallets/task',
-    'pallets/dao',
-    'pallets/grant',
-    'runtime',
+    "node",
+    "pallets/profile",
+    "pallets/task",
+    "pallets/dao",
+    "pallets/grant",
+    "runtime",
 ]
 [profile.release]
-panic = 'unwind'
+panic = "unwind"

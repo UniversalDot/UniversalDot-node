@@ -1,6 +1,6 @@
 use crate::{mock::*, Error};
-use frame_support::{assert_noop, assert_ok};
-use sp_core::{sr25519, H256};
+use frame_support::{assert_noop, assert_ok, BoundedVec};
+use sp_core::H256;
 
 
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  Constants and Functions used in TESTS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -11,20 +11,45 @@ fn vision() -> Vec<u8> {
 	vec![1u8, 7]
 }
 
+fn bounded_vision() -> BoundedVec<u8, MaxVisionLen>
+{
+	vision().try_into().unwrap()
+}
+
 fn name() -> Vec<u8> {
 	vec![1u8, 10]
+}
+
+fn bounded_name() -> BoundedVec<u8, MaxDaoNameLen>
+{
+	name().try_into().unwrap()
 }
 
 fn name2() -> Vec<u8> {
 	vec![1u8, 12]
 }
 
+fn bounded_name2() -> BoundedVec<u8, MaxDaoNameLen>
+{
+	name2().try_into().unwrap()
+}
+
 fn description() -> Vec<u8> {
 	vec![1u8, 10]
 }
 
+fn bounded_description() -> BoundedVec<u8, MaxDescriptionLen>
+{
+	description().try_into().unwrap()
+}
+
 fn description2() -> Vec<u8> {
 	vec![1u8, 12]
+}
+
+fn bounded_description2() -> BoundedVec<u8, MaxDescriptionLen>
+{
+	description2().try_into().unwrap()
 }
 
 fn last_event() -> OrgEvent {
@@ -44,29 +69,29 @@ fn last_event() -> OrgEvent {
 
 fn create_organization_1() -> H256 {
 
-		// Ensure organization can be created
-		assert_ok!(Dao::create_organization(Origin::signed(*ALICE), name(),description(), vision()));
+	// Ensure organization can be created
+	assert_ok!(Dao::create_organization(Origin::signed(*ALICE), bounded_name(), bounded_description(), bounded_vision()));
 
-		let event = last_event();
-		if let crate::Event::OrganizationCreated(_creator, org_id) = event {
-			return org_id;
-		} else {
-			assert!(false, "Last event must be OrganizationCreated");
-			return H256::zero();
-		}
+	let event = last_event();
+	if let crate::Event::OrganizationCreated(_creator, org_id) = event {
+		return org_id;
+	} else {
+		assert!(false, "Last event must be OrganizationCreated");
+		return H256::zero();
+	}
 }
 
 fn create_organization_2() -> H256 {
 
-		// Ensure organization can be created
-		assert_ok!(Dao::create_organization(Origin::signed(*ALICE), name2(),description2(), vision()));
-		let event = last_event();
-		if let crate::Event::OrganizationCreated(_creator, org_id) = event {
-			return org_id;
-		} else {
-			assert!(false, "Last event must be OrganizationCreated");
-			return H256::zero();
-		}
+	// Ensure organization can be created
+	assert_ok!(Dao::create_organization(Origin::signed(*ALICE), bounded_name2(), bounded_description2(), bounded_vision()));
+	let event = last_event();
+	if let crate::Event::OrganizationCreated(_creator, org_id) = event {
+		return org_id;
+	} else {
+		assert!(false, "Last event must be OrganizationCreated");
+		return H256::zero();
+	}
 }
 
 
@@ -116,7 +141,8 @@ fn can_remove_vision() {
 		assert_ok!(Dao::remove_vision(Origin::signed(*ALICE), vision()));
 
 		// TODO: Enforce stronger check on Vision test
-		assert_eq!(Dao::vision(vision()).0, sr25519::Public::from_raw([0_u8; 32]));
+		//assert_eq!(Dao::vision(vision()).0, sr25519::Public::from_raw([0_u8; 32]));
+		assert_eq!(Dao::vision(vision()), None);
 	});
 }
 
@@ -268,17 +294,17 @@ fn cant_create_an_organization_more_than_once_in_same_block() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure organization can be created
-		assert_ok!(Dao::create_organization(Origin::signed(*ALICE), name(), description(), vision()));
+		assert_ok!(Dao::create_organization(Origin::signed(*ALICE), bounded_name(), bounded_description(), bounded_vision()));
 
 		// Ensure that you can't create org with same data in same block
-		assert_noop!(Dao::create_organization(Origin::signed(*ALICE), name(), description(), vision()), crate::Error::<Test>::OrganizationAlreadyExists);
+		assert_noop!(Dao::create_organization(Origin::signed(*ALICE), bounded_name(), bounded_description(), bounded_vision()), crate::Error::<Test>::OrganizationAlreadyExists);
 	});
 }
 
 #[test]
 fn creating_organization_increases_organization_count() {
 	new_test_ext().execute_with(|| {
-		
+
 		// Create organization
 		create_organization_1();
 
@@ -290,7 +316,7 @@ fn creating_organization_increases_organization_count() {
 #[test]
 fn can_create_multiple_organization() {
 	new_test_ext().execute_with(|| {
-		
+
 		// Create 2 organizations
 		let org_id_1 = create_organization_1();
 		let org_id_2 = create_organization_2();
@@ -367,7 +393,7 @@ fn only_creator_can_remove_their_organization() {
 #[test]
 fn can_add_user_to_organization() {
 	new_test_ext().execute_with(|| {
-		
+
 		// Create organization
 		let org_id = create_organization_1();
 
@@ -386,7 +412,7 @@ fn can_add_user_to_organization() {
 #[test]
 fn only_creator_can_add_user_to_organization() {
 	new_test_ext().execute_with(|| {
-		
+
 		// Create organization
 		let org_id = create_organization_1();
 
@@ -402,7 +428,7 @@ fn only_creator_can_add_user_to_organization() {
 #[test]
 fn can_only_add_members_if_not_already_in_organization() {
 	new_test_ext().execute_with(|| {
-		
+
 		// Create organization
 		let org_id = create_organization_1();
 
@@ -614,15 +640,15 @@ fn can_update_an_organization() {
 		System::set_block_number(5);
 
 		// Ensure organization can be updated
-		assert_ok!(Dao::update_organization(Origin::signed(*ALICE), org_id, Some(name()), Some(description()), None));
+		assert_ok!(Dao::update_organization(Origin::signed(*ALICE), org_id, Some(bounded_name()), Some(bounded_description()), None));
 		assert_eq!(Dao::member_of(*ALICE)[0], org_id);
 		let event = last_event();
 
 		// Ensure the last event is correct
 		match event {
-		crate::Event::OrganizationUpdated(_creater, _org_id ) => {
-		},
-		_ => {assert!(false, "Last event must be OrganizationUpdated");}
+			crate::Event::OrganizationUpdated(_creater, _org_id ) => {
+			},
+			_ => {assert!(false, "Last event must be OrganizationUpdated");}
 		}
 
 	});
@@ -631,13 +657,13 @@ fn can_update_an_organization() {
 #[test]
 fn only_owner_can_update_an_organization() {
 	new_test_ext().execute_with(|| {
-		
+
 		// Create organization
 		let org_id = create_organization_1();
 		System::set_block_number(5);
 
 		// Ensure only owner can update organization
-		assert_noop!(Dao::update_organization(Origin::signed(*EVE), org_id, Some(name()), Some(description()), None), Error::<Test>::NotOrganizationOwner);
+		assert_noop!(Dao::update_organization(Origin::signed(*EVE), org_id, Some(bounded_name()), Some(bounded_description()), None), Error::<Test>::NotOrganizationOwner);
 	});
 }
 
@@ -651,18 +677,18 @@ fn can_transfer_ownership_of_an_organization() {
 
 		// Ensure ownership can be transferred from one to another user
 		assert_ok!(Dao::transfer_ownership(Origin::signed(*ALICE), org_id, *EVE));
-		
+
 		// Ensure last event is correct
 		let event = last_event();
 		match event {
-		crate::Event::OrganizationOwnerChanged(_creater, _org_id, _new_owner ) => {
-		},
-		_ => {assert!(false, "Last event must be OrganizationOwnerChanged");}
+			crate::Event::OrganizationOwnerChanged(_creater, _org_id, _new_owner ) => {
+			},
+			_ => {assert!(false, "Last event must be OrganizationOwnerChanged");}
 		}
 
 		// Ensure only owner can change org
 		System::set_block_number(7);
-		assert_noop!(Dao::update_organization(Origin::signed(*ALICE), org_id, Some(name()), Some(description()), None), Error::<Test>::NotOrganizationOwner);
+		assert_noop!(Dao::update_organization(Origin::signed(*ALICE), org_id, Some(bounded_name()), Some(bounded_description()), None), Error::<Test>::NotOrganizationOwner);
 
 	});
 }
@@ -685,7 +711,7 @@ fn owner_can_not_transfer_ownership_to_itself() {
 #[test]
 fn can_add_tasks_to_organization() {
 	new_test_ext().execute_with(|| {
-		
+
 		// Create organization
 		let org_id = create_organization_1();
 
@@ -702,7 +728,7 @@ fn can_add_tasks_to_organization() {
 #[test]
 fn can_add_task_to_organization_only_once() {
 	new_test_ext().execute_with(|| {
-		
+
 		// Create organization
 		let org_id = create_organization_1();
 
