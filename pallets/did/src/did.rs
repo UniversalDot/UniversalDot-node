@@ -2,7 +2,7 @@ use crate::types::AttributedId;
 
 use frame_support::dispatch::DispatchResult;
 
-pub trait Did<AccountId, BlockNumber, Moment, Signature> {
+pub trait Did<AccountId, BlockNumber, Moment, Signature, BoundedName, BoundedLen> {
     fn is_owner(identity: &AccountId, actual_owner: &AccountId) -> DispatchResult;
     fn identity_owner(identity: &AccountId) -> AccountId;
     fn valid_delegate(
@@ -41,5 +41,5 @@ pub trait Did<AccountId, BlockNumber, Moment, Signature> {
     fn attribute_and_id(
         identity: &AccountId,
         name: &[u8],
-    ) -> Option<AttributedId<BlockNumber, Moment>>;
+    ) -> Option<AttributedId<BlockNumber, Moment, BoundedName, BoundedLen>>;
 }

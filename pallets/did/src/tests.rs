@@ -118,8 +118,8 @@ fn add_on_chain_and_revoke_off_chain_attribute() {
 
         let revoke_transaction = AttributeTransaction {
             signature: revoke_sig,
-            name: name.clone(),
-            value,
+            name: name.clone().try_into().unwrap(),
+            value: value.try_into().unwrap(),
             validity,
             signer: alice_public,
             identity: alice_public,
@@ -172,7 +172,6 @@ fn attacker_to_transfer_identity_should_fail() {
     });
 }
 
-
 #[test]
 fn attacker_add_new_delegate_should_fail() {
     new_test_ext().execute_with(|| {
@@ -201,7 +200,6 @@ fn attacker_add_new_delegate_should_fail() {
         );
     });
 }
-
 
 #[test]
 fn revoke_delegate_works() {
@@ -323,5 +321,37 @@ fn add_remove_add_remove_attr() {
             account_key(acct),
             vec.to_vec()
         ));
+    });
+}
+
+#[test]
+fn create_attribute_checks_attribute_name_length() {
+    new_test_ext().execute_with(|| {
+        let account = account_key("Alice");
+        let name = vec![1u8; MaxNameLen::get() as usize + 1];
+        let value = vec![1u8; MaxValueLen::get() as usize];
+        assert_noop!(DID::create_attribute(
+            &account,
+            &account,
+            &name,
+            &value,
+            None
+        ), <Error<Test>>::AttributeNameTooLong);
+    });
+}
+
+#[test]
+fn create_attribute_checks_attribute_value_length() {
+    new_test_ext().execute_with(|| {
+        let account = account_key("Alice");
+        let name = vec![1u8; MaxNameLen::get() as usize];
+        let value = vec![1u8; MaxValueLen::get() as usize + 1];
+        assert_noop!(DID::create_attribute(
+            &account,
+            &account,
+            &name,
+            &value,
+            None
+        ), <Error<Test>>::AttributeValueTooLong);
     });
 }
