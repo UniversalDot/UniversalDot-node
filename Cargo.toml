@@ -4,6 +4,7 @@ members = [
     "pallets/profile",
     "pallets/task",
     "pallets/dao",
+    "pallets/grant",
     "runtime",
 ]
 [profile.release]

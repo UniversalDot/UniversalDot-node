@@ -17,7 +17,7 @@
 
 
 //! # Task Pallet
-//!
+//! 
 //! ## Version: 0.7.0
 //!
 //! - [`Config`]
@@ -35,9 +35,9 @@
 //!
 //! Anybody can become an Initiator or Volunteer. In other words,
 //! one doesn't need permission to become an Initiator or Volunteer.
-//!
-//! Budget funds are locked in escrow when task is created.
-//! Funds are removed from escrow when task is deleted.
+//! 
+//! Budget funds reserved using ReservableCurrency.
+//! Funds are unreserved and sent to volunteer when a task is completed or removed.
 //!
 //! Tasks with expired deadline are automatically removed from storage.
 //!
@@ -86,12 +86,12 @@
 //! 	Inputs:
 //! 	- task_id: T::Hash,
 //! 	- feedback : BoundedVec
-//!
+//! 
 //! Storage Items:
 //! 	Tasks: Stores Task related information
 //! 	TaskCount: Counts the total number of Tasks in the ecosystem
 //! 	TasksOwned: Keeps track of how many tasks are owned per account
-//!
+//! 
 //!
 //! ## Related Modules
 //!
@@ -114,12 +114,12 @@ pub mod weights;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use crate::TaskStatus::Created;
+	use crate::TaskStatus::Created; 
 	use frame_support::{dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime, PalletId};
 	use frame_system::pallet_prelude::*;
 	use frame_support::{
 		sp_runtime::traits::{Hash, SaturatedConversion, AccountIdConversion},
-		traits::{Currency, tokens::ExistenceRequirement},
+		traits::{Currency, ReservableCurrency, tokens::ExistenceRequirement},
 		transactional};
 	use scale_info::TypeInfo;
 	use sp_std::vec::Vec;
@@ -156,13 +156,13 @@ pub mod pallet {
 	// Set TaskStatus enum.
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
-	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-	pub enum TaskStatus {
-		Created,
-		InProgress,
+  	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+  	pub enum TaskStatus {
+    	Created,
+    	InProgress,
 		Completed,
 		Accepted,
-	}
+  	}
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
@@ -171,7 +171,7 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// Currency type that is linked with AccountID
-		type Currency: Currency<Self::AccountId>;
+		type Currency: ReservableCurrency<Self::AccountId>;
 
 		/// Time provider type
 		type Time: UnixTime;
@@ -287,7 +287,7 @@ pub mod pallet {
 		/// Function call that creates tasks.  [ origin, specification, budget, deadline]
 		#[pallet::weight(<T as Config>::WeightInfo::create_task(0,0))]
 		pub fn create_task(origin: OriginFor<T>, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: BalanceOf<T>,
-						   deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> DispatchResultWithPostInfo {
+			deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> DispatchResultWithPostInfo {
 
 			// Check that the extrinsic was signed and get the signer.
 			let signer = ensure_signed(origin)?;
@@ -295,10 +295,10 @@ pub mod pallet {
 			// Update storage.
 			let task_id = Self::new_task(&signer, title, specification, &budget, deadline, attachments, keywords)?;
 
-			// Transfer balance amount to escrow account
-			let sub_account = Self::account_id(&task_id);
-			<T as self::Config>::Currency::transfer(&signer, &sub_account, budget,
-													ExistenceRequirement::KeepAlive)?;
+			// need esistential deposit check?
+			ensure!(<T as self::Config>::Currency::can_reserve(&signer, budget), Error::<T>::NotEnoughBalance);
+			// Reserve currency of the task creator.
+			<T as self::Config>::Currency::reserve(&signer, budget.into()).expect("can_reserve has been called; qed");
 
 			// Emit a Task Created Event.
 			Self::deposit_event(Event::TaskCreated(signer, task_id));
@@ -307,31 +307,47 @@ pub mod pallet {
 		}
 
 		/// Function call that updates a created task.  [ origin, specification, budget, deadline]
+		//	todo: minimum change amount?
 		#[pallet::weight(<T as Config>::WeightInfo::update_task(0,0))]
 		pub fn update_task(origin: OriginFor<T>, task_id: T::Hash, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>,
-						   budget: BalanceOf<T>, deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> DispatchResultWithPostInfo {
+			budget: BalanceOf<T>, deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> DispatchResultWithPostInfo {
 
 			// Check that the extrinsic was signed and get the signer.
 			let signer = ensure_signed(origin)?;
 
-			let task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
+			// Check if task exists
+			let old_task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
 
-			// Update storage.
-			let _task_id = Self::update_created_task(&signer, &task_id, title, specification, &budget, deadline, attachments, keywords)?;
+			// Check if the owner is the one who created task
+			ensure!(Self::is_task_initiator(&task_id, &signer)?, <Error<T>>::OnlyInitiatorUpdatesTask);
 
-			if task.budget != budget {
-				// Update balance of escrow account
-				let sub_account = Self::account_id(&task_id);
-				if task.budget > budget {
-					let difference = task.budget - budget;
-					<T as self::Config>::Currency::transfer(&sub_account, &signer, difference,
-						ExistenceRequirement::KeepAlive)?;
+			// Ensure user has a profile before creating a task
+			ensure!(pallet_profile::Pallet::<T>::has_profile(&signer).unwrap(), <Error<T>>::NoProfile);
+
+			// Check if task is in created status. Tasks can be updated only before work has been started.
+			ensure!(TaskStatus::Created == old_task.status, <Error<T>>::NoPermissionToUpdate);
+
+			// Ensure deadline is in the future
+			let deadline_duration = Duration::from_millis(old_task.deadline.saturated_into::<u64>());
+			ensure!(T::Time::now() < deadline_duration, Error::<T>::IncorrectDeadlineTimestamp);
+
+			if old_task.budget != budget {
+				// Check that sender can reserve.
+				// Reserve difference if the budget has increased.
+				if budget > old_task.budget {
+					let diff = budget - old_task.budget;
+					ensure!(<T as self::Config>::Currency::can_reserve(&signer, diff), Error::<T>::NotEnoughBalance);
+					<T as self::Config>::Currency::reserve(&signer, diff).expect("can_reserve has been called; qed");
+
+				// Unreserve difference if the budget has decreased.
 				} else {
-					let difference = budget - task.budget;
-					<T as self::Config>::Currency::transfer(&signer, &sub_account, difference,
-						ExistenceRequirement::KeepAlive)?;
+					let diff = old_task.budget - budget;
+					<T as self::Config>::Currency::unreserve(&signer, diff);
 				}
 			}
+
+			//Update storage after as we need to check if sender can reserve new amount.
+			let _task_id = Self::update_created_task(old_task, &task_id, title, specification, &budget, deadline, attachments, keywords)?;
 
 			// Emit a Task Updated Event.
 			Self::deposit_event(Event::TaskUpdated(signer, task_id));
@@ -397,15 +413,17 @@ pub mod pallet {
 			let signer = ensure_signed(origin)?;
 
 			// Check if task exists
-			let task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
+			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
 
-			// Transfer escrow funds to volunteer
-			let sub_account = Self::account_id(&task_id);
-			<T as self::Config>::Currency::transfer(&sub_account, &task.volunteer, task.budget,
-				ExistenceRequirement::AllowDeath)?;
+			// Ensure owner
+			ensure!(&task.current_owner == &signer, Error::<T>::OnlyInitiatorAcceptsTask);
+
+			// Transfer reserved funds of task amount to volunteer.
+			<T as self::Config>::Currency::unreserve(&signer, task.budget);
+			<T as self::Config>::Currency::transfer(&signer, &task.volunteer, task.budget, ExistenceRequirement::AllowDeath)?;
 
 			// Accept task and update storage.
-			Self::accept_completed_task(&signer, &task_id)?;
+			Self::accept_completed_task(&signer, &mut task, &task_id)?;
 
 			// Add task to completed tasks list of volunteer's profile.
 			pallet_profile::Pallet::<T>::add_task_to_completed_tasks(&task.volunteer, task_id)?;
@@ -457,8 +475,8 @@ pub mod pallet {
 	// *** Helper functions *** //
 	impl<T:Config> Pallet<T> {
 
-		pub fn new_task(from_initiator: &T::AccountId, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: &BalanceOf<T>,
-			deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<T::Hash, DispatchError> {
+		fn new_task(from_initiator: &T::AccountId, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: &BalanceOf<T>,
+			 deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<T::Hash, DispatchError> {
 
 			// Ensure user has a profile before creating a task
 			ensure!(pallet_profile::Pallet::<T>::has_profile(from_initiator).unwrap(), <Error<T>>::NoProfile);
@@ -502,41 +520,27 @@ pub mod pallet {
 		}
 
 		// Task can be updated only after it has been created. Task that is already in progress can't be updated.
-		pub fn update_created_task(from_initiator: &T::AccountId, task_id: &T::Hash, new_title: BoundedVec<u8, T::MaxTitleLen>, new_specification: BoundedVec<u8, T::MaxSpecificationLen>, new_budget: &BalanceOf<T>,
-		    new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<(), DispatchError> {
+		//  Private helper function.
+		fn update_created_task(old_task:Task<T>, task_id: &T::Hash, new_title: BoundedVec<u8, T::MaxTitleLen>, new_specification: BoundedVec<u8, T::MaxSpecificationLen>, new_budget: &BalanceOf<T>,
+			new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<(), DispatchError> {
 
-			// Check if task exists
-			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
-
-			// Check if the owner is the one who created task
-			ensure!(Self::is_task_initiator(task_id, from_initiator)?, <Error<T>>::OnlyInitiatorUpdatesTask);
-
-			// Ensure user has a profile before creating a task
-			ensure!(pallet_profile::Pallet::<T>::has_profile(from_initiator).unwrap(), <Error<T>>::NoProfile);
-
-			// Check if task is in created status. Tasks can be updated only before work has been started.
-			ensure!(TaskStatus::Created == task.status, <Error<T>>::NoPermissionToUpdate);
-
-			// Ensure deadline is in the future
-			let deadline_duration = Duration::from_millis(task.deadline.saturated_into::<u64>());
-			ensure!(T::Time::now() < deadline_duration, Error::<T>::IncorrectDeadlineTimestamp);
-
+			let mut new_task: Task<T> = old_task;
 			// Init Task Object
-			task.title = new_title.clone();
-			task.specification = new_specification.clone();
-			task.budget = *new_budget;
-			task.deadline = new_deadline;
-			task.attachments = attachments.clone();
-			task.keywords = keywords.clone();
-			task.updated_at = <frame_system::Pallet<T>>::block_number();
+			new_task.title = new_title.clone();
+			new_task.specification = new_specification.clone();
+			new_task.budget = *new_budget;
+			new_task.deadline = new_deadline;
+			new_task.attachments = attachments.clone();
+			new_task.keywords = keywords.clone();
+			new_task.updated_at = <frame_system::Pallet<T>>::block_number();
 
 			// Insert task into Hashmap
-			<Tasks<T>>::insert(task_id, task);
+			<Tasks<T>>::insert(task_id, new_task);
 
 			Ok(())
 		}
 
-		pub fn assign_task(volunteer: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
+		fn assign_task(volunteer: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
 
 			// Check if task exists
 			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
@@ -572,7 +576,7 @@ pub mod pallet {
 		}
 
 
-		pub fn mark_finished(to: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
+		fn mark_finished(to: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
 
 			// Check if task exists
 			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
@@ -609,13 +613,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub fn accept_completed_task(task_initiator: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
-
-			// Check if task exists
-			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
-
-			// Check if the owner is the one who created task
-			ensure!(Self::is_task_initiator(task_id, task_initiator)?, <Error<T>>::OnlyInitiatorAcceptsTask);
+		// Internal helper function, checks Must be called before calling this function.
+		fn accept_completed_task(task_initiator: &T::AccountId, task: &mut Task<T>, task_id: &T::Hash) -> Result<(), DispatchError> {
 
 			// Remove from ownership
 			<TasksOwned<T>>::try_mutate(&task_initiator, |owned| {
@@ -644,7 +643,7 @@ pub mod pallet {
 		}
 
 		// Task can be rejected by the creator, which places the task back into progress.
-		pub fn reject_completed_task(task_initiator: &T::AccountId, task_id: &T::Hash, feedback: BoundedVec<u8, T::MaxFeedbackLen>) -> Result<(), DispatchError> {
+		fn reject_completed_task(task_initiator: &T::AccountId, task_id: &T::Hash, feedback: BoundedVec<u8, T::MaxFeedbackLen>) -> Result<(), DispatchError> {
 
 			// Check if task exists
 			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
@@ -682,7 +681,7 @@ pub mod pallet {
 		}
 
 
-		pub fn delete_task(task_initiator: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
+		fn delete_task(task_initiator: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
 
 			// Check if task exists
 			let task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
@@ -695,10 +694,9 @@ pub mod pallet {
 
 			// remove task from storage
 			<Tasks<T>>::remove(task_id);
-			// Transfer balance amount from escrow account to task creator
-			let sub_account = Self::account_id(&task_id);
-			<T as self::Config>::Currency::transfer(&sub_account, &task_initiator, task.budget,
-				ExistenceRequirement::AllowDeath)?;
+
+			// Unreserve balance amount from task creator
+			<T as self::Config>::Currency::unreserve(&task_initiator, task.budget);
 
 			// Reduce task count
 			let new_count = Self::task_count().saturating_sub(1);
@@ -708,7 +706,7 @@ pub mod pallet {
 		}
 
 		// Function to check if the current signer is the task_initiator
-		pub fn is_task_initiator(task_id: &T::Hash, task_acceptor: &T::AccountId) -> Result<bool, DispatchError> {
+		fn is_task_initiator(task_id: &T::Hash, task_acceptor: &T::AccountId) -> Result<bool, DispatchError> {
 			match Self::tasks(task_id) {
 				Some(task) => Ok(task.initiator == *task_acceptor),
 				None => Err(<Error<T>>::TaskNotExist.into())
@@ -718,12 +716,12 @@ pub mod pallet {
 		// Function that generates escrow account based on TaskID
 		// todo: ensure that usage of into_account_truncating is correct
 		// See: https://paritytech.github.io/substrate/master/sp_runtime/traits/trait.AccountIdConversion.html#tymethod.into_sub_account_truncating
-		pub fn account_id(task_id: &T::Hash) -> T::AccountId {
+		pub(crate) fn account_id(task_id: &T::Hash) -> T::AccountId {
 			T::PalletId::get().into_sub_account_truncating(task_id)
 		}
 
 		// Handles reputation update for profiles
-		pub fn handle_reputation(task_id: &T::Hash) -> Result<(), DispatchError> {
+		fn handle_reputation(task_id: &T::Hash) -> Result<(), DispatchError> {
 
 			// Check if task exists
 			let task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;

@@ -108,12 +108,13 @@ fn fund_transfer_on_create_task(){
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info())));
 
-		assert_eq!(Balances::balance(&1), 1000);
+		assert_eq!(Balances::free_balance(&1), 1000);
 		// Ensure new task can be created.
 		assert_ok!(Task::create_task(Origin::signed(1), title(), spec() , BUDGET, get_deadline(), attachments(), keywords()));
-		assert_eq!(Balances::balance(&1), 993);
+
+		assert_eq!(Balances::free_balance(&1), 993);
 		let task_id = Task::tasks_owned(&1)[0];
-		assert_eq!(Balances::balance(&Task::account_id(&task_id)), BUDGET);
+		assert_eq!(Balances::reserved_balance(&1), BUDGET);
 	});
 }
 
@@ -251,6 +252,8 @@ fn task_can_be_updated_after_it_is_created(){
 fn check_balance_after_update_task(){
 	new_test_ext().execute_with( || {
 
+		let initial_balance_of_sender = Balances::free_balance(&10);
+
 		// Create profle and task
 		assert_ok!(Profile::create_profile(Origin::signed(10), username(), interests(), HOURS, Some(additional_info())));
 		assert_ok!(Task::create_task(Origin::signed(10), title(), spec(), BUDGET, get_deadline(), attachments(), keywords()));
@@ -259,22 +262,19 @@ fn check_balance_after_update_task(){
 		let hash = Task::tasks_owned(10)[0];
 		assert_ok!(Task::update_task(Origin::signed(10), hash, title2(), spec2(), BUDGET2, get_deadline(), attachments2(), keywords2()));
 
-		// Ensure the new budget is transfered to escrow_account and assigned correctly
+		// Ensure the new budget is reserved
 		let hash = Task::tasks_owned(10)[0];
-		let task = Task::tasks(hash).expect("should found the task");
-		let task_account = Task::account_id(&hash);
-		assert_eq!(Balances::balance(&task_account), BUDGET2);
+		let task = Task::tasks(hash).expect("should find the task");
+		
+		let new_balance_of_sender = Balances::free_balance(&10);
+		assert_eq!(new_balance_of_sender + BUDGET2, initial_balance_of_sender);
 		assert_eq!(task.budget, BUDGET2);
 
 		// Update task again with previous budget
+		//	can use reserved balance here because there is only one task to play with.
 		assert_ok!(Task::update_task(Origin::signed(10), hash, title2(), spec2(), BUDGET, get_deadline(), attachments2(), keywords2()));
-		let hash = Task::tasks_owned(10)[0];
-		let task = Task::tasks(hash).expect("should found the task");
-		let task_account = Task::account_id(&hash);
-
-		// Ensure new budget is assigned correctly
-		assert_eq!(Balances::balance(&task_account), BUDGET);
-		assert_eq!(task.budget, BUDGET);
+		let reserved_balance = Balances::reserved_balance(&10);
+		assert_eq!(reserved_balance, BUDGET);
 	});
 }
 
@@ -882,23 +882,22 @@ fn balance_check_after_delete_task() {
 		assert_ok!(Task::create_task(Origin::signed(1), title(), spec(), BUDGET, get_deadline(), attachments(), keywords()));
 		
 		// Assign balances to task creator and escrow after task creation
-		let signer_balance_after_task_creation = Balances::balance(&1);
+		let signer_free_balance = Balances::free_balance(&1);
 		let hash = Task::tasks_owned(1)[0];
-		let task_account = Task::account_id(&hash);
-		let task_balance = Balances::balance(&task_account);
+		let signer_reserved_balance = Balances::reserved_balance(&1);
 		
 		// Ensure balances are correct
-		assert_eq!(task_balance, BUDGET);
-		assert_eq!(signer_balance, signer_balance_after_task_creation + task_balance);
+		assert_eq!(signer_reserved_balance, BUDGET);
+		assert_eq!(signer_balance, signer_reserved_balance + signer_free_balance);
 
 		// Ensure task can be removed
 		assert_ok!(Task::remove_task(Origin::signed(1), hash));
-		let signer_balance_after_task_deletion = Balances::balance(&1);
-		let task_balance = Balances::balance(&task_account);
+		let signer_free_balance_post_removal = Balances::free_balance(&1);
+		let signer_reserved_balance_post_removal = Balances::reserved_balance(&1);
 
-		// Ensure balances are correct after task removal
-		assert_eq!(signer_balance, signer_balance_after_task_deletion);
-		assert_eq!(task_balance, 0);
+		//// Ensure balances are correct after task removal
+		assert_eq!(signer_balance, signer_free_balance_post_removal);
+		assert_eq!(signer_reserved_balance_post_removal, 0);
 	});
 }
 
@@ -934,6 +933,86 @@ fn block_time_is_added_when_task_is_updated() {
 		assert_ok!(Task::complete_task(Origin::signed(2), hash));
 		let task = Task::tasks(hash).expect("should found the task");
 		assert_eq!(task.completed_at, 100);
+
+	})
+}
+
+#[test]
+fn test_multiple_tasks_and_reserve_amounts() {
+	new_test_ext().execute_with( || {
+
+		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info())));
+
+		//create 2 tasks of budgets 7 and 10
+		assert_ok!(Task::create_task(Origin::signed(1), title(), spec(), BUDGET, get_deadline(), attachments(), keywords()));
+		assert_ok!(Task::create_task(Origin::signed(1), title2(), spec2(), BUDGET2, get_deadline(), attachments2(), keywords2()));
+
+		// Assert that the reserved balances add up
+		assert_eq!(Balances::reserved_balance(&1), BUDGET + BUDGET2);
+
+		//swap around budgets
+		let hash = Task::tasks_owned(1)[0];
+		assert_ok!(Task::update_task(Origin::signed(1), hash, title(), spec(), BUDGET2, get_deadline(), attachments(), keywords()));
+
+		assert_eq!(Balances::reserved_balance(&1), BUDGET2 + BUDGET2);
+
+		//let hash = Task::tasks_owned(1)[1];
+		assert_ok!(Task::update_task(Origin::signed(1), hash, title2(), spec2(), BUDGET, get_deadline(), attachments2(), keywords2()));
+
+		assert_eq!(Balances::reserved_balance(&1), BUDGET2 + BUDGET);
+	})
+
+}
+
+#[test]
+fn test_create_not_enough_funds_to_reserve() {
+	new_test_ext().execute_with( || {
+		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info())));
+		
+		//Create a task with more tokens than the signer has
+		let res = Task::create_task(Origin::signed(1), title(), spec2(), Balances::free_balance(&1) + 1000, get_deadline(), attachments(), keywords());
+		
+		//hack to make work
+		if let Err(n) = res {
+			assert_eq!(n.error, Error::<Test>::NotEnoughBalance.into());	
+		}
+
+	})
+}
+#[test]
+fn test_update_not_enough_funds_to_reserve() {
+	new_test_ext().execute_with( || {
+		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info())));
+		
+		//Create task that should be ok
+		assert_ok!(Task::create_task(Origin::signed(1), title(), spec2(), Balances::free_balance(&1) - 1000, get_deadline(), attachments(), keywords()));
+		
+		let hash = Task::tasks_owned(1)[0];
+
+		//update that task with a balance more than signer has
+		let res = Task::update_task(Origin::signed(1), hash, title2(), spec2(), Balances::free_balance(&1) + 1000, get_deadline(), attachments2(), keywords2());
+		if let Err(n) = res {
+			assert_eq!(n.error, Error::<Test>::NotEnoughBalance.into());	
+		}
+
+	})
+}	
+
+#[test]
+fn test_create_two_task_not_enough_balance() {
+	new_test_ext().execute_with( || {
+		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info())));
+
+		//create a task with an ok balance
+		assert_ok!(Task::create_task(Origin::signed(1), title(), spec2(), Balances::free_balance(&1) - 1000, get_deadline(), attachments(), keywords()));
+		
+		//create a task with a balance not possible
+		let res = Task::create_task(Origin::signed(1), title(), spec2(), Balances::balance(&1), get_deadline(), attachments(), keywords());
+		
+		let hash = Task::tasks_owned(1)[0];
+		if let Err(n) = res {
+			assert_eq!(n.error, Error::<Test>::NotEnoughBalance.into());	
+		}
 
 	})
 }

@@ -315,6 +315,8 @@ parameter_types! {
 	pub const MaxAdditionalInformationLen: u32 = 5000;
 	#[derive(TypeInfo, MaxEncodedLen, Encode)]
 	pub const MaxCompletedTasksLen: u32 = 100;
+
+	pub const RandomnessPalletId: PalletId = PalletId(*b"py/lotto");
 }
 
 // Configure the pallet-profile.
@@ -326,6 +328,15 @@ impl pallet_profile::Config for Runtime {
 	type MaxInterestsLen = MaxInterestsLen;
 	type MaxAdditionalInformationLen = MaxAdditionalInformationLen;
 	type MaxCompletedTasksLen = MaxCompletedTasksLen;
+}
+
+impl pallet_grant::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type WeightInfo = pallet_grant::weights::SubstrateWeight<Runtime>;
+	type PalletId = RandomnessPalletId;
+	type Randomness = RandomnessCollectiveFlip;
+
 }
 
 parameter_types! {
@@ -364,6 +375,7 @@ construct_runtime!(
 		Profile: pallet_profile::{Pallet, Call, Storage, Event<T>},
 		Dao: pallet_dao::{Pallet, Call, Storage, Event<T>},
 		Did: pallet_did::{Pallet, Call, Storage, Event<T>},
+		Grant: pallet_grant::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -549,7 +561,7 @@ impl_runtime_apis! {
 			Vec<frame_benchmarking::BenchmarkList>,
 			Vec<frame_support::traits::StorageInfo>,
 		) {
-			use frame_benchmarking::{baseline, Benchmarking, BenchmarkList};
+			use frame_benchmarking::{list_benchmark, baseline, Benchmarking, BenchmarkList};
 			use frame_support::traits::StorageInfoTrait;
 			use frame_system_benchmarking::Pallet as SystemBench;
 			use baseline::Pallet as BaselineBench;
@@ -565,6 +577,7 @@ impl_runtime_apis! {
 			list_benchmark!(list, extra, pallet_profile, Profile);
 			list_benchmark!(list, extra, pallet_task, Task);
 			list_benchmark!(list, extra, pallet_dao, Dao);
+			list_benchmark!(list, extra, pallet_grant, Grant);
 			list_benchmark!(list, extra, pallet_did, Did);
 
 			let storage_info = AllPalletsWithSystem::storage_info();
@@ -575,7 +588,7 @@ impl_runtime_apis! {
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{baseline, Benchmarking, BenchmarkBatch, TrackedStorageKey};
+			use frame_benchmarking::{baseline, Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
 
 			use frame_system_benchmarking::Pallet as SystemBench;
 			use baseline::Pallet as BaselineBench;
@@ -609,6 +622,7 @@ impl_runtime_apis! {
 			add_benchmark!(params, batches, pallet_profile, Profile);
 			add_benchmark!(params, batches, pallet_task, Task);
 			add_benchmark!(params, batches, pallet_dao, Dao);
+			add_benchmark!(params, batches, pallet_grant, Grant);
 			add_benchmark!(params, batches, pallet_did, Did);
 
 
