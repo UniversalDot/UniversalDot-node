@@ -153,7 +153,7 @@ fn winner_can_be_selected() {
 		run_to_block(4);
 
 		// Ensure the winner is the only account that requested
-		assert_eq!(Grant::winner(), 7);
+		assert_eq!(Grant::winner().unwrap(), 7);
 
 	});
 }
@@ -169,7 +169,7 @@ fn winner_can_be_queried_by_anyone() {
 		run_to_block(2);
 
 		// Ensure the winner is the only account that requested
-		assert_eq!(Grant::winner(), 7);
+		assert_eq!(Grant::winner().unwrap(), 7);
 		assert_ok!(Grant::winner_is(Origin::signed(1)));
 
 	});
@@ -185,7 +185,7 @@ fn winner_can_be_selected_per_block() {
 		run_to_block(2);
 
 		// Ensure we have selected the correct winner
-		assert_eq!(Grant::winner(), 5);
+		assert_eq!(Grant::winner().unwrap(), 5);
 		
 		// Request additional grant for different block
 		assert_ok!(Grant::request_grant(Origin::signed(1), 8 ));
@@ -193,8 +193,8 @@ fn winner_can_be_selected_per_block() {
 		
 		run_to_block(5);
 
-		// Ensure we have the coorect winner (Repeatable randomness?)
-		assert_eq!(Grant::winner(), 7);
+		// Ensure we have the correct winner (Repeatable randomness?)
+		assert_eq!(Grant::winner().unwrap(), 7);
 
 	});
 }
@@ -203,7 +203,7 @@ fn winner_can_be_selected_per_block() {
 fn winner_can_be_recieve_grant_reward() {
 	new_test_ext().execute_with(|| {
 
-		// Add balance to grant treasury acccount
+		// Add balance to grant treasury account
 		Balances::mutate_account(&Grant::account_id(), |balance| {
 			balance.free = 100;
 		});
@@ -218,7 +218,7 @@ fn winner_can_be_recieve_grant_reward() {
 		run_to_block(2);
 
 		// Ensure we have selected the correct winner
-		assert_eq!(Grant::winner(), 5);
+		assert_eq!(Grant::winner().unwrap(), 5);
 
 		//Ensure money is tranfered todo:: look for minimum balance
 		assert!(Balances::free_balance(5) == 100 - 1);

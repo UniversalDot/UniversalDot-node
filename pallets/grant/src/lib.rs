@@ -95,7 +95,7 @@ pub mod pallet {
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	// Struct for holding Request information.
-	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo)]
+	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
 	pub struct Requesters<T: Config> {
 		pub owner: AccountOf<T>,
@@ -128,7 +128,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn winner)]
 	/// Stores the current winner for the block
-	pub(super) type Winner<T: Config> = StorageValue<_, T::AccountId, ValueQuery>;
+	pub(super) type Winner<T: Config> = StorageValue<_, T::AccountId>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn storage_requesters)]
@@ -157,14 +157,16 @@ pub mod pallet {
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Cant grant to recieving account
+		/// Cant grant to receiving account
 		CantGrantToSelf,
 		// User has already made requests
 		RequestAlreadyMade,
 		// You must have empty balance to receive tokens.
 		NonEmptyBalance,
 		// Too many requesters in current block
-		TooManyRequesters
+		TooManyRequesters,
+		// No winner exists
+		NoWinner
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -217,7 +219,7 @@ pub mod pallet {
 			let _account = ensure_signed(origin)?;
 
 			// Get the winner
-			let winner = <Winner<T>>::get();
+			let winner = <Winner<T>>::get().ok_or(<Error<T>>::NoWinner)?; // AccountId should not use default: https://substrate.stackexchange.com/a/1814
 			
 			// Deposit event
 			Self::deposit_event(Event::WinnerSelected{ who:winner });
@@ -254,8 +256,10 @@ pub mod pallet {
 
 
 		// Generates treasury account
-		pub fn account_id() -> T::AccountId {
-			T::PalletId::get().into_account()
+		// todo: ensure that usage of into_account_truncating is correct
+		// See: https://paritytech.github.io/substrate/master/sp_runtime/traits/trait.AccountIdConversion.html#tymethod.into_sub_account_truncating
+		pub(crate) fn account_id() -> T::AccountId {
+			T::PalletId::get().into_account_truncating()
 		}
 
 		fn treasury_account() -> (T::AccountId, BalanceOf<T>) {
@@ -267,7 +271,7 @@ pub mod pallet {
 		}
 		
 		// Generates requests in storage
-		pub fn generate_requests(grant_receiver: &T::AccountId) -> Result<T::Hash, DispatchError> {
+		fn generate_requests(grant_receiver: &T::AccountId) -> Result<T::Hash, DispatchError> {
 
 			// Get current balance of owner
 			let balance = T::Currency::free_balance(grant_receiver);
@@ -288,14 +292,14 @@ pub mod pallet {
 			// Insert profile into HashMap
 			<StorageRequesters<T>>::insert(grant_receiver, requesters);
 
-			// Increast count for requesterss
+			// Increase count for requesters
 			let new_count = Self::requesters_count().checked_add(1).ok_or(<Error<T>>::TooManyRequesters)?;
 			<RequestersCount<T>>::put(new_count);
 
 			Ok(requesters_id)
 		}
 
-		pub fn select_winner() -> Result<(), DispatchError> {
+		fn select_winner() -> Result<(), DispatchError> {
 
 			let requestor: Vec<T::AccountId> = <StorageRequesters<T>>::iter_keys().collect();
 
@@ -321,8 +325,8 @@ pub mod pallet {
 			random_number
 		}
 
-		// Function that allows funds to be sent to wiiner
-		pub fn transfer_funds_to_winner() -> Result<(), DispatchError> {
+		// Function that allows funds to be sent to winner
+		fn transfer_funds_to_winner() -> Result<(), DispatchError> {
 
 			let (_lottery_account, lottery_balance) = Self::treasury_account();
 
@@ -331,14 +335,15 @@ pub mod pallet {
 			// TODO: Implement formula that grants based on total supply and not whole balance
 			let _total = T::Currency::total_issuance();
 
-			let transfer = T::Currency::transfer(treasury, &Self::winner(), lottery_balance, ExistenceRequirement::KeepAlive);
+			let winner = &Self::winner().ok_or(<Error<T>>::NoWinner)?; // AccountId should not use default: https://substrate.stackexchange.com/a/1814
+			let transfer = T::Currency::transfer(treasury, winner, lottery_balance, ExistenceRequirement::KeepAlive);
 			debug_assert!(transfer.is_ok());
 
 			Ok(())
 		}
 
-		// Public function that check if user has made requests
-		pub fn has_made_requests(owner: &T::AccountId) -> Result<bool, DispatchError>  {
+		// Function that check if user has made requests
+		fn has_made_requests(owner: &T::AccountId) -> Result<bool, DispatchError>  {
 
 			// Check if an account has a profile
 			Self::storage_requesters(owner).ok_or(<Error<T>>::RequestAlreadyMade)?;
