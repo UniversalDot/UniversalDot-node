@@ -716,7 +716,7 @@ pub mod pallet {
 		// Function that generates escrow account based on TaskID
 		// todo: ensure that usage of into_account_truncating is correct
 		// See: https://paritytech.github.io/substrate/master/sp_runtime/traits/trait.AccountIdConversion.html#tymethod.into_sub_account_truncating
-		fn account_id(task_id: &T::Hash) -> T::AccountId {
+		pub(crate) fn account_id(task_id: &T::Hash) -> T::AccountId {
 			T::PalletId::get().into_sub_account_truncating(task_id)
 		}
 
