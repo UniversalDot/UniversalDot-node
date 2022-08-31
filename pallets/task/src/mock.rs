@@ -108,9 +108,11 @@ impl pallet_profile::Config for Test {
 	type MaxCompletedTasksLen = MaxCompletedTasksLen;
 }
 
+// One can own at most 77 tasks
+pub(crate) const MAX_TASKS_OWNED: u32 = 77;
+
 parameter_types! {
-	// One can owned at most 77 tasks
-	pub const MaxTasksOwned: u32 = 77;
+	pub const MaxTasksOwned: u32 = MAX_TASKS_OWNED;
 	pub TestPalletID : PalletId = PalletId(*b"task_pal");
 	#[derive(TypeInfo, MaxEncodedLen, Encode)]
 	pub const MaxTitleLen: u32 = 256;
