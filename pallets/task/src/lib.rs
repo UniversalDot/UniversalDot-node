@@ -96,9 +96,7 @@
 //! ## Related Modules
 //!
 
-
 #![cfg_attr(not(feature = "std"), no_std)]
-
 
 pub use pallet::*;
 
@@ -131,7 +129,8 @@ pub mod pallet {
 
 	// Use AccountId from frame_system
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
-	type BalanceOf<T> =<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	type DaoOf<T> = <T as frame_system::Config>::Hash;
 
 	// Struct for holding Task information.
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -151,6 +150,8 @@ pub mod pallet {
 		pub created_at: <T as frame_system::Config>::BlockNumber,
 		pub updated_at:<T as frame_system::Config>::BlockNumber,
 		pub completed_at: <T as frame_system::Config>::BlockNumber,
+		/// The organization to which the task belongs.
+		pub dao: Option<DaoOf<T>>
 	}
 
 	// Set TaskStatus enum.
@@ -206,7 +207,6 @@ pub mod pallet {
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
-
 	#[pallet::storage]
 	#[pallet::getter(fn task_count)]
 	/// TaskCount: Get total number of Tasks in the system
@@ -221,7 +221,6 @@ pub mod pallet {
 	#[pallet::getter(fn tasks_owned)]
 	/// Keeps track of which Accounts own which Tasks.
 	pub(super) type TasksOwned<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, BoundedVec<T::Hash, T::MaxTasksOwned>, ValueQuery>;
-
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -284,18 +283,18 @@ pub mod pallet {
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Function call that creates tasks.  [ origin, specification, budget, deadline]
+		/// Function call that creates tasks.  [origin, title, specification, budget, deadline, attachments, keywords, organization]
 		#[pallet::weight(<T as Config>::WeightInfo::create_task(0,0))]
 		pub fn create_task(origin: OriginFor<T>, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: BalanceOf<T>,
-			deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> DispatchResultWithPostInfo {
+			deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<DaoOf<T>>) -> DispatchResultWithPostInfo {
 
 			// Check that the extrinsic was signed and get the signer.
 			let signer = ensure_signed(origin)?;
 
 			// Update storage.
-			let task_id = Self::new_task(&signer, title, specification, &budget, deadline, attachments, keywords)?;
+			let task_id = Self::new_task(&signer, title, specification, &budget, deadline, attachments, keywords, organization)?;
 
-			// need esistential deposit check?
+			// need existential deposit check?
 			ensure!(<T as self::Config>::Currency::can_reserve(&signer, budget), Error::<T>::NotEnoughBalance);
 			// Reserve currency of the task creator.
 			<T as self::Config>::Currency::reserve(&signer, budget.into()).expect("can_reserve has been called; qed");
@@ -306,11 +305,11 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// Function call that updates a created task.  [ origin, specification, budget, deadline]
+		/// Function call that updates a created task.  [origin, task, title, specification, budget, deadline, attachments, keywords, organization]
 		//	todo: minimum change amount?
 		#[pallet::weight(<T as Config>::WeightInfo::update_task(0,0))]
 		pub fn update_task(origin: OriginFor<T>, task_id: T::Hash, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>,
-			budget: BalanceOf<T>, deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> DispatchResultWithPostInfo {
+			budget: BalanceOf<T>, deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<DaoOf<T>>) -> DispatchResultWithPostInfo {
 
 			// Check that the extrinsic was signed and get the signer.
 			let signer = ensure_signed(origin)?;
@@ -346,8 +345,8 @@ pub mod pallet {
 				}
 			}
 
-			//Update storage after as we need to check if sender can reserve new amount.
-			let _task_id = Self::update_created_task(old_task, &task_id, title, specification, &budget, deadline, attachments, keywords)?;
+			// Update storage after as we need to check if sender can reserve new amount.
+			let _task_id = Self::update_created_task(old_task, &task_id, title, specification, &budget, deadline, attachments, keywords, organization)?;
 
 			// Emit a Task Updated Event.
 			Self::deposit_event(Event::TaskUpdated(signer, task_id));
@@ -454,6 +453,7 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T:Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_initialize(_n: T::BlockNumber) -> frame_support::weights::Weight {
+			// Remove tasks which have not been started, and have passed the deadline
 			let mut weight = 0;
 			let current_timestamp = T::Time::now();
 			let task_hashes : Vec<T::Hash> = Tasks::<T>::iter_keys().collect();
@@ -476,7 +476,7 @@ pub mod pallet {
 	impl<T:Config> Pallet<T> {
 
 		fn new_task(from_initiator: &T::AccountId, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: &BalanceOf<T>,
-			 deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<T::Hash, DispatchError> {
+			 deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<DaoOf<T>>) -> Result<T::Hash, DispatchError> {
 
 			// Ensure user has a profile before creating a task
 			ensure!(pallet_profile::Pallet::<T>::has_profile(from_initiator).unwrap(), <Error<T>>::NoProfile);
@@ -495,7 +495,8 @@ pub mod pallet {
 				deadline,
 				attachments,
 				keywords,
-				feedback: None,
+				feedback: None, // Only used when task is rejected
+				dao: organization,
 				created_at: <frame_system::Pallet<T>>::block_number(),
 				updated_at: Default::default(),
 				completed_at: Default::default(),
@@ -522,7 +523,7 @@ pub mod pallet {
 		// Task can be updated only after it has been created. Task that is already in progress can't be updated.
 		//  Private helper function.
 		fn update_created_task(old_task:Task<T>, task_id: &T::Hash, new_title: BoundedVec<u8, T::MaxTitleLen>, new_specification: BoundedVec<u8, T::MaxSpecificationLen>, new_budget: &BalanceOf<T>,
-			new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>) -> Result<(), DispatchError> {
+			new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<DaoOf<T>>) -> Result<(), DispatchError> {
 
 			let mut new_task: Task<T> = old_task;
 			// Init Task Object
@@ -532,6 +533,7 @@ pub mod pallet {
 			new_task.deadline = new_deadline;
 			new_task.attachments = attachments.clone();
 			new_task.keywords = keywords.clone();
+			new_task.dao = organization;
 			new_task.updated_at = <frame_system::Pallet<T>>::block_number();
 
 			// Insert task into Hashmap
@@ -574,7 +576,6 @@ pub mod pallet {
 
 			Ok(())
 		}
-
 
 		fn mark_finished(to: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
 
@@ -679,7 +680,6 @@ pub mod pallet {
 
 			Ok(())
 		}
-
 
 		fn delete_task(task_initiator: &T::AccountId, task_id: &T::Hash) -> Result<(), DispatchError> {
 
