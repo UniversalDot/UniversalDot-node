@@ -53,6 +53,7 @@
 //! 		- deadline: u64
 //! 		- attachments: BoundedVec,
 //! 		- keywords: BoundedVec
+//! 		- organization: Option<DaoOf<T>>
 //!
 //! - `update_task` - Function used to update already existing task.
 //! 	Inputs:
@@ -63,6 +64,7 @@
 //! 		- deadline: u64,
 //! 		- attachments, BoundedVec
 //! 		- keywords: BoundedVec,
+//! 		- organization: Option<DaoOf<T>>
 //! 	Only the creator of the task has the update rights.
 //!
 //! - `remove_task` - Function used to remove an already existing task.
