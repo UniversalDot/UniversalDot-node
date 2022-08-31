@@ -1,18 +1,17 @@
 [package]
 name = "pallet-did"
-version = '0.7.0'
+version = "0.7.0"
 description = "Decentralized identifiers (DIDs) pallet."
-authors = ['UNIVERSALDOT FOUNDATION <https://github.com/UniversalDot>']
-homepage = 'https://universaldot.foundation'
-edition = '2021'
-license = 'Apache-2.0'
+authors = ["UNIVERSALDOT FOUNDATION <https://github.com/UniversalDot>"]
+homepage = "https://universaldot.foundation"
+edition = "2021"
+license = "Apache-2.0"
 publish = false
 repository = "https://github.com/UniversalDot/universal-dot-node"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
-# dependencies
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
@@ -27,7 +26,6 @@ sp-io = { version = "6.0.0", default-features = false, git = "https://github.com
 sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 sp-std = { version = "4.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 
-# dev dependencies
 [dev-dependencies]
 pallet-balances = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 sp-core = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
