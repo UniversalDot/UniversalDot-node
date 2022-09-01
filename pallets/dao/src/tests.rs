@@ -706,3 +706,16 @@ fn owner_can_not_transfer_ownership_to_itself() {
 
 	});
 }
+
+#[test]
+fn test_org_is_retained_when_multiple_orgs_created() {
+	new_test_ext().execute_with(|| {
+		// ALICE creates 2 organizations. 
+		let org_id_1 = create_organization_1();
+		let org_id_2 = create_organization_2();
+
+		// Assert ALICE is a member of 2 Daos + 2 exist
+		assert!(Dao::member_of(*ALICE).len() == 2);
+		assert!(Dao::organization_count() == 2);
+	});
+}
