@@ -478,7 +478,7 @@ pub mod pallet {
 
 	// *** Helper functions *** //
 	impl<T:Config> Pallet<T> {
-		fn does_organization_exist(org_id: &DaoOf<T>) -> bool {
+		pub fn does_organization_exist(org_id: &DaoOf<T>) -> bool {
 			<Organizations<T>>::contains_key(org_id)
 		}
 
