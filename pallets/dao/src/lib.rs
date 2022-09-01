@@ -175,6 +175,10 @@ pub mod pallet {
 
 		/// WeightInfo provider.
 		type WeightInfo: WeightInfo;
+
+		/// Maximum amount of organizations someone can be a member of.
+		type MaxMemberOfLen: Get<u32> + MaxEncodedLen + TypeInfo;
+
 	}
 
 	#[pallet::pallet]
@@ -195,13 +199,13 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn organizations)]
 	/// Storage for organizations data, key: hash of Dao struct, Value Dao struct.
-	pub(super) type Organizations<T: Config> = StorageMap<_, Twox64Concat, T::Hash, Dao<T>, OptionQuery>;
+	pub(super) type Organizations<T: Config> = StorageMap<_, Twox64Concat, DaoIdOf<T>, Dao<T>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn members)]
 	#[pallet::unbounded]
-	/// Create members of organization storage map with key: Hash and value: Vec<AccountID>
-	pub(super) type Members<T: Config> = StorageMap<_, Twox64Concat, T::Hash, Vec<T::AccountId>, ValueQuery>;
+	/// Create members of organization storage map with key: Hash of Dao, value: Vec<AccountID>
+	pub(super) type Members<T: Config> = StorageMap<_, Twox64Concat, DaoIdOf<T>, Vec<T::AccountId>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn organization_count)]
@@ -212,7 +216,7 @@ pub mod pallet {
 	#[pallet::getter(fn member_of)]
 	#[pallet::unbounded]
 	/// Storage item that indicates which DAO's a user belongs to [AccountID, Vec]
-	pub(super) type MemberOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Vec<DaoIdOf<T>>, ValueQuery>;
+	pub(super) type MemberOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, BoundedVec<DaoIdOf<T>, T::MaxMemberOfLen>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn applicants_to_organization)]
@@ -285,6 +289,8 @@ pub mod pallet {
 		OrganizationAlreadyExists,
 		/// The user is not a member of this organization.
 		NotMember,
+		/// The user if over the maximum amount of organizations allowed to be affiliated with.
+		MaxOrganizationsReached
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -503,7 +509,11 @@ pub mod pallet {
 			<Members<T>>::insert(org_id, vec![from_initiator]);
 
 			// Insert organizations into MemberOf
-			<MemberOf<T>>::insert(&from_initiator, vec![org_id]);
+			let mut organizations_for = <MemberOf<T>>::take(&from_initiator);
+			ensure!(organizations_for.try_push(org_id).is_ok(),
+			Error::<T>::MaxOrganizationsReached);
+			
+			<MemberOf<T>>::set(&from_initiator, organizations_for);
 
 			// Increase organization count
 			let new_count =
@@ -570,11 +580,17 @@ pub mod pallet {
 
 			// Find current organizations and remove org_id from MemberOf user
 			let mut current_organizations = <Pallet<T>>::member_of(&from_initiator);
+			
 			ensure!(current_organizations.iter().any(|a| *a == org_id), Error::<T>::InvalidOrganization);
-			current_organizations = current_organizations.into_iter().filter(|a| *a !=
-				org_id).collect();
-			// Update MemberOf
-			<MemberOf<T>>::insert(&from_initiator, &current_organizations);
+			
+			let current_organizations = current_organizations.into_iter()
+				.filter(|a| *a != org_id)
+				.collect::<Vec<DaoIdOf<T>>>()
+				.try_into()
+				.expect("reducing size of boundedvec; qed");
+			
+				// Update MemberOf
+			<MemberOf<T>>::set(&from_initiator, current_organizations);
 
 			Ok(())
 		}
@@ -597,8 +613,10 @@ pub mod pallet {
 
 			// Insert organizations into MemberOf
 			let mut organizations = Self::member_of(&account);
-			organizations.push(org_id);
-			<MemberOf<T>>::insert(&account, organizations);
+			ensure!(organizations.try_push(org_id).is_ok(),
+			Error::<T>::MaxOrganizationsReached);
+
+			<MemberOf<T>>::set(&account, organizations);	
 
 			Ok(())
 		}
@@ -621,7 +639,7 @@ pub mod pallet {
 			let mut current_organizations = <Pallet<T>>::member_of(&account);
 			ensure!(current_organizations.iter().any(|a| *a == org_id), Error::<T>::InvalidOrganization);
 			current_organizations = current_organizations.into_iter().filter(|a| *a !=
-				org_id).collect();
+				org_id).collect::<Vec<DaoIdOf<T>>>().try_into().expect("reducing size of boundedved; qed");
 			// Update MemberOf
 			<MemberOf<T>>::insert(&account, &current_organizations);
 
