@@ -132,7 +132,7 @@ fn create_new_task(){
 		assert_eq!(deadline, task.deadline);
 		assert_eq!(attachments, task.attachments);
 		assert_eq!(keywords, task.keywords);
-		assert_eq!(organization, task.dao);
+		assert_eq!(organization, task.organization);
 	});
 }
 
@@ -241,7 +241,7 @@ fn verify_inputs_outputs_to_tasks(){
 		assert_eq!(task.title, title());
 		assert_eq!(task.attachments, attachments());
 		assert_eq!(task.keywords, keywords());
-		assert_eq!(task.dao, organization);
+		assert_eq!(task.organization, organization);
 	});
 }
 
@@ -260,7 +260,7 @@ fn task_can_be_updated_after_it_is_created(){
 
 		// assert expected values before change below
 		assert_eq!(task.budget, BUDGET);
-		assert_eq!(task.dao, None);
+		assert_eq!(task.organization, None);
 
 		// Ensure task can be updated
 		let organization = Some(create_organization());
@@ -276,7 +276,7 @@ fn task_can_be_updated_after_it_is_created(){
 		assert_eq!(task.title, title2());
 		assert_eq!(task.attachments, attachments2());
 		assert_eq!(task.keywords, keywords2());
-		assert_eq!(task.dao, organization);
+		assert_eq!(task.organization, organization);
 	});
 }
 
