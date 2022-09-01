@@ -293,12 +293,12 @@ pub mod pallet {
 			let signer = ensure_signed(origin)?;
 
 			ensure!(<T as self::Config>::Currency::can_reserve(&signer, budget), Error::<T>::NotEnoughBalance);
+			
+			// Update storage.
+			let task_id = Self::new_task(&signer, title, specification, &budget, deadline, attachments, keywords)?;
 			// Reserve currency of the task creator.
 			<T as self::Config>::Currency::reserve(&signer, budget.into()).expect("can_reserve has been called; qed");
 
-			// Update storage.
-			let task_id = Self::new_task(&signer, title, specification, &budget, deadline, attachments, keywords)?;
-			
 			// Emit a Task Created Event.
 			Self::deposit_event(Event::TaskCreated(signer, task_id));
 
