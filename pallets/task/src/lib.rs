@@ -111,10 +111,10 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 pub mod weights;
+pub mod traits;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use crate::TaskStatus::Created; 
 	use frame_support::{dispatch::DispatchResult, pallet_prelude::*, traits::UnixTime, PalletId};
 	use frame_system::pallet_prelude::*;
 	use frame_support::{
@@ -124,7 +124,12 @@ pub mod pallet {
 	use scale_info::TypeInfo;
 	use sp_std::vec::Vec;
 	use core::time::Duration;
-	use crate::weights::WeightInfo;
+	use crate::{
+		weights::WeightInfo,
+		TaskStatus::Created,
+		traits::Organization,
+		traits
+	};
 
 	#[cfg(feature = "std")]
 	use frame_support::serde::{Deserialize, Serialize};
@@ -132,7 +137,7 @@ pub mod pallet {
 	// Use AccountId from frame_system
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
 	type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-	type DaoOf<T> = <T as frame_system::Config>::Hash;
+	type OrganizationIdOf<T> = <T as frame_system::Config>::Hash;
 
 	// Struct for holding Task information.
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -153,7 +158,7 @@ pub mod pallet {
 		pub updated_at:<T as frame_system::Config>::BlockNumber,
 		pub completed_at: <T as frame_system::Config>::BlockNumber,
 		/// The organization to which the task belongs.
-		pub dao: Option<DaoOf<T>>
+		pub dao: Option<OrganizationIdOf<T>>
 	}
 
 	// Set TaskStatus enum.
@@ -175,6 +180,9 @@ pub mod pallet {
 
 		/// Currency type that is linked with AccountID
 		type Currency: ReservableCurrency<Self::AccountId>;
+
+		/// Organization type used to verify organization existence
+		type Organization: traits::Organization<Self::Hash>;
 
 		/// Time provider type
 		type Time: UnixTime;
@@ -278,6 +286,8 @@ pub mod pallet {
 		IncorrectDeadlineTimestamp,
 		/// Only Task creator can update the task.
 		OnlyInitiatorUpdatesTask,
+		/// The provided organization identifier does not exist.
+		InvalidOrganization
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -288,10 +298,15 @@ pub mod pallet {
 		/// Function call that creates tasks.  [origin, title, specification, budget, deadline, attachments, keywords, organization]
 		#[pallet::weight(<T as Config>::WeightInfo::create_task(0,0))]
 		pub fn create_task(origin: OriginFor<T>, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: BalanceOf<T>,
-			deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<DaoOf<T>>) -> DispatchResultWithPostInfo {
+			deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>) -> DispatchResultWithPostInfo {
 
 			// Check that the extrinsic was signed and get the signer.
 			let signer = ensure_signed(origin)?;
+
+			// Verify the organization (if provided)
+			if let Some(organization) = organization {
+				ensure!(T::Organization::exists(&organization), Error::<T>::InvalidOrganization);
+			}
 
 			ensure!(<T as self::Config>::Currency::can_reserve(&signer, budget), Error::<T>::NotEnoughBalance);
 			
@@ -311,10 +326,15 @@ pub mod pallet {
 		//	todo: minimum change amount?
 		#[pallet::weight(<T as Config>::WeightInfo::update_task(0,0))]
 		pub fn update_task(origin: OriginFor<T>, task_id: T::Hash, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>,
-			budget: BalanceOf<T>, deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<DaoOf<T>>) -> DispatchResultWithPostInfo {
+			budget: BalanceOf<T>, deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>) -> DispatchResultWithPostInfo {
 
 			// Check that the extrinsic was signed and get the signer.
 			let signer = ensure_signed(origin)?;
+
+			// Verify the organization (if provided)
+			if let Some(organization) = organization {
+				ensure!(T::Organization::exists(&organization), Error::<T>::InvalidOrganization);
+			}
 
 			// Check if task exists
 			let old_task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
@@ -478,7 +498,7 @@ pub mod pallet {
 	impl<T:Config> Pallet<T> {
 
 		fn new_task(from_initiator: &T::AccountId, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: &BalanceOf<T>,
-			 deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<DaoOf<T>>) -> Result<T::Hash, DispatchError> {
+			 deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>) -> Result<T::Hash, DispatchError> {
 
 			// Ensure user has a profile before creating a task
 			ensure!(pallet_profile::Pallet::<T>::has_profile(from_initiator).unwrap(), <Error<T>>::NoProfile);
@@ -525,7 +545,7 @@ pub mod pallet {
 		// Task can be updated only after it has been created. Task that is already in progress can't be updated.
 		//  Private helper function.
 		fn update_created_task(old_task:Task<T>, task_id: &T::Hash, new_title: BoundedVec<u8, T::MaxTitleLen>, new_specification: BoundedVec<u8, T::MaxSpecificationLen>, new_budget: &BalanceOf<T>,
-			new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<DaoOf<T>>) -> Result<(), DispatchError> {
+			new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>) -> Result<(), DispatchError> {
 
 			let mut new_task: Task<T> = old_task;
 			// Init Task Object

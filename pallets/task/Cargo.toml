@@ -12,7 +12,6 @@ repository = "https://github.com/UniversalDot/pallets"
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
 
-# dependencies
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
@@ -29,8 +28,9 @@ sp-std = { version = "4.0.0", default-features = false, git = "https://github.co
 # universal
 pallet-profile = { path = "../profile", version = "0.7.0", default-features = false }
 
-# dev dependencies
 [dev-dependencies]
+pallet-dao = { path = "../dao", version = "0.7.0", default-features = false }
+pallet-did = { path = "../did", version = "0.7.0", default-features = false }
 sp-core = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 sp-io = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
 sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
