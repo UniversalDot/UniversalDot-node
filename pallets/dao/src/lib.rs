@@ -291,10 +291,18 @@ pub mod pallet {
 		OrganizationAlreadyExists,
 		/// The user is not a member of this organization.
 		NotMember,
+<<<<<<< HEAD
 		/// The user if over the maximum amount of organizations allowed to be affiliated with.
 		MaxOrganizationsReached
+=======
+<<<<<<< HEAD
+>>>>>>> 34041aa (fix: MemberOf to be a bounded vec and member can create multiple orgs)
 		/// You cannot create multiple organisations in the same block.
 		AlreadyCreatedOrgThisBlock,
+=======
+		/// The user if over the maximum amount of organizations allowed to be affiliated with.
+		MaxOrganizationsReached
+>>>>>>> a278dfe (fix: MemberOf to be a bounded vec and member can create multiple orgs)
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -556,6 +564,23 @@ pub mod pallet {
 			let new_count = Self::organization_count().saturating_sub(1);
 			<OrganizationCount<T>>::put(new_count);
 
+<<<<<<< HEAD
+=======
+			// Find current organizations and remove org_id from MemberOf user
+			let mut current_organizations = <Pallet<T>>::member_of(&from_initiator);
+			
+			ensure!(current_organizations.iter().any(|a| *a == org_id), Error::<T>::InvalidOrganization);
+			
+			let current_organizations = current_organizations.into_iter()
+				.filter(|a| *a != org_id)
+				.collect::<Vec<DaoIdOf<T>>>()
+				.try_into()
+				.expect("reducing size of boundedvec; qed");
+			
+				// Update MemberOf
+			<MemberOf<T>>::set(&from_initiator, current_organizations);
+
+>>>>>>> a278dfe (fix: MemberOf to be a bounded vec and member can create multiple orgs)
 			Ok(())
 		}
 
@@ -602,10 +627,10 @@ pub mod pallet {
 			// Find current organizations and remove org_id from MemberOf user
 			let mut current_organizations = <Pallet<T>>::member_of(&account);
 			ensure!(current_organizations.iter().any(|a| *a == org_id), Error::<T>::InvalidOrganization);
+
+				// Update MemberOf
 			current_organizations = current_organizations.into_iter().filter(|a| *a !=
 				org_id).collect::<Vec<DaoIdOf<T>>>().try_into().expect("reducing size of boundedved; qed");
-			
-				// Update MemberOf
 			<MemberOf<T>>::insert(&account, &current_organizations);
 
 			Ok(())
