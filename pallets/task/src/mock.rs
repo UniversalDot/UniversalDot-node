@@ -4,14 +4,14 @@ use frame_support::{parameter_types, PalletId};
 use frame_system as system;
 use scale_info::TypeInfo;
 use codec::{Encode, MaxEncodedLen};
-use sp_core::H256;
+use frame_support::once_cell::sync::Lazy;
+use sp_core::{sr25519, H256};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 	BuildStorage,
 	traits::ConstU32
 };
-
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -24,10 +24,12 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Task: pallet_task::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Did: pallet_did::{Pallet, Call, Storage, Event<T>},
+		Dao: pallet_dao::{Pallet, Call, Storage, Event<T>},
 		Profile: pallet_profile::{Pallet, Call, Storage, Event<T>},
 		Time: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+		Task: pallet_task::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -47,7 +49,7 @@ impl system::Config for Test {
 	type BlockNumber = u64;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
-	type AccountId = u128;
+	type AccountId = sr25519::Public;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Header = Header;
 	type Event = Event;
@@ -84,6 +86,40 @@ impl pallet_balances::Config for Test {
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxDescriptionLen: u32 = 64;
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxDaoNameLen: u32 = 64;
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxVisionLen: u32 = 64;
+}
+
+impl pallet_dao::Config for Test {
+	type Event = Event;
+	type MaxDescriptionLen = MaxDescriptionLen;
+	type MaxNameLen = MaxDaoNameLen;
+	type MaxVisionLen = MaxVisionLen;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxNameLen: u32 = 64;
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxValueLen: u32 = 64;
+}
+
+impl pallet_did::Config for Test {
+	type Event = Event;
+	type MaxNameLen = MaxNameLen;
+	type MaxValueLen = MaxValueLen;
+	type Public = sr25519::Public;
+	type Signature = sr25519::Signature;
+	type Time = Time;
 	type WeightInfo = ();
 }
 
@@ -129,6 +165,7 @@ parameter_types! {
 impl pallet_task::Config for Test {
 	type Event = Event;
 	type Currency = Balances;
+	type Organization = Test;
 	type MaxTasksOwned = MaxTasksOwned;
 	type Time = Time;
 	type WeightInfo = ();
@@ -138,14 +175,23 @@ impl pallet_task::Config for Test {
 	type MaxAttachmentsLen = MaxAttachmentsLen;
 	type MaxFeedbackLen = MaxFeedbackLen;
 	type MaxKeywordsLen = MaxKeywordsLen;
-
 }
+
+impl pallet_task::traits::Organization<H256> for Test {
+	fn exists(id: &H256) -> bool {
+		Dao::does_organization_exist(id)
+	}
+}
+
+pub static ALICE : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([1u8; 32])});
+pub static BOB : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([2u8; 32])});
+pub static TED : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([10u8; 32])});
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 	GenesisConfig {
 		balances: BalancesConfig {
-			balances: vec![(1,  1000), (2,  1000), (10, 1000)]
+			balances: vec![(*ALICE,  1000), (*BOB,  1000), (*TED, 1000)]
 		},
 		..Default::default()
 	}
