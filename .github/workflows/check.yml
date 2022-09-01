@@ -2,9 +2,8 @@ name: Check Set-Up & Build
 
 # Controls when the action will run.
 on:
-  # Triggers the workflow on push or pull request events but only for the master branch
-  push:
-    branches: [ universal-develop ]
+  # Triggers the workflow on push or pull request (only for the develop branch)
+  push: # Run checks on all branches
   pull_request:
     branches: [ universal-develop ]
 
@@ -15,30 +14,50 @@ on:
 jobs:
   check:
     # The type of runner that the job will run on
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    env:
+      SKIP_WASM_BUILD: '1' # Skip for all steps, so no wasm32-unknown-unknown target required
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - name: Set-Up
-        run: sudo apt install -y git clang curl libssl-dev llvm libudev-dev
+      # Install and use nightly
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2022-09-01 # Specific version required otherwise new cache each day due to nightly changes
+          override: true
+          components: rustfmt, clippy
 
-      - name: Install Rustup
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          source ~/.cargo/env
-          rustup default stable
-          rustup update nightly
-          rustup update stable
-          rustup target add wasm32-unknown-unknown --toolchain nightly
+      # Setup cache
+      - name: Setup cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "universal-dot-node"
+          key: "check"
+          cache-on-failure: "true" # Building is expensive, try to cache what we have
 
-      - name: Check Build
-        run: |
-          SKIP_WASM_BUILD=1 cargo check --release
+      # Check default and runtime-benchmarks for errors
+      # todo: can probably be removed to just use clippy below, as it supposedly calls cargo check
+      - name: Check
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --features=default,runtime-benchmarks --release
 
-      - name: Check Build for Benchmarking
-        run: >
-          pushd node &&
-          cargo check --features=runtime-benchmarks --release
+      # Run clippy checks (using same arguments as above to re-use built dependencies)
+      - name: Annotate commit with clippy warnings
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --release
+
+#      # Check formatting
+#      - name: Check formatting
+#        uses: actions-rs/cargo@v1
+#        with:
+#          command: fmt
+#          args: --all -- --check
