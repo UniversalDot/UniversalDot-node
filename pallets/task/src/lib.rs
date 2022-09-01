@@ -53,7 +53,7 @@
 //! 		- deadline: u64
 //! 		- attachments: BoundedVec,
 //! 		- keywords: BoundedVec
-//! 		- organization: Option<DaoOf<T>>
+//! 		- organization: Option<OrganizationIdOf<T>>
 //!
 //! - `update_task` - Function used to update already existing task.
 //! 	Inputs:
@@ -64,7 +64,7 @@
 //! 		- deadline: u64,
 //! 		- attachments, BoundedVec
 //! 		- keywords: BoundedVec,
-//! 		- organization: Option<DaoOf<T>>
+//! 		- organization: Option<OrganizationIdOf<T>>
 //! 	Only the creator of the task has the update rights.
 //!
 //! - `remove_task` - Function used to remove an already existing task.
@@ -158,7 +158,7 @@ pub mod pallet {
 		pub updated_at:<T as frame_system::Config>::BlockNumber,
 		pub completed_at: <T as frame_system::Config>::BlockNumber,
 		/// The organization to which the task belongs.
-		pub dao: Option<OrganizationIdOf<T>>
+		pub organization: Option<OrganizationIdOf<T>>
 	}
 
 	// Set TaskStatus enum.
@@ -518,7 +518,7 @@ pub mod pallet {
 				attachments,
 				keywords,
 				feedback: None, // Only used when task is rejected
-				dao: organization,
+				organization: organization,
 				created_at: <frame_system::Pallet<T>>::block_number(),
 				updated_at: Default::default(),
 				completed_at: Default::default(),
@@ -555,7 +555,7 @@ pub mod pallet {
 			new_task.deadline = new_deadline;
 			new_task.attachments = attachments.clone();
 			new_task.keywords = keywords.clone();
-			new_task.dao = organization;
+			new_task.organization = organization;
 			new_task.updated_at = <frame_system::Pallet<T>>::block_number();
 
 			// Insert task into Hashmap
