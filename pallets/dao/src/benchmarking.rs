@@ -22,7 +22,6 @@ use super::*;
 use crate::Pallet as PalletDao;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller, vec};
 use frame_system::RawOrigin;
-use frame_support::sp_runtime::traits::Hash;
 use sp_core::crypto::UncheckedFrom;
 
 const SEED: u32 = 1;
@@ -199,31 +198,6 @@ benchmarks! {
 		assert_last_event::<T>(Event::<T>::MemberAdded (caller, account, org_id).into());
 	}
 
-	add_tasks {
-		/* setup initial state */
-		let caller: T::AccountId = whitelisted_caller();
-
-		let s in 1 .. u8::MAX.into();
-		let name = vec![0u8, s as u8].try_into().unwrap();
-		let description = vec![0u8, s as u8].try_into().unwrap();
-		let vision = vec![0u8, s as u8].try_into().unwrap();
-
-		// Create hash
-		let task_hash_h256 = "task hash";
-		let hash = T::Hashing::hash_of(&task_hash_h256);
-
-		// Create organization before adding members to it
-		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name, description, vision);
-		// let org_id = PalletDao::<T>::get_hash_for_dao(&caller, &name, &description, &vision, 0_u32.into(), 0_u32.into());
-		let org_id = PalletDao::<T>::member_of(&caller)[0];
-
-	}: add_tasks(RawOrigin::Signed(caller.clone()), org_id.clone(), hash.clone())
-		/* the code to be benchmarked */
-	verify {
-		/* verifying final state */
-		assert_last_event::<T>(Event::<T>::TaskAdded (caller, hash, org_id).into());
-	}
-
 	remove_members {
 		/* setup initial state */
 		let caller: T::AccountId = whitelisted_caller();
@@ -250,34 +224,6 @@ benchmarks! {
 		/* verifying final state */
 		assert_eq!(PalletDao::<T>::members(org_id.clone()).len(), 1);
 		assert_last_event::<T>(Event::<T>::MemberRemoved (caller, account, org_id).into());
-	}
-
-	remove_tasks {
-		/* setup initial state */
-		let caller: T::AccountId = whitelisted_caller();
-
-		let s in 1 .. u8::MAX.into();
-		let name = vec![0u8, s as u8].try_into().unwrap();
-		let description = vec![0u8, s as u8].try_into().unwrap();
-		let vision = vec![0u8, s as u8].try_into().unwrap();
-
-		// Create hash
-		let task_hash_h256 = "task hash";
-		let hash = T::Hashing::hash_of(&task_hash_h256);
-
-		// Create organization
-		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name, description, vision);
-		// let org_id = PalletDao::<T>::get_hash_for_dao(&caller, &name, &description, &vision, 0_u32.into(), 0_u32.into());
-		let org_id = PalletDao::<T>::member_of(&caller)[0];
-		// Add task to be removed
-		let _ = PalletDao::<T>::add_tasks(RawOrigin::Signed(caller.clone()).into(), org_id.clone(), hash.clone());
-
-
-	}: remove_tasks(RawOrigin::Signed(caller.clone()), org_id.clone(), hash.clone())
-		/* the code to be benchmarked */
-	verify {
-		/* verifying final state */
-		assert_last_event::<T>(Event::<T>::TaskRemoved (caller, hash, org_id).into());
 	}
 }
 

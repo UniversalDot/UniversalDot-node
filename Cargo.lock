@@ -4207,6 +4207,8 @@ dependencies = [
  "frame-system",
  "log",
  "pallet-balances",
+ "pallet-dao",
+ "pallet-did",
  "pallet-profile",
  "pallet-timestamp",
  "parity-scale-codec",

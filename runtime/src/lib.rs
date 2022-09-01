@@ -285,6 +285,7 @@ parameter_types! {
 impl pallet_task::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
+	type Organization = Runtime;
 	type MaxTasksOwned = MaxTasksOwned;
 	type Time = Timestamp;
 	type WeightInfo = pallet_task::weights::SubstrateWeight<Runtime>;
@@ -294,6 +295,12 @@ impl pallet_task::Config for Runtime {
 	type MaxAttachmentsLen = MaxAttachmentsLen;
 	type MaxFeedbackLen = MaxFeedbackLen;
 	type MaxKeywordsLen = MaxKeywordsLen;
+}
+
+impl pallet_task::traits::Organization<Hash> for Runtime {
+	fn exists(id: &Hash) -> bool {
+		Dao::does_organization_exist(id)
+	}
 }
 
 // Configure the pallet-dao.
