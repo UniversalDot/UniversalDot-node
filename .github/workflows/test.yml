@@ -38,21 +38,26 @@ jobs:
         with:
           shared-key: "tests-v2"
 
-      # Install utility for converting cargo test output to standard format used by CI tools
-      - name: Install cargo2junit
+      # Install cargo-nextest, 60% faster than cargo test and support for junit output format
+      - name: Install cargo-nextest
         uses: actions-rs/install@v0.1
         with:
-          crate: cargo2junit
+          crate: cargo-nextest
           version: latest
 
-      # Run all tests in solution and convert to junit format
-      - name: Run tests
-        run: cargo test --release -- --format json | cargo2junit > results.xml
+      # Create profile with JUnit output enabled
+      - name: Configure CI
+        run:  mkdir .config && echo -e "[profile.ci.junit]\npath = \"junit.xml\"" > .config/nextest.toml
 
-      # Upload test results
-      - name: Upload test results
-        uses: EnricoMi/publish-unit-test-result-action@v2
+      # Run all tests in solution using CI profile created above
+      - name: Run tests
+        run:  cargo nextest run --release --profile ci
+
+      # Report test results
+      - name: Report test results
+        uses: dorny/test-reporter@v1
+        if: success() || failure()    # run this step even if previous step failed
         with:
-          check_name: Test Results
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          files: results.xml
+          name: tests
+          path: target/nextest/ci/junit.xml
+          reporter: jest-junit
