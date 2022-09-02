@@ -202,12 +202,6 @@ pub mod pallet {
 	/// VisionCount: Get total number of submitted Visions in the system
 	pub(super) type VisionCount<T: Config> = StorageValue<_, u64, ValueQuery>;
 
-	//#[pallet::storage]
-	//#[pallet::getter(fn vision)]
-	//#[pallet::unbounded]
-	///// Store Vision document in StorageMap as Vector with value: AccountID, BlockNumber
-	//pub(super) type Vision<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, (T::AccountId, T::BlockNumber)>;
-
 	#[pallet::storage]
 	#[pallet::getter(fn organizations)]
 	/// Storage for organizations data, key: hash of Dao struct, Value Dao struct.
