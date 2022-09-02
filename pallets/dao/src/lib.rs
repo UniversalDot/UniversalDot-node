@@ -145,13 +145,14 @@ pub mod pallet {
 
 	/// Stur
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+	#[scale_info(skip_type_params(T))]
 	pub struct VisionDoc<T: Config> {
 		/// The representation of the vision document.
 		pub vision_literal: BoundedVisionOf<T>,
 		/// The accountid of the vision_literal creator.
 		pub created_by: <T as frame_system::Config>::AccountId,
 		/// The accountid of the last updator.
-		pub updated_by: <T as frame_system::Config>::BlockNumber,
+		pub updated_by: <T as frame_system::Config>::AccountId,
 		/// The Blocknumber the vision was created on. 
 		pub created_on: <T as frame_system::Config>::BlockNumber,
 		/// The Blocknumber the vision was updated on. 
@@ -311,10 +312,10 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
-			Self::member_signs_vision(&who, &org_id)?;
+			Self::member_signs_vision(&who, org_id)?;
 
 			// Emit an event.
-			Self::deposit_event(Event::VisionSigned(who, vision_document));
+			Self::deposit_event(Event::VisionSigned(who, org_id));
 
 			Ok(())
 		}
@@ -326,10 +327,10 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
-			Self::member_unsigns_vision(&who, &org_id)?;
+			Self::member_unsigns_vision(&who, org_id)?;
 
 			// Emit an event.
-			Self::deposit_event(Event::VisionUnsigned(who, vision_document));
+			Self::deposit_event(Event::VisionUnsigned(who, org_id));
 
 			Ok(())
 		}
@@ -375,7 +376,7 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 			
-			Self::update_org(&who, org_id, name, description, vision)?;
+			Self::update_org(who.clone(), org_id, name, description, vision)?;
 
 			Self::deposit_event(Event::OrganizationUpdated(who, org_id));
 
@@ -439,21 +440,22 @@ pub mod pallet {
 
 		fn new_org(from_initiator: &T::AccountId, name: BoundedNameOf<T>, description: BoundedDescriptionOf<T>, vision: BoundedVisionOf<T>) -> Result<DaoIdOf<T>, DispatchError> {
 			let current_block = <frame_system::Pallet<T>>::block_number();
-			let dao = Dao::<T> {
-				name: name,
-				description: description,
-				owner: from_initiator.clone(),
-				vision: vision,
-				created_time: current_block,
-				last_updated: current_block,
-			};
+			
 			let vision_doc = VisionDoc::<T> {
 				vision_literal: vision,
 				created_by: from_initiator.clone(),
 				updated_by: from_initiator.clone(),
 				created_on: current_block,
 				updated_on: current_block,
-			}
+			};
+			let dao = Dao::<T> {
+				name: name,
+				description: description,
+				owner: from_initiator.clone(),
+				vision: vision_doc,
+				created_time: current_block,
+				last_updated: current_block,
+			};
 			let org_id = T::Hashing::hash_of(&dao);
 			//todo
 			// Not needed as the hash will always be different on a given block
@@ -491,11 +493,11 @@ pub mod pallet {
 			})
 		}
 
-		fn update_org(owner : &T::AccountId, org_id: DaoIdOf<T>, name : Option<BoundedNameOf<T>>,
-					  description: Option<BoundedDescriptionOf<T>>, vision: BoundedVisionOf<T>,) -> Result<(), DispatchError> {
+		fn update_org(owner : T::AccountId, org_id: DaoIdOf<T>, name : Option<BoundedNameOf<T>>,
+					  description: Option<BoundedDescriptionOf<T>>, vision: Option<BoundedVisionOf<T>>,) -> Result<(), DispatchError> {
 
 			ensure!(Self::does_organization_exist(&org_id), Error::<T>::InvalidOrganization);
-			Self::is_dao_founder(owner, org_id)?;
+			Self::is_dao_founder(&owner, org_id)?;
 
 			let current_block = <frame_system::Pallet<T>>::block_number();
 			Organizations::<T>::try_mutate(&org_id, |ref mut org| {
@@ -615,9 +617,10 @@ pub mod pallet {
 		}
 
 		fn member_unsigns_vision(from_initiator: &T::AccountId, org_id: DaoIdOf<T>) -> Result<(), DispatchError> {
-
+			
+			//todo
 			// Verify that the specified vision has been created.
-			ensure!(Vision::<T>::contains_key(vision_document), Error::<T>::NoSuchVision);
+			//ensure!(Vision::<T>::contains_key(vision_document), Error::<T>::NoSuchVision);
 
 			let mut members = <Pallet<T>>::applicants_to_organization(org_id);
 
