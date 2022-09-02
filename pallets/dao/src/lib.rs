@@ -295,6 +295,8 @@ pub mod pallet {
 		OrganizationAlreadyExists,
 		/// The user is not a member of this organization.
 		NotMember,
+		/// You cannot create multiple organisations in the same block.
+		AlreadyCreatedOrgThisBlock,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -342,9 +344,11 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
+			// Ensure sender has not created > 1 org in the block
+
 			//TODO: Ensure only visionary can create DAOs
 
-			// call public function to create org
+			// call function to create org
 			let org_id = Self::new_org(&who, name, description, vision)?;
 			let org_account : T::AccountId = UncheckedFrom::unchecked_from(org_id);
 			<pallet_did::Pallet<T>>::set_owner(&who, &org_account, &who);
@@ -457,9 +461,11 @@ pub mod pallet {
 				last_updated: current_block,
 			};
 			let org_id = T::Hashing::hash_of(&dao);
-			//todo
-			// Not needed as the hash will always be different on a given block
-			//ensure!(<Organizations<T>>::get(org_id) == None, <Error<T>>::OrganizationAlreadyExists);
+
+			// Ensures duplicate organisations cannot be created
+			ensure!(<Organizations<T>>::get(org_id) == None, <Error<T>>::OrganizationAlreadyExists);
+
+			// Todo? Ensure an account cannot create multiple orgs in the same block. 
 
 			// Insert Dao struct in Organizations storage
 			<Organizations<T>>::insert(org_id, dao);
