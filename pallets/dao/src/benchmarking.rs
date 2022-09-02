@@ -38,13 +38,11 @@ benchmarks! {
 	sign_vision {
 		/* setup initial state */
 		let caller: T::AccountId = whitelisted_caller();
-
 		
 		let s in 1 .. u8::MAX.into();
 		let name = vec![0u8, s as u8].try_into().unwrap();
 		let description = vec![0u8, s as u8].try_into().unwrap();
 		let vision = vec![0u8, s as u8].try_into().unwrap();
-		
 
 		let _org = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name, description, vision);
 		
@@ -70,7 +68,6 @@ benchmarks! {
 		
 		// Create vision before removing
 		let _ = PalletDao::<T>::sign_vision(RawOrigin::Signed(caller.clone()).into(), org_id);
-
 
 	}: unsign_vision(RawOrigin::Signed(caller.clone()), org_id)
 	verify {
