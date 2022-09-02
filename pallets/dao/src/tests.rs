@@ -93,18 +93,17 @@ fn create_organization_2() -> H256 {
 
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  TESTS  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-//can create vision
+#[test]
+fn only_organisation_owner_can_remove_vision() {
+	new_test_ext().execute_with(|| {
+		let org_id = create_organization_1();
+		// Assert that alice can change the vision.
+		assert_ok!(Dao::update_organization(Origin::signed(*ALICE), org_id, Some(bounded_name()), Some(bounded_description()), Some(vec![12u8; 20].try_into().unwrap())));
 
-//creating_vision_increases_vision_count() 
-
-//fn can_not_create_vision_that_already_exists() {
-
-//fn can_remove_vision() {
-
-//fn removing_vision_decreases_vision_count() {
-
-//fn when_removing_vision_ensure_it_exists() {
-//fn only_vision_owner_can_remove_vision() {
+		// Assert that Bob cannot.
+		assert_noop!(Dao::update_organization(Origin::signed(*BOB), org_id, Some(bounded_name()), Some(bounded_description()), Some(vec![8u8; 10].try_into().unwrap())), Error::<Test>::NotOrganizationOwner);
+	});
+}
 
 //fn user_can_sign_onto_vision() {
 #[test]
