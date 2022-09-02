@@ -3,7 +3,7 @@ name: Test
 # Controls when the action will run.
 on:
   # Triggers the workflow on push or pull request (only for the develop branch)
-  push: # Run checks on all branches
+  push: # Run checks on push to any branch, for early notification of issues
   pull_request:
     branches: [ universal-develop ]
 
@@ -36,9 +36,7 @@ jobs:
       - name: Setup cache
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "universal-dot-node"
-          key: "test"
-          cache-on-failure: "true" # Building is expensive, try to cache what we have
+          shared-key: "tests-v2"
 
       # Install utility for converting cargo test output to standard format used by CI tools
       - name: Install cargo2junit
