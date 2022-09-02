@@ -145,7 +145,7 @@ pub mod pallet {
 
 	/// Stur
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-	pub struct Vision<T: Config> {
+	pub struct VisionDoc<T: Config> {
 		/// The representation of the vision document.
 		pub vision_literal: BoundedVisionOf<T>,
 		/// The accountid of the vision_literal creator.
@@ -163,7 +163,7 @@ pub mod pallet {
 		pub name: BoundedNameOf<T>,
 		pub description: BoundedDescriptionOf<T>,
 		pub owner: AccountOf<T>,
-		pub vision: Vision<T>,
+		pub vision: VisionDoc<T>,
 		pub created_time: <T as frame_system::Config>::BlockNumber,
 		pub last_updated: <T as frame_system::Config>::BlockNumber,
 	}
@@ -230,23 +230,23 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn applicants_to_organization)]
 	#[pallet::unbounded]
-	/// Storage Map to indicate which user agree with a proposed Vision [Vision, Vec[Account]]
-	pub(super) type ApplicantsToOrganization<T: Config> = StorageMap<_, Twox64Concat, Vec<u8>, Vec<T::AccountId>, ValueQuery>;
+	/// Storage Map to indicate which user agree with a proposed Vision of an Organisation [DaoId, Vec[Account]]
+	pub(super) type ApplicantsToOrganization<T: Config> = StorageMap<_, Twox64Concat, DaoIdOf<T>, Vec<T::AccountId>, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Vision successfully created [AccountID, Vec]
-		VisionCreated(T::AccountId, Vec<u8>),
+		///// Vision successfully created [AccountID, DaoIdOf]
+		//VisionCreated(T::AccountId, Vec<u8>),
+//
+		///// Vision removed [AccountID, DaoIdOf]
+		//VisionRemoved(T::AccountId, Vec<u8>),
 
-		/// Vision removed [AccountID, Vec]
-		VisionRemoved(T::AccountId, Vec<u8>),
+		/// Vision signed [AccountID, DaoIdOf]
+		VisionSigned(T::AccountId, DaoIdOf<T>),
 
-		/// Vision signed [AccountID, Vec]
-		VisionSigned(T::AccountId, Vec<u8>),
-
-		/// Vision signed [AccountID, Vec]
-		VisionUnsigned(T::AccountId, Vec<u8>),
+		/// Vision signed [AccountID, DaoIdOf]
+		VisionUnsigned(T::AccountId, DaoIdOf<T>),
 
 		/// DAO Organization was created [AccountID, DAO ID]
 		OrganizationCreated(T::AccountId, DaoIdOf<T>),
@@ -306,71 +306,71 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T>
 		where T::AccountId : UncheckedFrom<T::Hash>,
-	{
-		/// Function for creating a vision and publishing it on chain [origin, vision]
-		#[pallet::weight(<T as Config>::WeightInfo::create_vision(0))]
-		pub fn create_vision(origin: OriginFor<T>, vision_document: Vec<u8>) -> DispatchResult {
-
-			// Check that the extrinsic was signed and get the signer.
-			let sender = ensure_signed(origin)?;
-
-			// Verify that the specified vision has not already been created.
-			ensure!(!Vision::<T>::contains_key(&vision_document), Error::<T>::VisionAlreadyExists);
-
-			// Get the block number from the FRAME System pallet.
-			let current_block = <frame_system::Pallet<T>>::block_number();
-
-			// Store the vision with the sender and block number.
-			Vision::<T>::insert(&vision_document, (&sender, current_block));
-
-			//Increase Vision Count storage
-			let new_count = Self::vision_count().checked_add(1).ok_or(<Error<T>>::VisionCountOverflow)?;
-			<VisionCount<T>>::put(new_count);
-
-			// Emit an event that the claim was created.
-			Self::deposit_event(Event::VisionCreated(sender, vision_document));
-
-			Ok(())
-		}
-
-		/// Function for removing a vision document [origin, vision]
-		#[pallet::weight(<T as Config>::WeightInfo::remove_vision(0))]
-		pub fn remove_vision(origin: OriginFor<T>, vision_document: Vec<u8>) -> DispatchResult {
-
-			// Check that the extrinsic was signed and get the signer.
-			let sender = ensure_signed(origin)?;
-
-			// Verify that the specified vision has been created.
-			ensure!(Vision::<T>::contains_key(&vision_document), Error::<T>::NoSuchVision);
-
-			// Get owner of the vision.
-			// todo: merge with above?
-			let (owner, _) = Vision::<T>::get(&vision_document).ok_or(<Error<T>>::NoSuchVision)?;
-
-			// Verify that sender of the current call is the vision creator
-			ensure!(sender == owner, Error::<T>::NotVisionOwner);
-
-			// Remove vision from storage.
-			Vision::<T>::remove(&vision_document);
-
-			// Reduce vision count
-			let new_count = Self::vision_count().saturating_sub(1);
-			<VisionCount<T>>::put(new_count);
-
-			// Emit an event that the vision was erased.
-			Self::deposit_event(Event::VisionRemoved(sender, vision_document));
-
-			Ok(())
-		}
+	{	
+//
+		//#[pallet::weight(<T as Config>::WeightInfo::create_vision(0))]
+		//pub fn create_vision(origin: OriginFor<T>, vision_document: Vec<u8>) -> DispatchResult {
+//
+		//	// Check that the extrinsic was signed and get the signer.
+		//	let sender = ensure_signed(origin)?;
+//
+		//	// Verify that the specified vision has not already been created.
+		//	ensure!(!Vision::<T>::contains_key(&vision_document), Error::<T>::VisionAlreadyExists);
+//
+		//	// Get the block number from the FRAME System pallet.
+		//	let current_block = <frame_system::Pallet<T>>::block_number();
+//
+		//	// Store the vision with the sender and block number.
+		//	Vision::<T>::insert(&vision_document, (&sender, current_block));
+//
+		//	//Increase Vision Count storage
+		//	let new_count = Self::vision_count().checked_add(1).ok_or(<Error<T>>::VisionCountOverflow)?;
+		//	<VisionCount<T>>::put(new_count);
+//
+		//	// Emit an event that the claim was created.
+		//	Self::deposit_event(Event::VisionCreated(sender, vision_document));
+//
+		//	Ok(())
+		//}
+//
+		///// Function for removing a vision document [origin, vision]
+		//#[pallet::weight(<T as Config>::WeightInfo::remove_vision(0))]
+		//pub fn remove_vision(origin: OriginFor<T>, vision_document: Vec<u8>) -> DispatchResult {
+//
+		//	// Check that the extrinsic was signed and get the signer.
+		//	let sender = ensure_signed(origin)?;
+//
+		//	// Verify that the specified vision has been created.
+		//	ensure!(Vision::<T>::contains_key(&vision_document), Error::<T>::NoSuchVision);
+//
+		//	// Get owner of the vision.
+		//	// todo: merge with above?
+		//	let (owner, _) = Vision::<T>::get(&vision_document).ok_or(<Error<T>>::NoSuchVision)?;
+//
+		//	// Verify that sender of the current call is the vision creator
+		//	ensure!(sender == owner, Error::<T>::NotVisionOwner);
+//
+		//	// Remove vision from storage.
+		//	Vision::<T>::remove(&vision_document);
+//
+		//	// Reduce vision count
+		//	let new_count = Self::vision_count().saturating_sub(1);
+		//	<VisionCount<T>>::put(new_count);
+//
+		//	// Emit an event that the vision was erased.
+		//	Self::deposit_event(Event::VisionRemoved(sender, vision_document));
+//
+		//	Ok(())
+		//}
 
 		/// Function for signing a vision document [origin, vision]
 		#[pallet::weight(<T as Config>::WeightInfo::sign_vision(0))]
-		pub fn sign_vision(origin: OriginFor<T>, vision_document: Vec<u8>) -> DispatchResult {
+		pub fn sign_vision(origin: OriginFor<T>, org_id: DaoIdOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
-			Self::member_signs_vision(&who, &vision_document)?;
+			Self::member_signs_vision(&who, &org_id)?;
 
 			// Emit an event.
 			Self::deposit_event(Event::VisionSigned(who, vision_document));
@@ -380,12 +380,12 @@ pub mod pallet {
 
 		/// Function for unsigning a vision document [origin, vision]
 		#[pallet::weight(<T as Config>::WeightInfo::unsign_vision(0))]
-		pub fn unsign_vision(origin: OriginFor<T>, vision_document: Vec<u8>) -> DispatchResult {
+		pub fn unsign_vision(origin: OriginFor<T>, org_id: DaoIdOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
-			Self::member_unsigns_vision(&who, &vision_document)?;
+			Self::member_unsigns_vision(&who, &org_id)?;
 
 			// Emit an event.
 			Self::deposit_event(Event::VisionUnsigned(who, vision_document));
@@ -429,10 +429,11 @@ pub mod pallet {
 		/// Function for updating organization [origin, org_id, option<name>, option<description>,
 		/// option<vision>
 		#[pallet::weight(<T as Config>::WeightInfo::update_organization(0))]
-		pub fn update_organization(origin: OriginFor<T>, org_id: DaoIdOf<T>, name: Option<BoundedNameOf<T>>, description: Option<BoundedDescriptionOf<T>>, vision: Option<BoundedVisionOf<T>>) -> DispatchResult {
+		pub fn update_organization(origin: OriginFor<T>, org_id: DaoIdOf<T>, name: Option<BoundedNameOf<T>>,
+			description: Option<BoundedDescriptionOf<T>>, vision: Option<BoundedVisionOf<T>>) -> DispatchResult {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
-
+			
 			Self::update_org(&who, org_id, name, description, vision)?;
 
 			Self::deposit_event(Event::OrganizationUpdated(who, org_id));
@@ -495,7 +496,7 @@ pub mod pallet {
 			<Organizations<T>>::contains_key(org_id)
 		}
 
-		fn new_org(from_initiator: &T::AccountId, name: BoundedNameOf<T>, description: BoundedDescriptionOf<T>, vision: BoundedVisionOf<T>) -> Result<DaoIdOf<T>, DispatchError> {
+		fn new_org(from_initiator: &T::AccountId, name: BoundedNameOf<T>, description: BoundedDescriptionOf<T>, vision: VisionDoc<T>) -> Result<DaoIdOf<T>, DispatchError> {
 			let current_block = <frame_system::Pallet<T>>::block_number();
 			let dao = Dao::<T> {
 				name: name,
@@ -542,7 +543,7 @@ pub mod pallet {
 		}
 
 		fn update_org(owner : &T::AccountId, org_id: DaoIdOf<T>, name : Option<BoundedNameOf<T>>,
-					  description: Option<BoundedDescriptionOf<T>>, vision: Option<BoundedVisionOf<T>>,) -> Result<(), DispatchError> {
+					  description: Option<BoundedDescriptionOf<T>>, vision: Option<VisionDoc<T>>,) -> Result<(), DispatchError> {
 			ensure!(Self::does_organization_exist(&org_id), Error::<T>::InvalidOrganization);
 
 			Self::is_dao_founder(owner, org_id)?;
@@ -556,7 +557,7 @@ pub mod pallet {
 						org.description = d;
 					}
 					if let Some(v) = vision {
-						org.vision =v;
+						org.vision = v;
 					}
 					org.last_updated = <frame_system::Pallet<T>>::block_number();
 					Ok(())
@@ -641,42 +642,39 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn member_signs_vision(from_initiator: &T::AccountId, vision_document: &[u8]) -> Result<(), DispatchError> {
+		fn member_signs_vision(from_initiator: &T::AccountId, org_id: DaoIdOf<T>) -> Result<(), DispatchError> {
 
+			//todo:
 			// Verify that the specified vision has been created.
-			ensure!(Vision::<T>::contains_key(vision_document), Error::<T>::NoSuchVision);
+			//ensure!(Vision::<T>::contains_key(vision_document), Error::<T>::NoSuchVision);
 
-			// TODO: Perhaps use vision Hash instead of vision document
-			// let hash_vision = T::Hashing::hash_of(&vision_document);
-
-			let mut members = <Pallet<T>>::applicants_to_organization(vision_document);
+			let mut members = <Pallet<T>>::applicants_to_organization(&org_id);
 
 			// Ensure not signed already
 			ensure!(!members.contains(from_initiator), <Error<T>>::AlreadySigned);
+			
 			members.push(from_initiator.clone());
 
 			// Update storage.
-			<ApplicantsToOrganization<T>>::insert(vision_document, members);
+			<ApplicantsToOrganization<T>>::insert(org_id, members);
 
 			Ok(())
 		}
 
-		fn member_unsigns_vision(from_initiator: &T::AccountId, vision_document: &[u8]) -> Result<(), DispatchError> {
+		fn member_unsigns_vision(from_initiator: &T::AccountId, org_id: DaoIdOf<T>) -> Result<(), DispatchError> {
 
 			// Verify that the specified vision has been created.
 			ensure!(Vision::<T>::contains_key(vision_document), Error::<T>::NoSuchVision);
 
-			// TODO: Perhaps use vision Hash instead of vision document
-			// let hash_vision = T::Hashing::hash_of(&vision_document);
-
-			let mut members = <Pallet<T>>::applicants_to_organization(vision_document);
+			let mut members = <Pallet<T>>::applicants_to_organization(org_id);
 
 			// Ensure not signed already
 			ensure!(members.iter().any(|a| *a == *from_initiator), Error::<T>::NotSigned);
+			
 			members = members.into_iter().filter(|a| *a != *from_initiator).collect();
 
 			// Update storage.
-			<ApplicantsToOrganization<T>>::insert(vision_document, members);
+			<ApplicantsToOrganization<T>>::insert(org_id, members);
 
 			Ok(())
 		}
