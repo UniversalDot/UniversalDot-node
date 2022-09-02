@@ -22,8 +22,8 @@ use super::*;
 use crate::Pallet as PalletDao;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller, vec};
 use frame_system::RawOrigin;
+use frame_support::traits::Get;
 use sp_core::crypto::UncheckedFrom;
-
 const SEED: u32 = 1;
 
 // Helper function to assert event thrown during verification
@@ -35,78 +35,70 @@ benchmarks! {
 	where_clause { where
 		T::AccountId: UncheckedFrom<T::Hash>,
 	}
-	create_vision {
-		/* setup initial state */
-		let caller: T::AccountId = whitelisted_caller();
-
-		let s in 1 .. u8::MAX.into();
-		let vision = vec![0u8, s as u8];
-
-	}: create_vision(RawOrigin::Signed(caller.clone()), vision.clone())
-	verify {
-		/* verifying final state */
-		assert_last_event::<T>(Event::<T>::VisionCreated (caller, vision ).into());
-	}
-
-	remove_vision {
-		/* setup initial state */
-		let caller: T::AccountId = whitelisted_caller();
-
-		let s in 1 .. u8::MAX.into();
-		let vision = vec![0u8, s as u8];
-
-		// Create vision before removing
-		let _ = PalletDao::<T>::create_vision(RawOrigin::Signed(caller.clone()).into(), vision.clone());
-
-	}: remove_vision(RawOrigin::Signed(caller.clone()), vision.clone())
-	verify {
-		/* verifying final state */
-		assert_last_event::<T>(Event::<T>::VisionRemoved (caller, vision ).into());
-	}
-
 	sign_vision {
 		/* setup initial state */
 		let caller: T::AccountId = whitelisted_caller();
 
+		
 		let s in 1 .. u8::MAX.into();
-		let vision = vec![0u8, s as u8];
+		let name = vec![0u8, s as u8].try_into().unwrap();
+		let description = vec![0u8, s as u8].try_into().unwrap();
+		let vision = vec![0u8, s as u8].try_into().unwrap();
+		
 
-		// Create vision before removing
-		let _ = PalletDao::<T>::create_vision(RawOrigin::Signed(caller.clone()).into(), vision.clone());
+		let _org = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name, description, vision);
+		
+		let org_id = PalletDao::<T>::member_of(&caller)[0];
 
-	}: sign_vision(RawOrigin::Signed(caller.clone()), vision.clone())
+	}: sign_vision(RawOrigin::Signed(caller.clone()), org_id)
 	verify {
 		/* verifying final state */
-		assert_last_event::<T>(Event::<T>::VisionSigned (caller, vision ).into());
+		assert_last_event::<T>(Event::<T>::VisionSigned (caller, org_id).into());
 	}
 
 	unsign_vision {
 		/* setup initial state */
 		let caller: T::AccountId = whitelisted_caller();
-
 		let s in 1 .. u8::MAX.into();
-		let vision = vec![0u8, s as u8];
+		let name = vec![0u8, s as u8].try_into().unwrap();
+		let description = vec![0u8, s as u8].try_into().unwrap();
+		let vision = vec![0u8, s as u8].try_into().unwrap();
 
+		let _org = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name, description, vision);
+		
+		let org_id = PalletDao::<T>::member_of(&caller)[0];
+		
 		// Create vision before removing
-		let _ = PalletDao::<T>::create_vision(RawOrigin::Signed(caller.clone()).into(), vision.clone());
-		let _ = PalletDao::<T>::sign_vision(RawOrigin::Signed(caller.clone()).into(), vision.clone());
+		let _ = PalletDao::<T>::sign_vision(RawOrigin::Signed(caller.clone()).into(), org_id);
 
 
-	}: unsign_vision(RawOrigin::Signed(caller.clone()), vision.clone())
+	}: unsign_vision(RawOrigin::Signed(caller.clone()), org_id)
 	verify {
 		/* verifying final state */
-		assert_last_event::<T>(Event::<T>::VisionUnsigned (caller, vision ).into());
+		assert_last_event::<T>(Event::<T>::VisionUnsigned (caller, org_id).into());
 	}
 
 	create_organization {
 		/* setup initial state */
 		let caller: T::AccountId = whitelisted_caller();
 
-		let s in 1 .. u8::MAX.into();
-		let name = vec![0u8, s as u8].try_into().unwrap();
-		let description = vec![0u8, s as u8].try_into().unwrap();
-		let vision = vec![0u8, s as u8].try_into().unwrap();
-
+		// These utilise the config of the pallet for worst case benchmark scenario
+		// as using something less than max may be less costly than expected.
+		// they dynamically change with the runtime logic.
+		let vision: BoundedVisionOf<T> = 
+		vec![2u8; (<T as pallet::Config>::MaxVisionLen::get() - 1) as usize]
+		.try_into()
+		.unwrap(); 
+		
+		let name: BoundedNameOf<T> =
+		vec![0u8; (<T as pallet::Config>::MaxNameLen::get() - 1) as usize]
+		.try_into()
+		.unwrap();
+		
+		let description: BoundedDescriptionOf<T> = 
+		vec![1u8; (<T as pallet::Config>::MaxDescriptionLen::get() - 1) as usize]
+		.try_into()
+		.unwrap();
 
 	}: create_organization(RawOrigin::Signed(caller.clone()), name, description, vision)
 	verify {
@@ -118,17 +110,29 @@ benchmarks! {
 	update_organization {
 		/* setup initial state */
 		let caller: T::AccountId = whitelisted_caller();
-
-		let s in 1 .. u8::MAX.into();
-		let name = vec![0u8, s as u8];
-		let description = vec![0u8, s as u8];
-		let vision = vec![0u8, s as u8];
-
-		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name.clone().try_into().unwrap(),
-			description.clone().try_into().unwrap(), vision.clone().try_into().unwrap());
+		
+		// These utilise the config of the pallet for worst case benchmark scenario
+		// as using something less than max may be less costly than expected.
+		// they dynamically change with the runtime logic.
+		let vision: BoundedVisionOf<T> = 
+		vec![2u8; (<T as pallet::Config>::MaxVisionLen::get() - 1) as usize]
+		.try_into()
+		.unwrap(); 
+		
+		let name: BoundedNameOf<T> =
+		vec![0u8; (<T as pallet::Config>::MaxNameLen::get() - 1) as usize]
+		.try_into()
+		.unwrap();
+		
+		let description: BoundedDescriptionOf<T> = 
+		vec![1u8; (<T as pallet::Config>::MaxDescriptionLen::get() - 1) as usize]
+		.try_into()
+		.unwrap();
+		
+		let _org = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name.clone(), description.clone(), vision.clone());
 		let org_id = PalletDao::<T>::member_of(&caller)[0];
 
-	}: update_organization(RawOrigin::Signed(caller.clone()), org_id, Some(name.try_into().unwrap()), Some(description.try_into().unwrap()), Some(vision.try_into().unwrap()))
+	}: update_organization(RawOrigin::Signed(caller.clone()), org_id, Some(name), Some(description), Some(vision))
 	verify {
 		let hash = PalletDao::<T>::member_of(&caller)[0];
 		assert_last_event::<T>(Event::<T>::OrganizationUpdated(caller, hash.into()).into())

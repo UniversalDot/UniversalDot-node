@@ -103,7 +103,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::BoundedVec;
 pub use pallet::*;
 
 #[cfg(test)]
@@ -116,16 +115,16 @@ mod tests;
 mod benchmarking;
 pub mod weights;
 
-type BoundedDescriptionOf<T> = BoundedVec<u8, <T as Config>::MaxDescriptionLen>;
-type BoundedNameOf<T> = BoundedVec<u8, <T as Config>::MaxNameLen>;
-type BoundedVisionOf<T> = BoundedVec<u8, <T as Config>::MaxVisionLen>;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{dispatch::DispatchResult, pallet_prelude::*};
+	use frame_support::{
+		dispatch::DispatchResult,
+		pallet_prelude::*,
+		sp_runtime::traits::Hash,
+		BoundedVec
+	};
 	use frame_system::pallet_prelude::*;
-	use frame_support::sp_runtime::traits::Hash;
-
 	use sp_core::crypto::UncheckedFrom;
 	use sp_std::vec::Vec;
 	use sp_std::vec;
@@ -136,7 +135,10 @@ pub mod pallet {
 	// Account used in Dao Struct
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
 	type DaoIdOf<T> = <T as frame_system::Config>::Hash;
-
+	pub type BoundedDescriptionOf<T> = BoundedVec<u8, <T as Config>::MaxDescriptionLen>;
+	pub type BoundedNameOf<T> = BoundedVec<u8, <T as Config>::MaxNameLen>;
+	pub type BoundedVisionOf<T> = BoundedVec<u8, <T as Config>::MaxVisionLen>;
+	
 	/// Stur
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
