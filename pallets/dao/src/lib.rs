@@ -202,11 +202,11 @@ pub mod pallet {
 	/// VisionCount: Get total number of submitted Visions in the system
 	pub(super) type VisionCount<T: Config> = StorageValue<_, u64, ValueQuery>;
 
-	#[pallet::storage]
-	#[pallet::getter(fn vision)]
-	#[pallet::unbounded]
-	/// Store Vision document in StorageMap as Vector with value: AccountID, BlockNumber
-	pub(super) type Vision<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, (T::AccountId, T::BlockNumber)>;
+	//#[pallet::storage]
+	//#[pallet::getter(fn vision)]
+	//#[pallet::unbounded]
+	///// Store Vision document in StorageMap as Vector with value: AccountID, BlockNumber
+	//pub(super) type Vision<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, (T::AccountId, T::BlockNumber)>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn organizations)]
@@ -599,9 +599,8 @@ pub mod pallet {
 
 		fn member_signs_vision(from_initiator: &T::AccountId, org_id: DaoIdOf<T>) -> Result<(), DispatchError> {
 
-			//todo:
-			// Verify that the specified vision has been created.
-			//ensure!(Vision::<T>::contains_key(vision_document), Error::<T>::NoSuchVision);
+			// Verify that the specified organization has been created.
+			ensure!(Organizations::<T>::contains_key(org_id), Error::<T>::InvalidOrganization);
 
 			let mut members = <Pallet<T>>::applicants_to_organization(&org_id);
 
@@ -618,9 +617,8 @@ pub mod pallet {
 
 		fn member_unsigns_vision(from_initiator: &T::AccountId, org_id: DaoIdOf<T>) -> Result<(), DispatchError> {
 			
-			//todo
 			// Verify that the specified vision has been created.
-			//ensure!(Vision::<T>::contains_key(vision_document), Error::<T>::NoSuchVision);
+			ensure!(Organizations::<T>::contains_key(org_id), Error::<T>::InvalidOrganization);
 
 			let mut members = <Pallet<T>>::applicants_to_organization(org_id);
 
