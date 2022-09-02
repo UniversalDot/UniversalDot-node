@@ -149,11 +149,13 @@ pub mod pallet {
 		/// The representation of the vision document.
 		pub vision_literal: BoundedVisionOf<T>,
 		/// The accountid of the vision_literal creator.
-		pub creator: <T as frame_system::Config>::AccountId,
+		pub created_by: <T as frame_system::Config>::AccountId,
+		/// The accountid of the last updator.
+		pub updated_by: <T as frame_system::Config>::BlockNumber,
 		/// The Blocknumber the vision was created on. 
 		pub created_on: <T as frame_system::Config>::BlockNumber,
-		/// The accociated Dao of the vision.
-		pub organization_id : DaoIdOf<T>
+		/// The Blocknumber the vision was updated on. 
+		pub updated_on: <T as frame_system::Config>::BlockNumber,
 	}
 
 	// Struct for holding Dao information.
@@ -435,7 +437,7 @@ pub mod pallet {
 			<Organizations<T>>::contains_key(org_id)
 		}
 
-		fn new_org(from_initiator: &T::AccountId, name: BoundedNameOf<T>, description: BoundedDescriptionOf<T>, vision: VisionDoc<T>) -> Result<DaoIdOf<T>, DispatchError> {
+		fn new_org(from_initiator: &T::AccountId, name: BoundedNameOf<T>, description: BoundedDescriptionOf<T>, vision: BoundedVisionOf<T>) -> Result<DaoIdOf<T>, DispatchError> {
 			let current_block = <frame_system::Pallet<T>>::block_number();
 			let dao = Dao::<T> {
 				name: name,
@@ -445,17 +447,25 @@ pub mod pallet {
 				created_time: current_block,
 				last_updated: current_block,
 			};
-
+			let vision_doc = VisionDoc::<T> {
+				vision_literal: vision,
+				created_by: from_initiator.clone(),
+				updated_by: from_initiator.clone(),
+				created_on: current_block,
+				updated_on: current_block,
+			}
 			let org_id = T::Hashing::hash_of(&dao);
-			ensure!(<Organizations<T>>::get(org_id) == None, <Error<T>>::OrganizationAlreadyExists);
+			//todo
+			// Not needed as the hash will always be different on a given block
+			//ensure!(<Organizations<T>>::get(org_id) == None, <Error<T>>::OrganizationAlreadyExists);
 
 			// Insert Dao struct in Organizations storage
 			<Organizations<T>>::insert(org_id, dao);
 
-			// Insert vector into Hashmap
+			// Insert new members into the org storage
 			<Members<T>>::insert(org_id, vec![from_initiator]);
 
-			// Insert organizations into MemberOf
+			// Insert organizations into members storage
 			<MemberOf<T>>::insert(&from_initiator, vec![org_id]);
 
 			// Increase organization count
