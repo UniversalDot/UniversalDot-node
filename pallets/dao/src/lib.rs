@@ -236,12 +236,6 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		///// Vision successfully created [AccountID, DaoIdOf]
-		//VisionCreated(T::AccountId, Vec<u8>),
-//
-		///// Vision removed [AccountID, DaoIdOf]
-		//VisionRemoved(T::AccountId, Vec<u8>),
-
 		/// Vision signed [AccountID, DaoIdOf]
 		VisionSigned(T::AccountId, DaoIdOf<T>),
 
@@ -307,61 +301,6 @@ pub mod pallet {
 	impl<T: Config> Pallet<T>
 		where T::AccountId : UncheckedFrom<T::Hash>,
 	{	
-//
-		//#[pallet::weight(<T as Config>::WeightInfo::create_vision(0))]
-		//pub fn create_vision(origin: OriginFor<T>, vision_document: Vec<u8>) -> DispatchResult {
-//
-		//	// Check that the extrinsic was signed and get the signer.
-		//	let sender = ensure_signed(origin)?;
-//
-		//	// Verify that the specified vision has not already been created.
-		//	ensure!(!Vision::<T>::contains_key(&vision_document), Error::<T>::VisionAlreadyExists);
-//
-		//	// Get the block number from the FRAME System pallet.
-		//	let current_block = <frame_system::Pallet<T>>::block_number();
-//
-		//	// Store the vision with the sender and block number.
-		//	Vision::<T>::insert(&vision_document, (&sender, current_block));
-//
-		//	//Increase Vision Count storage
-		//	let new_count = Self::vision_count().checked_add(1).ok_or(<Error<T>>::VisionCountOverflow)?;
-		//	<VisionCount<T>>::put(new_count);
-//
-		//	// Emit an event that the claim was created.
-		//	Self::deposit_event(Event::VisionCreated(sender, vision_document));
-//
-		//	Ok(())
-		//}
-//
-		///// Function for removing a vision document [origin, vision]
-		//#[pallet::weight(<T as Config>::WeightInfo::remove_vision(0))]
-		//pub fn remove_vision(origin: OriginFor<T>, vision_document: Vec<u8>) -> DispatchResult {
-//
-		//	// Check that the extrinsic was signed and get the signer.
-		//	let sender = ensure_signed(origin)?;
-//
-		//	// Verify that the specified vision has been created.
-		//	ensure!(Vision::<T>::contains_key(&vision_document), Error::<T>::NoSuchVision);
-//
-		//	// Get owner of the vision.
-		//	// todo: merge with above?
-		//	let (owner, _) = Vision::<T>::get(&vision_document).ok_or(<Error<T>>::NoSuchVision)?;
-//
-		//	// Verify that sender of the current call is the vision creator
-		//	ensure!(sender == owner, Error::<T>::NotVisionOwner);
-//
-		//	// Remove vision from storage.
-		//	Vision::<T>::remove(&vision_document);
-//
-		//	// Reduce vision count
-		//	let new_count = Self::vision_count().saturating_sub(1);
-		//	<VisionCount<T>>::put(new_count);
-//
-		//	// Emit an event that the vision was erased.
-		//	Self::deposit_event(Event::VisionRemoved(sender, vision_document));
-//
-		//	Ok(())
-		//}
 
 		/// Function for signing a vision document [origin, vision]
 		#[pallet::weight(<T as Config>::WeightInfo::sign_vision(0))]
