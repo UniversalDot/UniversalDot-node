@@ -502,11 +502,12 @@ pub mod pallet {
 		}
 
 		fn update_org(owner : &T::AccountId, org_id: DaoIdOf<T>, name : Option<BoundedNameOf<T>>,
-					  description: Option<BoundedDescriptionOf<T>>, vision: Option<VisionDoc<T>>,) -> Result<(), DispatchError> {
-			ensure!(Self::does_organization_exist(&org_id), Error::<T>::InvalidOrganization);
+					  description: Option<BoundedDescriptionOf<T>>, vision: BoundedVisionOf<T>,) -> Result<(), DispatchError> {
 
+			ensure!(Self::does_organization_exist(&org_id), Error::<T>::InvalidOrganization);
 			Self::is_dao_founder(owner, org_id)?;
 
+			let current_block = <frame_system::Pallet<T>>::block_number();
 			Organizations::<T>::try_mutate(&org_id, |ref mut org| {
 				if let Some(org) = org {
 					if let Some(n) = name {
@@ -516,9 +517,12 @@ pub mod pallet {
 						org.description = d;
 					}
 					if let Some(v) = vision {
-						org.vision = v;
+						org.vision.vision_literal = v;
+						org.vision.updated_on = current_block;
+						org.vision.updated_by = owner;
 					}
-					org.last_updated = <frame_system::Pallet<T>>::block_number();
+
+					org.last_updated = current_block;
 					Ok(())
 				} else {
 					Err(Error::<T>::InvalidOrganization.into())
