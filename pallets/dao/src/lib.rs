@@ -115,7 +115,6 @@ mod tests;
 mod benchmarking;
 pub mod weights;
 
-
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::{
