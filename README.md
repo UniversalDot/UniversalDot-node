@@ -1,5 +1,8 @@
 # Universaldot Node : Blockchain for creating digital economies
 
+[![Check Set-Up & Build](https://github.com/UniversalDot/universal-dot-node/actions/workflows/check.yml/badge.svg)](https://github.com/UniversalDot/universal-dot-node/actions/workflows/check.yml)
+[![Test](https://github.com/UniversalDot/universal-dot-node/actions/workflows/test.yml/badge.svg)](https://github.com/UniversalDot/universal-dot-node/actions/workflows/test.yml)
+
 ![Logo](https://github.com/UniversalDot/documents/blob/master/logo/rsz_jpg-02.jpg)
 
 In the past, people have created organizations and corporations by obtaining legal status from a government or a state. In the future, organizations and corporations will be created digitally and will have global instead of local reach. UNIVERSALDOT Foundation provides the needed infrastructure for people to organize themselves by creating digital identities and tasks. We enable the creation of a new digital future.
