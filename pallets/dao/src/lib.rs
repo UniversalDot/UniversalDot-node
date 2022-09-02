@@ -44,55 +44,49 @@
 //!
 //! ### Public Functions
 //!
-//! - `create_vision` - Function used to create vision of the future.
-//! 	Inputs:
-//! 		- vision_document: Vec<u8>
-//!
-//! - `remove_vision` - Function used to remove existing vision.
-//! 	Inputs:
-//! 		- vision_document: Vec<u8>
-//!
-//! - `sign_vision` - Function used to sign user to a vision. Signing a vision
-//! indicates interest that the user are interested in creating said vision.
+//! - `sign_vision` - Function used to sign user to a vision associated with
+//! an organization. Signing a vision indicates interest that the user are 
+//! interested in creating said vision.
 //! 	Inputs: 
-//! 		- vision_document: Vec<u8>
+//! 		- organization_id: DaoIdOf<T>
 //!
-//! - `unsign_vision` - Function used to unsign user from a vision. Unsigning a vision
-//! indicates that a user is no longer interested in creating said vision.
+//! - `unsign_vision` - Function used to unsign user from a vision associated with 
+//! an organization. Unsigning a vision indicates that a user is no longer 
+//! interested in creating said vision.
 //! 	Inputs: 
-//! 		- vision_document: Vec<u8>
+//! 		- organization_id: DaoIdOf<T>
 //!
 //! - `create_organization` - Function used to create a DAO organization.
 //! 	Inputs:
-//! 		- name: Vec<u8>
-//! 		- description: Vec<u8>,
-//! 		- vision: Vec<u8>
+//! 		- name: BoundedNameOf<T>
+//! 		- description: BoundedDescriptionOf<T>,
+//! 		- organization_id: DaoIdOf<T>
 //!
 //! - `transfer_ownership` - Function used to transfer ownership of a DAO organization.
 //! 	Inputs:
-//! 		- org_id: Hash
+//! 		- org_id: DaoIdOf<T>
 //! 		- new_owner: AccountID,
 //!
 //! - `update_organization` - Function used to update an existing organization.
 //! 	Inputs:
-//! 		- org_id: Hash
-//! 		- name: Vec<u8>
-//! 		- description: Vec<u8>,
-//! 		- vision: Vec<u8>
+//! 		- org_id: DaoIdOf<T>
+//! 		- name: BoundedNameOf<T>
+//! 		- description: BoundedDescriptionOf<T>,
+//! 		- vision: Option<BoundedVisionOf<T>>
 //!
 //! - `add_members` - Function used for a visionary to add members to his organization.
 //! 	Inputs:
-//! 		- org_id: Hash
+//! 		- org_id: DaoIdOf<T>
 //! 		- account: AccountID
 //!
 //! - `remove_members` - Function used for a visionary to remove members from his organization.
 //! 	Inputs:
-//! 		- org_id: Hash
+//! 		- org_id: DaoIdOf<T>
 //! 		- account: AccountID
 //!
 //! - `dissolve_organization` - Function used for a visionary to dissolve his organization.
 //!		Inputs:
-//! 		- org_id: Hash
+//! 		- org_id: DaoIdOf<T>
 //!
 //! Storage Items:
 //! 	Vision: Vision document 
@@ -343,8 +337,6 @@ pub mod pallet {
 
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
-
-			// Ensure sender has not created > 1 org in the block
 
 			//TODO: Ensure only visionary can create DAOs
 
