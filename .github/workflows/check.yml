@@ -3,7 +3,7 @@ name: Check Set-Up & Build
 # Controls when the action will run.
 on:
   # Triggers the workflow on push or pull request (only for the develop branch)
-  push: # Run checks on all branches
+  push: # Run checks on push to any branch, for early notification of issues
   pull_request:
     branches: [ universal-develop ]
 
@@ -36,9 +36,7 @@ jobs:
       - name: Setup cache
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "universal-dot-node"
-          key: "check"
-          cache-on-failure: "true" # Building is expensive, try to cache what we have
+          shared-key: "checks-v2"
 
       # Check default and runtime-benchmarks for errors
       # todo: can probably be removed to just use clippy below, as it supposedly calls cargo check
