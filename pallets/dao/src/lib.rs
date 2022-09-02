@@ -143,6 +143,19 @@ pub mod pallet {
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
 	type DaoIdOf<T> = <T as frame_system::Config>::Hash;
 
+	/// Stur
+	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+	pub struct Vision<T: Config> {
+		/// The representation of the vision document.
+		pub vision_literal: BoundedVisionOf<T>,
+		/// The accountid of the vision_literal creator.
+		pub creator: <T as frame_system::Config>::AccountId,
+		/// The Blocknumber the vision was created on. 
+		pub created_on: <T as frame_system::Config>::BlockNumber,
+		/// The accociated Dao of the vision.
+		pub organization_id : DaoIdOf<T>
+	}
+
 	// Struct for holding Dao information.
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
@@ -150,7 +163,7 @@ pub mod pallet {
 		pub name: BoundedNameOf<T>,
 		pub description: BoundedDescriptionOf<T>,
 		pub owner: AccountOf<T>,
-		pub vision: BoundedVisionOf<T>,
+		pub vision: Vision<T>,
 		pub created_time: <T as frame_system::Config>::BlockNumber,
 		pub last_updated: <T as frame_system::Config>::BlockNumber,
 	}
