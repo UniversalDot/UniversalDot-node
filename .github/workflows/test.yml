@@ -1,0 +1,60 @@
+name: Test
+
+# Controls when the action will run.
+on:
+  # Triggers the workflow on push or pull request (only for the develop branch)
+  push: # Run checks on all branches
+  pull_request:
+    branches: [ universal-develop ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  test:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    env:
+      SKIP_WASM_BUILD: '1' # Skip for all steps, so no wasm32-unknown-unknown target required
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+
+      # Install and use nightly
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2022-09-01 # Specific version required otherwise new cache each day due to nightly changes
+          override: true
+          components: rustfmt, clippy
+
+      # Setup cache
+      - name: Setup cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "universal-dot-node"
+          key: "test"
+          cache-on-failure: "true" # Building is expensive, try to cache what we have
+
+      # Install utility for converting cargo test output to standard format used by CI tools
+      - name: Install cargo2junit
+        uses: actions-rs/install@v0.1
+        with:
+          crate: cargo2junit
+          version: latest
+
+      # Run all tests in solution and convert to junit format
+      - name: Run tests
+        run: cargo test --release -- --format json | cargo2junit > results.xml
+
+      # Upload test results
+      - name: Upload test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          check_name: Test Results
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          files: results.xml
