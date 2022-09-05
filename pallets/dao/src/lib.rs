@@ -304,7 +304,7 @@ pub mod pallet {
 
 		/// Function for signing a vision document [origin, vision]
 		#[pallet::weight(<T as Config>::WeightInfo::sign_vision(0))]
-		pub fn sign_vision(origin: OriginFor<T>, org_id: DaoIdOf<T>) -> DispatchResult {
+		pub fn apply_to_organization(origin: OriginFor<T>, org_id: DaoIdOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
@@ -319,7 +319,7 @@ pub mod pallet {
 
 		/// Function for unsigning a vision document [origin, vision]
 		#[pallet::weight(<T as Config>::WeightInfo::unsign_vision(0))]
-		pub fn unsign_vision(origin: OriginFor<T>, org_id: DaoIdOf<T>) -> DispatchResult {
+		pub fn remove_application_from_organization(origin: OriginFor<T>, org_id: DaoIdOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
