@@ -50,7 +50,8 @@
 //! 	Inputs: 
 //! 		- organization_id: DaoIdOf<T>
 //!
-//! - `remove_application_from_organization` - Function used to unsign user from a vision associated with 
+//! - `remove_application_from_organization` - Function used to unsign user 
+//! from a vision associated with 
 //! an organization. Unsigning a vision indicates that a user is no longer 
 //! interested in creating said vision.
 //! 	Inputs: 
@@ -67,11 +68,15 @@
 //! 		- org_id: DaoIdOf<T>
 //! 		- new_owner: AccountID,
 //!
+//!
 //! - `update_organization` - Function used to update an existing organization.
+//! WARNING: this function will only update a value if Some(value) is given.
+//! if Some("") is given then the value will be updated to "".
+//! None is used to signify the value has not been changed.
 //! 	Inputs:
 //! 		- org_id: DaoIdOf<T>
-//! 		- name: BoundedNameOf<T>
-//! 		- description: BoundedDescriptionOf<T>,
+//! 		- name: Option<BoundedNameOf<T>>
+//! 		- description: Option<BoundedDescriptionOf<T>>,
 //! 		- vision: Option<BoundedVisionOf<T>>
 //!
 //! - `add_members` - Function used for a visionary to add members to his organization.
@@ -138,7 +143,7 @@ pub mod pallet {
 	pub type BoundedNameOf<T> = BoundedVec<u8, <T as Config>::MaxNameLen>;
 	pub type BoundedVisionOf<T> = BoundedVec<u8, <T as Config>::MaxVisionLen>;
 	
-	/// Stur
+	/// Structure used to hold data associated with a vision.
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
 	pub struct VisionDoc<T: Config> {
@@ -302,8 +307,8 @@ pub mod pallet {
 		where T::AccountId : UncheckedFrom<T::Hash>,
 	{	
 
-		/// Function for signing a vision document [origin, vision]
-		#[pallet::weight(<T as Config>::WeightInfo::sign_vision(0))]
+		/// Function to apply for organisation and sign the vision associated. [origin, org_id]
+		#[pallet::weight(<T as Config>::WeightInfo::apply_to_organization(0))]
 		pub fn apply_to_organization(origin: OriginFor<T>, org_id: DaoIdOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
@@ -317,8 +322,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Function for unsigning a vision document [origin, vision]
-		#[pallet::weight(<T as Config>::WeightInfo::unsign_vision(0))]
+		/// Function for revoking application to organization and vision associated. [origin, org_id]
+		#[pallet::weight(<T as Config>::WeightInfo::remove_application_from_organization(0))]
 		pub fn remove_application_from_organization(origin: OriginFor<T>, org_id: DaoIdOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
@@ -530,16 +535,6 @@ pub mod pallet {
 			// check if its DAO original creator
 			Self::is_dao_founder(from_initiator, org_id)?;
 
-			// Remove Dao struct from Organizations storage
-			<Organizations<T>>::remove(org_id);
-			// Remove organizational instance
-			<Members<T>>::remove(org_id);
-
-
-			// Reduce organization count
-			let new_count = Self::organization_count().saturating_sub(1);
-			<OrganizationCount<T>>::put(new_count);
-
 			// Find current organizations and remove org_id from MemberOf user
 			let mut current_organizations = <Pallet<T>>::member_of(&from_initiator);
 			
@@ -553,6 +548,15 @@ pub mod pallet {
 			
 				// Update MemberOf
 			<MemberOf<T>>::set(&from_initiator, current_organizations);
+
+			// Remove Dao struct from Organizations storage
+			<Organizations<T>>::remove(org_id);
+			// Remove organizational instance
+			<Members<T>>::remove(org_id);
+
+			// Reduce organization count
+			let new_count = Self::organization_count().saturating_sub(1);
+			<OrganizationCount<T>>::put(new_count);
 
 			Ok(())
 		}
