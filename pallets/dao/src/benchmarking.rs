@@ -35,7 +35,7 @@ benchmarks! {
 	where_clause { where
 		T::AccountId: UncheckedFrom<T::Hash>,
 	}
-	sign_vision {
+	apply_to_organization {
 		/* setup initial state */
 		let caller: T::AccountId = whitelisted_caller();
 		
@@ -48,13 +48,13 @@ benchmarks! {
 		
 		let org_id = PalletDao::<T>::member_of(&caller)[0];
 
-	}: sign_vision(RawOrigin::Signed(caller.clone()), org_id)
+	}: apply_to_organization(RawOrigin::Signed(caller.clone()), org_id)
 	verify {
 		/* verifying final state */
 		assert_last_event::<T>(Event::<T>::VisionSigned (caller, org_id).into());
 	}
 
-	unsign_vision {
+	remove_application_from_organization {
 		/* setup initial state */
 		let caller: T::AccountId = whitelisted_caller();
 		let s in 1 .. u8::MAX.into();
@@ -67,9 +67,9 @@ benchmarks! {
 		let org_id = PalletDao::<T>::member_of(&caller)[0];
 		
 		// Create vision before removing
-		let _ = PalletDao::<T>::sign_vision(RawOrigin::Signed(caller.clone()).into(), org_id);
+		let _ = PalletDao::<T>::apply_to_organization(RawOrigin::Signed(caller.clone()).into(), org_id);
 
-	}: unsign_vision(RawOrigin::Signed(caller.clone()), org_id)
+	}: remove_application_from_organization(RawOrigin::Signed(caller.clone()), org_id)
 	verify {
 		/* verifying final state */
 		assert_last_event::<T>(Event::<T>::VisionUnsigned (caller, org_id).into());
