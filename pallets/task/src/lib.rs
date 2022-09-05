@@ -170,6 +170,7 @@ pub mod pallet {
     	InProgress,
 		Completed,
 		Accepted,
+		Dying,
   	}
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -223,11 +224,11 @@ pub mod pallet {
 	//TODO!!!!!!! BOUNDED VEC SIZE
 	#[pallet::storage]
 	/// Tasks: The Tasks that end on a given block number [key: Block Number, value: Vec<TaskId>]
-	pub(super) type ExpiringTasksPerBlock<T: Config> = StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<T::Hash>, 10000>;
+	pub(super) type ExpiringTasksPerBlock<T: Config> = StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<T::Hash, 10000>, ValueQuery>;
 
 	#[pallet::storage]
 	/// Tasks that will be removed from storage on a given block. [key: Block Number, value: Vec<TaskId>]
-	pub(super) type DyingTasksPerBlock<T: Config> = StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<T::Hash>, 10000>;
+	pub(super) type DyingTasksPerBlock<T: Config> = StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<T::Hash, 10000>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn task_count)]
@@ -300,6 +301,8 @@ pub mod pallet {
 		OnlyInitiatorUpdatesTask,
 		/// The provided organization identifier does not exist.
 		InvalidOrganization
+		/// Expiry or Dying Tasks limit reached.
+		ExpiringTaskLimitReached
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -775,6 +778,24 @@ pub mod pallet {
 			}
 
 			Ok(())
+		}
+
+		// Handles the changing of a Task's deadline
+		fn handle_task_deadline_change(task_hash: T::Hash, old_task_deadline: T::BlockNumber, new_task_deadline: T::BlockNumber) -> Result<(), DispatchError> {
+			// Remove from old expiring tasks vec;
+			let mut expiring_blocks = ExpiringTasksPerBlock::<T>::take(old_task_deadline);
+			expiring_blocks = expiring_blocks.iter().filter(|h| h != task_hash).collect();
+			ExpiringTasksPerBlock::<T>::insert(old_task_deadline, expiring_blocks);
+
+			// Add to new expiring tasks vec;
+			expiring_blocks = ExpiringTasksPerBlock::<T>::take(new_task_deadline);
+			expiring_blocks.try_push(task_hash).ok_or(Error::<T>::ExpiringTaskLimitReached);
+			Ok(())
+		}
+
+		//todo
+		fn rejuvinate_dying_task() {
+
 		}
 	}
 }
