@@ -311,12 +311,7 @@ pub mod pallet {
 			ensure!(<T as self::Config>::Currency::can_reserve(&signer, budget), Error::<T>::NotEnoughBalance);
 			
 			// Update storage.
-<<<<<<< HEAD
 			let task_id = Self::new_task(&signer, title, specification, &budget, deadline, attachments, keywords, organization)?;
-
-=======
-			let task_id = Self::new_task(&signer, title, specification, &budget, deadline, attachments, keywords)?;
->>>>>>> f7f284c (fixed another check before writing failed test in tasks)
 			// Reserve currency of the task creator.
 			<T as self::Config>::Currency::reserve(&signer, budget.into()).expect("can_reserve has been called; qed");
 
