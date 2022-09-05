@@ -187,6 +187,9 @@ pub mod pallet {
 		/// Time provider type
 		type Time: UnixTime;
 
+		/// Grace period after a task has expired before it is removed from storage.
+		type TaskLongevityAfterExpiration: Self::BlockNumber;
+
 		/// The maximum amount of tasks a single account can own.
 		#[pallet::constant]
 		type MaxTasksOwned: Get<u32>;
@@ -216,6 +219,15 @@ pub mod pallet {
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
+
+	//TODO!!!!!!! BOUNDED VEC SIZE
+	#[pallet::storage]
+	/// Tasks: The Tasks that end on a given block number [key: Block Number, value: Vec<TaskId>]
+	pub(super) type ExpiringTasksPerBlock<T: Config> = StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<T::Hash>, 10000>;
+
+	#[pallet::storage]
+	/// Tasks that will be removed from storage on a given block. [key: Block Number, value: Vec<TaskId>]
+	pub(super) type DyingTasksPerBlock<T: Config> = StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<T::Hash>, 10000>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn task_count)]
@@ -475,22 +487,28 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T:Config> Hooks<T::BlockNumber> for Pallet<T> {
-		fn on_initialize(_n: T::BlockNumber) -> frame_support::weights::Weight {
+		fn on_initialize(n: T::BlockNumber) -> frame_support::weights::Weight {
 			// Remove tasks which have not been started, and have passed the deadline
 			let mut weight = 0;
 			let current_timestamp = T::Time::now();
-			let task_hashes : Vec<T::Hash> = Tasks::<T>::iter_keys().collect();
-			for th in task_hashes {
-				let task = Tasks::<T>::get(th);
-				if let Some(task) = task {
-					let deadline_duration = Duration::from_millis(task.deadline.saturated_into::<u64>());
-					if deadline_duration < current_timestamp {
-						if let Ok(()) = Self::delete_task(&task.initiator, &th) {
-							weight += 10_000;
-						}
+
+			// Collect all dying and expiring tasks.
+			let expiring_tasks = ExpiringTasksPerBlock::<T>::take(n);
+			let dying_tasks = DyingTasksPerBlock::<T>::take(n);
+
+			// Set the new dying tasks as the old expiring tasks.
+			DyingTasksPerBlock::insert(n + T::TaskLongevityAfterExpiration, expiring_tasks);
+			
+			// Remove all dying tasks from storage.
+			dying_tasks.iter().map(|task_hash| {
+				let maybe_task = Tasks::<T>::get(th)
+				if let Some(task)= maybe_task {
+					if let Ok(()) = Self::delete_task(&task.initiator, &th) {
+						weight += 10_000;
 					}
 				}
-			}
+			});
+
 			weight
 		}
 	}
