@@ -7,13 +7,9 @@ use sp_core::H256;
 
 type OrgEvent = crate::Event<Test>;
 
-fn vision() -> Vec<u8> {
-	vec![1u8, 7]
-}
-
-fn bounded_vision() -> BoundedVec<u8, MaxVisionLen>
+fn vision() -> BoundedVec<u8, MaxVisionLen> 
 {
-	vision().try_into().unwrap()
+	vec![10u8, 50].try_into().expect("too long for config")
 }
 
 fn name() -> Vec<u8> {
@@ -70,7 +66,7 @@ fn last_event() -> OrgEvent {
 fn create_organization_1() -> H256 {
 
 	// Ensure organization can be created
-	assert_ok!(Dao::create_organization(Origin::signed(*ALICE), bounded_name(), bounded_description(), bounded_vision()));
+	assert_ok!(Dao::create_organization(Origin::signed(*ALICE), bounded_name(), bounded_description(), vision()));
 
 	let event = last_event();
 	if let crate::Event::OrganizationCreated(_creator, org_id) = event {
@@ -84,7 +80,7 @@ fn create_organization_1() -> H256 {
 fn create_organization_2() -> H256 {
 
 	// Ensure organization can be created
-	assert_ok!(Dao::create_organization(Origin::signed(*ALICE), bounded_name2(), bounded_description2(), bounded_vision()));
+	assert_ok!(Dao::create_organization(Origin::signed(*ALICE), bounded_name2(), bounded_description2(), vision()));
 	let event = last_event();
 	if let crate::Event::OrganizationCreated(_creator, org_id) = event {
 		return org_id;
@@ -98,181 +94,79 @@ fn create_organization_2() -> H256 {
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  TESTS  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 #[test]
-fn can_create_vision() {
+fn only_organisation_owner_can_remove_vision() {
 	new_test_ext().execute_with(|| {
+		let org_id = create_organization_1();
+		// Assert that alice can change the vision.
+		assert_ok!(Dao::update_organization(Origin::signed(*ALICE), org_id, Some(bounded_name()), Some(bounded_description()), Some(vec![12u8; 20].try_into().unwrap())));
 
-		// Ensure the DAO can create a vision document
-		assert_ok!(Dao::create_vision(Origin::signed(*ALICE), vision()));
+		// Assert that Bob cannot.
+		assert_noop!(Dao::update_organization(Origin::signed(*BOB), org_id, Some(bounded_name()), Some(bounded_description()), Some(vec![8u8; 10].try_into().unwrap())), Error::<Test>::NotOrganizationOwner);
 	});
 }
 
-#[test]
-fn creating_vision_increases_vision_count() {
-	new_test_ext().execute_with(|| {
-
-		// Ensure the DAO can create a vision document
-		assert_ok!(Dao::create_vision(Origin::signed(*ALICE), vision()));
-
-		// Ensure vision count is 1
-		assert_eq!(Dao::vision_count(), 1);
-	});
-}
-
-#[test]
-fn can_not_create_vision_that_already_exists() {
-	new_test_ext().execute_with(|| {
-
-		// Ensure the DAO can create a vision document
-		assert_ok!(Dao::create_vision(Origin::signed(*ALICE), vision()));
-
-		// Ensure the DAO can NOT Create create a vision that already exists
-		assert_noop!(Dao::create_vision(Origin::signed(*ALICE), vision()), Error::<Test>::VisionAlreadyExists);
-	});
-}
-
-#[test]
-fn can_remove_vision() {
-	new_test_ext().execute_with(|| {
-
-		// Ensure the DAO can create a vision document
-		assert_ok!(Dao::create_vision(Origin::signed(*ALICE), vision()));
-
-		// Ensure the DAO can remove a vision document
-		assert_ok!(Dao::remove_vision(Origin::signed(*ALICE), vision()));
-
-		// TODO: Enforce stronger check on Vision test
-		//assert_eq!(Dao::vision(vision()).0, sr25519::Public::from_raw([0_u8; 32]));
-		assert_eq!(Dao::vision(vision()), None);
-	});
-}
-
-#[test]
-fn removing_vision_decreases_vision_count() {
-	new_test_ext().execute_with(|| {
-
-		// Ensure the DAO can create a vision document
-		assert_ok!(Dao::create_vision(Origin::signed(*ALICE), vision()));
-
-		// Ensure vision count is 1
-		assert_eq!(Dao::vision_count(), 1);
-
-		// Ensure the DAO can remove a vision document
-		assert_ok!(Dao::remove_vision(Origin::signed(*ALICE), vision()));
-
-		// Ensure vision count is 0
-		assert_eq!(Dao::vision_count(), 0);
-	});
-}
-
-#[test]
-fn when_removing_vision_ensure_it_exists() {
-	new_test_ext().execute_with(|| {
-
-		// Ensure error is thrown when no vision exists yet
-		assert_noop!(Dao::remove_vision(Origin::signed(*ALICE), vision()), Error::<Test>::NoSuchVision);
-	});
-}
-
-#[test]
-fn only_vision_owner_can_remove_vision() {
-	new_test_ext().execute_with(|| {
-
-		// Ensure the DAO can create a vision document
-		assert_ok!(Dao::create_vision(Origin::signed(*ALICE), vision()));
-
-		// Ensure the vision can not be deleted by user who didn't create it. Created with user 1, deleted with 2
-		assert_noop!(Dao::remove_vision(Origin::signed(*BOB), vision()), Error::<Test>::NotVisionOwner);
-	});
-}
-
-#[test]
-fn user_can_sign_onto_vision() {
-	new_test_ext().execute_with(|| {
-
-		// Ensure the DAO can create a vision document
-		assert_ok!(Dao::create_vision(Origin::signed(*ALICE), vision()));
-
-		// Ensure a user can sign onto vision.
-		assert_ok!(Dao::sign_vision(Origin::signed(*ALICE), vision()));
-
-		// Ensure the length of VisionSigner has increased
-		assert_eq!(Dao::applicants_to_organization(vision()).len(), 1);
-	});
-}
-
+//fn user_can_sign_onto_vision() {
 #[test]
 fn user_can_unsign_from_vision() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure the DAO can create a vision document
-		assert_ok!(Dao::create_vision(Origin::signed(*ALICE), vision()));
+		let org_id = create_organization_1();
 
 		// Ensure a user can sign onto vision.
-		assert_ok!(Dao::sign_vision(Origin::signed(*BOB), vision()));
+		assert_ok!(Dao::apply_to_organization(Origin::signed(*BOB), org_id));
 
 		// Ensure the length of VisionSigners has increased
-		assert_eq!(Dao::applicants_to_organization(vision()).len(), 1);
+		assert_eq!(Dao::applicants_to_organization(org_id).len(), 1);
 
 		// Ensure a user can unsign onto vision.
-		assert_ok!(Dao::unsign_vision(Origin::signed(*BOB), vision()));
+		assert_ok!(Dao::remove_application_from_organization(Origin::signed(*BOB), org_id));
 
 		// Ensure the length of VisionSigners has increased
-		assert_eq!(Dao::applicants_to_organization(vision()).len(), 0);
+		assert_eq!(Dao::applicants_to_organization(org_id).len(), 0);
 	});
 }
 
 #[test]
-fn user_can_sign_onto_vision_if_vision_exists() {
+fn user_can_sign_onto_vision_if_org_exists() {
 	new_test_ext().execute_with(|| {
-
-		// Ensure the DAO can create a vision document
-		assert_ok!(Dao::create_vision(Origin::signed(*ALICE), vision()));
-
-		// Ensure Error is thrown if vision doesn't exist when signing
-		assert_noop!(Dao::sign_vision(Origin::signed(*ALICE), Vec::new()), Error::<Test>::NoSuchVision );
-
+		let org_id_1 = create_organization_1();
+		// Assert that the vision cannot be signed if the given org doesnt exist.		
+		assert_noop!(Dao::apply_to_organization(Origin::signed(*ALICE), H256::from([8u8; 32])), Error::<Test>::InvalidOrganization);
+		assert_ok!(Dao::apply_to_organization(Origin::signed(*ALICE), org_id_1));
 	});
 }
 
 #[test]
-fn user_can_unsign_from_vision_if_vision_exists() {
+fn user_cannot_unsign_if_org_does_not_exist() {
 	new_test_ext().execute_with(|| {
-
-		// Ensure the DAO can create a vision document
-		assert_ok!(Dao::create_vision(Origin::signed(*ALICE), vision()));
+		let org_id_1 = create_organization_1();
 
 		// Ensure Error is thrown if vision doesn't exist when unsigning
-		assert_noop!(Dao::unsign_vision(Origin::signed(*ALICE), Vec::new()), Error::<Test>::NoSuchVision );
-
+		assert_ok!(Dao::apply_to_organization(Origin::signed(*ALICE), org_id_1));
+		assert_noop!(Dao::remove_application_from_organization(Origin::signed(*ALICE), H256::from([8u8; 32])), Error::<Test>::InvalidOrganization);
 	});
 }
 
 #[test]
 fn user_can_sign_onto_vision_only_if_not_signed_previously() {
 	new_test_ext().execute_with(|| {
-
-		// Ensure the DAO can create a vision document
-		assert_ok!(Dao::create_vision(Origin::signed(*ALICE), vision()));
+		let org_id = create_organization_1();
 
 		// Ensure Vision can be signed
-		assert_ok!(Dao::sign_vision(Origin::signed(*BOB), vision()));
+		assert_ok!(Dao::apply_to_organization(Origin::signed(*BOB), org_id));
 
 		// Ensure Error is thrown if vision is already signed
-		assert_noop!(Dao::sign_vision(Origin::signed(*BOB), vision()), Error::<Test>::AlreadySigned );
-
+		assert_noop!(Dao::apply_to_organization(Origin::signed(*BOB), org_id), Error::<Test>::AlreadySigned );
 	});
 }
 
 #[test]
 fn user_can_unsign_from_vision_only_if_signed_previously() {
 	new_test_ext().execute_with(|| {
-
-		// Ensure the DAO can create a vision document
-		assert_ok!(Dao::create_vision(Origin::signed(*ALICE), vision()));
-
+		let org_id = create_organization_1();
 		// Ensure Error is thrown if vision has not been signed previously
-		assert_noop!(Dao::unsign_vision(Origin::signed(*BOB), vision()), Error::<Test>::NotSigned );
-
+		assert_noop!(Dao::remove_application_from_organization(Origin::signed(*BOB), org_id), Error::<Test>::NotSigned );
 	});
 }
 
@@ -290,14 +184,14 @@ fn can_create_an_organization() {
 }
 
 #[test]
-fn cant_create_an_organization_more_than_once_in_same_block() {
+fn cant_create_duplicate_organisations() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure organization can be created
-		assert_ok!(Dao::create_organization(Origin::signed(*ALICE), bounded_name(), bounded_description(), bounded_vision()));
+		assert_ok!(Dao::create_organization(Origin::signed(*ALICE), bounded_name(), bounded_description(), vision()));
 
 		// Ensure that you can't create org with same data in same block
-		assert_noop!(Dao::create_organization(Origin::signed(*ALICE), bounded_name(), bounded_description(), bounded_vision()), crate::Error::<Test>::OrganizationAlreadyExists);
+		assert_noop!(Dao::create_organization(Origin::signed(*ALICE), bounded_name(), bounded_description(), vision()), Error::<Test>::OrganizationAlreadyExists);
 	});
 }
 

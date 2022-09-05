@@ -44,55 +44,54 @@
 //!
 //! ### Public Functions
 //!
-//! - `create_vision` - Function used to create vision of the future.
-//! 	Inputs:
-//! 		- vision_document: Vec<u8>
-//!
-//! - `remove_vision` - Function used to remove existing vision.
-//! 	Inputs:
-//! 		- vision_document: Vec<u8>
-//!
-//! - `sign_vision` - Function used to sign user to a vision. Signing a vision
-//! indicates interest that the user are interested in creating said vision.
+//! - `apply_to_organization` - Function used to sign user to a vision associated with
+//! an organization. Signing a vision indicates interest that the user are 
+//! interested in creating said vision.
 //! 	Inputs: 
-//! 		- vision_document: Vec<u8>
+//! 		- organization_id: OrganizationIdOf<T>
 //!
-//! - `unsign_vision` - Function used to unsign user from a vision. Unsigning a vision
-//! indicates that a user is no longer interested in creating said vision.
+//! - `remove_application_from_organization` - Function used to unsign user 
+//! from a vision associated with 
+//! an organization. Unsigning a vision indicates that a user is no longer 
+//! interested in creating said vision.
 //! 	Inputs: 
-//! 		- vision_document: Vec<u8>
+//! 		- organization_id: OrganizationIdOf<T>
 //!
 //! - `create_organization` - Function used to create a DAO organization.
 //! 	Inputs:
-//! 		- name: Vec<u8>
-//! 		- description: Vec<u8>,
-//! 		- vision: Vec<u8>
+//! 		- name: BoundedNameOf<T>
+//! 		- description: BoundedDescriptionOf<T>,
+//! 		- vision BoundedVisionOf<T>
 //!
 //! - `transfer_ownership` - Function used to transfer ownership of a DAO organization.
 //! 	Inputs:
-//! 		- org_id: Hash
+//! 		- org_id: OrganizationIdOf<T>
 //! 		- new_owner: AccountID,
 //!
+//!
 //! - `update_organization` - Function used to update an existing organization.
+//! WARNING: this function will only update a value if Some(value) is given.
+//! if Some("") is given then the value will be updated to "".
+//! None is used to signify the value has not been changed.
 //! 	Inputs:
-//! 		- org_id: Hash
-//! 		- name: Vec<u8>
-//! 		- description: Vec<u8>,
-//! 		- vision: Vec<u8>
+//! 		- org_id: OrganizationIdOf<T>
+//! 		- name: Option<BoundedNameOf<T>>
+//! 		- description: Option<BoundedDescriptionOf<T>>,
+//! 		- vision: Option<BoundedVisionOf<T>>
 //!
 //! - `add_members` - Function used for a visionary to add members to his organization.
 //! 	Inputs:
-//! 		- org_id: Hash
+//! 		- org_id: OrganizationIdOf<T>
 //! 		- account: AccountID
 //!
 //! - `remove_members` - Function used for a visionary to remove members from his organization.
 //! 	Inputs:
-//! 		- org_id: Hash
+//! 		- org_id: OrganizationIdOf<T>
 //! 		- account: AccountID
 //!
 //! - `dissolve_organization` - Function used for a visionary to dissolve his organization.
 //!		Inputs:
-//! 		- org_id: Hash
+//! 		- org_id: OrganizationIdOf<T>
 //!
 //! Storage Items:
 //! 	Vision: Vision document 
@@ -109,7 +108,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use frame_support::BoundedVec;
 pub use pallet::*;
 
 #[cfg(test)]
@@ -122,16 +120,15 @@ mod tests;
 mod benchmarking;
 pub mod weights;
 
-type BoundedDescriptionOf<T> = BoundedVec<u8, <T as Config>::MaxDescriptionLen>;
-type BoundedNameOf<T> = BoundedVec<u8, <T as Config>::MaxNameLen>;
-type BoundedVisionOf<T> = BoundedVec<u8, <T as Config>::MaxVisionLen>;
-
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{dispatch::DispatchResult, pallet_prelude::*};
+	use frame_support::{
+		dispatch::DispatchResult,
+		pallet_prelude::*,
+		sp_runtime::traits::Hash,
+		BoundedVec
+	};
 	use frame_system::pallet_prelude::*;
-	use frame_support::sp_runtime::traits::Hash;
-
 	use sp_core::crypto::UncheckedFrom;
 	use sp_std::vec::Vec;
 	use sp_std::vec;
@@ -141,7 +138,26 @@ pub mod pallet {
 
 	// Account used in Dao Struct
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
-	type DaoIdOf<T> = <T as frame_system::Config>::Hash;
+	type OrganizationIdOf<T> = <T as frame_system::Config>::Hash;
+	pub type BoundedDescriptionOf<T> = BoundedVec<u8, <T as Config>::MaxDescriptionLen>;
+	pub type BoundedNameOf<T> = BoundedVec<u8, <T as Config>::MaxNameLen>;
+	pub type BoundedVisionOf<T> = BoundedVec<u8, <T as Config>::MaxVisionLen>;
+	
+	/// Structure used to hold data associated with a vision.
+	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+	#[scale_info(skip_type_params(T))]
+	pub struct VisionDoc<T: Config> {
+		/// The representation of the vision document.
+		pub vision_literal: BoundedVisionOf<T>,
+		/// The accountid of the vision_literal creator.
+		pub created_by: <T as frame_system::Config>::AccountId,
+		/// The accountid of the last updator.
+		pub updated_by: <T as frame_system::Config>::AccountId,
+		/// The Blocknumber the vision was created on. 
+		pub created_on: <T as frame_system::Config>::BlockNumber,
+		/// The Blocknumber the vision was updated on. 
+		pub updated_on: <T as frame_system::Config>::BlockNumber,
+	}
 
 	// Struct for holding Dao information.
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -150,7 +166,7 @@ pub mod pallet {
 		pub name: BoundedNameOf<T>,
 		pub description: BoundedDescriptionOf<T>,
 		pub owner: AccountOf<T>,
-		pub vision: BoundedVisionOf<T>,
+		pub vision: VisionDoc<T>,
 		pub created_time: <T as frame_system::Config>::BlockNumber,
 		pub last_updated: <T as frame_system::Config>::BlockNumber,
 	}
@@ -187,12 +203,6 @@ pub mod pallet {
 	pub(super) type VisionCount<T: Config> = StorageValue<_, u64, ValueQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn vision)]
-	#[pallet::unbounded]
-	/// Store Vision document in StorageMap as Vector with value: AccountID, BlockNumber
-	pub(super) type Vision<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, (T::AccountId, T::BlockNumber)>;
-
-	#[pallet::storage]
 	#[pallet::getter(fn organizations)]
 	/// Storage for organizations data, key: hash of Dao struct, Value Dao struct.
 	pub(super) type Organizations<T: Config> = StorageMap<_, Twox64Concat, T::Hash, Dao<T>, OptionQuery>;
@@ -212,46 +222,40 @@ pub mod pallet {
 	#[pallet::getter(fn member_of)]
 	#[pallet::unbounded]
 	/// Storage item that indicates which DAO's a user belongs to [AccountID, Vec]
-	pub(super) type MemberOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Vec<DaoIdOf<T>>, ValueQuery>;
+	pub(super) type MemberOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Vec<OrganizationIdOf<T>>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn applicants_to_organization)]
 	#[pallet::unbounded]
-	/// Storage Map to indicate which user agree with a proposed Vision [Vision, Vec[Account]]
-	pub(super) type ApplicantsToOrganization<T: Config> = StorageMap<_, Twox64Concat, Vec<u8>, Vec<T::AccountId>, ValueQuery>;
+	/// Storage Map to indicate which user agree with a proposed Vision of an Organisation [DaoId, Vec[Account]]
+	pub(super) type ApplicantsToOrganization<T: Config> = StorageMap<_, Twox64Concat, OrganizationIdOf<T>, Vec<T::AccountId>, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Vision successfully created [AccountID, Vec]
-		VisionCreated(T::AccountId, Vec<u8>),
+		/// Vision signed [AccountID, DaoIdOf]
+		VisionSigned(T::AccountId, OrganizationIdOf<T>),
 
-		/// Vision removed [AccountID, Vec]
-		VisionRemoved(T::AccountId, Vec<u8>),
-
-		/// Vision signed [AccountID, Vec]
-		VisionSigned(T::AccountId, Vec<u8>),
-
-		/// Vision signed [AccountID, Vec]
-		VisionUnsigned(T::AccountId, Vec<u8>),
+		/// Vision signed [AccountID, DaoIdOf]
+		VisionUnsigned(T::AccountId, OrganizationIdOf<T>),
 
 		/// DAO Organization was created [AccountID, DAO ID]
-		OrganizationCreated(T::AccountId, DaoIdOf<T>),
+		OrganizationCreated(T::AccountId, OrganizationIdOf<T>),
 
 		/// DAO Owner changed [old owner id, DAO ID, new owner id]
-		OrganizationOwnerChanged(T::AccountId, DaoIdOf<T>, T::AccountId),
+		OrganizationOwnerChanged(T::AccountId, OrganizationIdOf<T>, T::AccountId),
 
 		/// DAO Organization updated [owner, DAO ID]
-		OrganizationUpdated(T::AccountId, DaoIdOf<T>),
+		OrganizationUpdated(T::AccountId, OrganizationIdOf<T>),
 
 		/// DAO Organization was dissolved [AccountID, DAO ID]
-		OrganizationDissolved(T::AccountId, DaoIdOf<T>),
+		OrganizationDissolved(T::AccountId, OrganizationIdOf<T>),
 
 		/// Member has been added to an organization [AccountID, AccountID, DAO ID]
-		MemberAdded(T::AccountId, T::AccountId, DaoIdOf<T>),
+		MemberAdded(T::AccountId, T::AccountId, OrganizationIdOf<T>),
 
 		/// Member removed from an organization [AccountID, AccountID, DAO ID]
-		MemberRemoved(T::AccountId, T::AccountId, DaoIdOf<T>),
+		MemberRemoved(T::AccountId, T::AccountId, OrganizationIdOf<T>),
 	}
 
 	// Errors inform users that something went wrong.
@@ -285,6 +289,8 @@ pub mod pallet {
 		OrganizationAlreadyExists,
 		/// The user is not a member of this organization.
 		NotMember,
+		/// You cannot create multiple organisations in the same block.
+		AlreadyCreatedOrgThisBlock,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -293,89 +299,34 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T>
 		where T::AccountId : UncheckedFrom<T::Hash>,
-	{
-		/// Function for creating a vision and publishing it on chain [origin, vision]
-		#[pallet::weight(<T as Config>::WeightInfo::create_vision(0))]
-		pub fn create_vision(origin: OriginFor<T>, vision_document: Vec<u8>) -> DispatchResult {
+	{	
 
-			// Check that the extrinsic was signed and get the signer.
-			let sender = ensure_signed(origin)?;
-
-			// Verify that the specified vision has not already been created.
-			ensure!(!Vision::<T>::contains_key(&vision_document), Error::<T>::VisionAlreadyExists);
-
-			// Get the block number from the FRAME System pallet.
-			let current_block = <frame_system::Pallet<T>>::block_number();
-
-			// Store the vision with the sender and block number.
-			Vision::<T>::insert(&vision_document, (&sender, current_block));
-
-			//Increase Vision Count storage
-			let new_count = Self::vision_count().checked_add(1).ok_or(<Error<T>>::VisionCountOverflow)?;
-			<VisionCount<T>>::put(new_count);
-
-			// Emit an event that the claim was created.
-			Self::deposit_event(Event::VisionCreated(sender, vision_document));
-
-			Ok(())
-		}
-
-		/// Function for removing a vision document [origin, vision]
-		#[pallet::weight(<T as Config>::WeightInfo::remove_vision(0))]
-		pub fn remove_vision(origin: OriginFor<T>, vision_document: Vec<u8>) -> DispatchResult {
-
-			// Check that the extrinsic was signed and get the signer.
-			let sender = ensure_signed(origin)?;
-
-			// Verify that the specified vision has been created.
-			ensure!(Vision::<T>::contains_key(&vision_document), Error::<T>::NoSuchVision);
-
-			// Get owner of the vision.
-			// todo: merge with above?
-			let (owner, _) = Vision::<T>::get(&vision_document).ok_or(<Error<T>>::NoSuchVision)?;
-
-			// Verify that sender of the current call is the vision creator
-			ensure!(sender == owner, Error::<T>::NotVisionOwner);
-
-			// Remove vision from storage.
-			Vision::<T>::remove(&vision_document);
-
-			// Reduce vision count
-			let new_count = Self::vision_count().saturating_sub(1);
-			<VisionCount<T>>::put(new_count);
-
-			// Emit an event that the vision was erased.
-			Self::deposit_event(Event::VisionRemoved(sender, vision_document));
-
-			Ok(())
-		}
-
-		/// Function for signing a vision document [origin, vision]
+		/// Function to apply for organisation and sign the vision associated. [origin, org_id]
 		#[pallet::weight(<T as Config>::WeightInfo::sign_vision(0))]
-		pub fn sign_vision(origin: OriginFor<T>, vision_document: Vec<u8>) -> DispatchResult {
+		pub fn apply_to_organization(origin: OriginFor<T>, org_id: OrganizationIdOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
-			Self::member_signs_vision(&who, &vision_document)?;
+			Self::member_signs_vision(&who, org_id)?;
 
 			// Emit an event.
-			Self::deposit_event(Event::VisionSigned(who, vision_document));
+			Self::deposit_event(Event::VisionSigned(who, org_id));
 
 			Ok(())
 		}
 
-		/// Function for unsigning a vision document [origin, vision]
+		/// Function for revoking application to organization and vision associated. [origin, org_id]
 		#[pallet::weight(<T as Config>::WeightInfo::unsign_vision(0))]
-		pub fn unsign_vision(origin: OriginFor<T>, vision_document: Vec<u8>) -> DispatchResult {
+		pub fn remove_application_from_organization(origin: OriginFor<T>, org_id: OrganizationIdOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
-			Self::member_unsigns_vision(&who, &vision_document)?;
+			Self::member_unsigns_vision(&who, org_id)?;
 
 			// Emit an event.
-			Self::deposit_event(Event::VisionUnsigned(who, vision_document));
+			Self::deposit_event(Event::VisionUnsigned(who, org_id));
 
 			Ok(())
 		}
@@ -389,7 +340,7 @@ pub mod pallet {
 
 			//TODO: Ensure only visionary can create DAOs
 
-			// call public function to create org
+			// call function to create org
 			let org_id = Self::new_org(&who, name, description, vision)?;
 			let org_account : T::AccountId = UncheckedFrom::unchecked_from(org_id);
 			<pallet_did::Pallet<T>>::set_owner(&who, &org_account, &who);
@@ -402,7 +353,7 @@ pub mod pallet {
 
 		/// Transfer ownership of dao to other user.
 		#[pallet::weight(<T as Config>::WeightInfo::transfer_ownership(0))]
-		pub fn transfer_ownership(origin: OriginFor<T>, org_id: DaoIdOf<T>, new_owner: T::AccountId) -> DispatchResult {
+		pub fn transfer_ownership(origin: OriginFor<T>, org_id: OrganizationIdOf<T>, new_owner: T::AccountId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let _ = Self::change_owner(&who, org_id, &new_owner)?;
 			let org_account : T::AccountId = UncheckedFrom::unchecked_from(org_id);
@@ -416,11 +367,12 @@ pub mod pallet {
 		/// Function for updating organization [origin, org_id, option<name>, option<description>,
 		/// option<vision>
 		#[pallet::weight(<T as Config>::WeightInfo::update_organization(0))]
-		pub fn update_organization(origin: OriginFor<T>, org_id: DaoIdOf<T>, name: Option<BoundedNameOf<T>>, description: Option<BoundedDescriptionOf<T>>, vision: Option<BoundedVisionOf<T>>) -> DispatchResult {
+		pub fn update_organization(origin: OriginFor<T>, org_id: OrganizationIdOf<T>, name: Option<BoundedNameOf<T>>,
+			description: Option<BoundedDescriptionOf<T>>, vision: Option<BoundedVisionOf<T>>) -> DispatchResult {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
-
-			Self::update_org(&who, org_id, name, description, vision)?;
+			
+			Self::update_org(who.clone(), org_id, name, description, vision)?;
 
 			Self::deposit_event(Event::OrganizationUpdated(who, org_id));
 
@@ -429,7 +381,7 @@ pub mod pallet {
 
 		/// Function for adding member to an organization [origin, org_id, AccountID]
 		#[pallet::weight(<T as Config>::WeightInfo::add_members(0))]
-		pub fn add_members(origin: OriginFor<T>, org_id: DaoIdOf<T>, account: T::AccountId) -> DispatchResult {
+		pub fn add_members(origin: OriginFor<T>, org_id: OrganizationIdOf<T>, account: T::AccountId) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
@@ -445,7 +397,7 @@ pub mod pallet {
 
 		/// Function for removing member from an organization [origin, org_id, AccountID]
 		#[pallet::weight(<T as Config>::WeightInfo::remove_members(0))]
-		pub fn remove_members(origin: OriginFor<T>, org_id: DaoIdOf<T>, account: T::AccountId) -> DispatchResult {
+		pub fn remove_members(origin: OriginFor<T>, org_id: OrganizationIdOf<T>, account: T::AccountId) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
@@ -461,7 +413,7 @@ pub mod pallet {
 
 		/// Function for dissolving an organization [origin, org_id]
 		#[pallet::weight(<T as Config>::WeightInfo::dissolve_organization(0))]
-		pub fn dissolve_organization(origin: OriginFor<T>, org_id: DaoIdOf<T>) -> DispatchResult {
+		pub fn dissolve_organization(origin: OriginFor<T>, org_id: OrganizationIdOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
@@ -478,31 +430,42 @@ pub mod pallet {
 
 	// *** Helper functions *** //
 	impl<T:Config> Pallet<T> {
-		pub fn does_organization_exist(org_id: &DaoIdOf<T>) -> bool {
+		pub fn does_organization_exist(org_id: &OrganizationIdOf<T>) -> bool {
 			<Organizations<T>>::contains_key(org_id)
 		}
 
-		fn new_org(from_initiator: &T::AccountId, name: BoundedNameOf<T>, description: BoundedDescriptionOf<T>, vision: BoundedVisionOf<T>) -> Result<DaoIdOf<T>, DispatchError> {
+		fn new_org(from_initiator: &T::AccountId, name: BoundedNameOf<T>, description: BoundedDescriptionOf<T>, vision: BoundedVisionOf<T>) -> Result<OrganizationIdOf<T>, DispatchError> {
 			let current_block = <frame_system::Pallet<T>>::block_number();
+			
+			let vision_doc = VisionDoc::<T> {
+				vision_literal: vision,
+				created_by: from_initiator.clone(),
+				updated_by: from_initiator.clone(),
+				created_on: current_block,
+				updated_on: current_block,
+			};
 			let dao = Dao::<T> {
 				name: name,
 				description: description,
 				owner: from_initiator.clone(),
-				vision: vision,
+				vision: vision_doc,
 				created_time: current_block,
 				last_updated: current_block,
 			};
-
 			let org_id = T::Hashing::hash_of(&dao);
+
+			// Ensures duplicate organisations cannot be created
 			ensure!(<Organizations<T>>::get(org_id) == None, <Error<T>>::OrganizationAlreadyExists);
+
+			// Todo? Ensure an account cannot create multiple orgs in the same block. 
 
 			// Insert Dao struct in Organizations storage
 			<Organizations<T>>::insert(org_id, dao);
 
-			// Insert vector into Hashmap
+			// Insert new members into the org storage
 			<Members<T>>::insert(org_id, vec![from_initiator]);
 
-			// Insert organizations into MemberOf
+			// Insert organizations into members storage
 			<MemberOf<T>>::insert(&from_initiator, vec![org_id]);
 
 			// Increase organization count
@@ -512,7 +475,7 @@ pub mod pallet {
 			Ok(org_id)
 		}
 
-		fn change_owner(owner : &T::AccountId, org_id: DaoIdOf<T>, new_owner : &T::AccountId) -> Result<(), DispatchError> {
+		fn change_owner(owner : &T::AccountId, org_id: OrganizationIdOf<T>, new_owner : &T::AccountId) -> Result<(), DispatchError> {
 
 			ensure!(Self::does_organization_exist(&org_id), Error::<T>::InvalidOrganization);
 
@@ -528,12 +491,13 @@ pub mod pallet {
 			})
 		}
 
-		fn update_org(owner : &T::AccountId, org_id: DaoIdOf<T>, name : Option<BoundedNameOf<T>>,
+		fn update_org(owner : T::AccountId, org_id: OrganizationIdOf<T>, name : Option<BoundedNameOf<T>>,
 					  description: Option<BoundedDescriptionOf<T>>, vision: Option<BoundedVisionOf<T>>,) -> Result<(), DispatchError> {
+
 			ensure!(Self::does_organization_exist(&org_id), Error::<T>::InvalidOrganization);
+			Self::is_dao_founder(&owner, org_id)?;
 
-			Self::is_dao_founder(owner, org_id)?;
-
+			let current_block = <frame_system::Pallet<T>>::block_number();
 			Organizations::<T>::try_mutate(&org_id, |ref mut org| {
 				if let Some(org) = org {
 					if let Some(n) = name {
@@ -543,9 +507,12 @@ pub mod pallet {
 						org.description = d;
 					}
 					if let Some(v) = vision {
-						org.vision =v;
+						org.vision.vision_literal = v;
+						org.vision.updated_on = current_block;
+						org.vision.updated_by = owner;
 					}
-					org.last_updated = <frame_system::Pallet<T>>::block_number();
+
+					org.last_updated = current_block;
 					Ok(())
 				} else {
 					Err(Error::<T>::InvalidOrganization.into())
@@ -553,20 +520,10 @@ pub mod pallet {
 			})
 		}
 
-		fn remove_org(from_initiator: &T::AccountId, org_id: DaoIdOf<T>) -> Result<(), DispatchError> {
+		fn remove_org(from_initiator: &T::AccountId, org_id: OrganizationIdOf<T>) -> Result<(), DispatchError> {
 
 			// check if its DAO original creator
 			Self::is_dao_founder(from_initiator, org_id)?;
-
-			// Remove Dao struct from Organizations storage
-			<Organizations<T>>::remove(org_id);
-			// Remove organizational instance
-			<Members<T>>::remove(org_id);
-
-
-			// Reduce organization count
-			let new_count = Self::organization_count().saturating_sub(1);
-			<OrganizationCount<T>>::put(new_count);
 
 			// Find current organizations and remove org_id from MemberOf user
 			let mut current_organizations = <Pallet<T>>::member_of(&from_initiator);
@@ -576,10 +533,19 @@ pub mod pallet {
 			// Update MemberOf
 			<MemberOf<T>>::insert(&from_initiator, &current_organizations);
 
+			// Remove Dao struct from Organizations storage
+			<Organizations<T>>::remove(org_id);
+			// Remove organizational instance
+			<Members<T>>::remove(org_id);
+
+			// Reduce organization count
+			let new_count = Self::organization_count().saturating_sub(1);
+			<OrganizationCount<T>>::put(new_count);
+
 			Ok(())
 		}
 
-		fn add_member_to_organization(from_initiator: &T::AccountId, org_id: DaoIdOf<T>, account: &T::AccountId ) -> Result<(), DispatchError> {
+		fn add_member_to_organization(from_initiator: &T::AccountId, org_id: OrganizationIdOf<T>, account: &T::AccountId ) -> Result<(), DispatchError> {
 			// Check if organization exists
 			ensure!(Self::does_organization_exist(&org_id), Error::<T>::InvalidOrganization);
 
@@ -603,7 +569,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn remove_member_from_organization(from_initiator: &T::AccountId, org_id: DaoIdOf<T>, account: &T::AccountId ) -> Result<(), DispatchError> {
+		fn remove_member_from_organization(from_initiator: &T::AccountId, org_id: OrganizationIdOf<T>, account: &T::AccountId ) -> Result<(), DispatchError> {
 			// Check if organization exists
 			ensure!(Self::does_organization_exist(&org_id), Error::<T>::InvalidOrganization);
 			let mut members = <Pallet<T>>::members(org_id);
@@ -628,47 +594,43 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn member_signs_vision(from_initiator: &T::AccountId, vision_document: &[u8]) -> Result<(), DispatchError> {
+		fn member_signs_vision(from_initiator: &T::AccountId, org_id: OrganizationIdOf<T>) -> Result<(), DispatchError> {
 
-			// Verify that the specified vision has been created.
-			ensure!(Vision::<T>::contains_key(vision_document), Error::<T>::NoSuchVision);
+			// Verify that the specified organization has been created.
+			ensure!(Organizations::<T>::contains_key(org_id), Error::<T>::InvalidOrganization);
 
-			// TODO: Perhaps use vision Hash instead of vision document
-			// let hash_vision = T::Hashing::hash_of(&vision_document);
-
-			let mut members = <Pallet<T>>::applicants_to_organization(vision_document);
+			let mut members = <Pallet<T>>::applicants_to_organization(&org_id);
 
 			// Ensure not signed already
 			ensure!(!members.contains(from_initiator), <Error<T>>::AlreadySigned);
+			
 			members.push(from_initiator.clone());
 
 			// Update storage.
-			<ApplicantsToOrganization<T>>::insert(vision_document, members);
+			<ApplicantsToOrganization<T>>::insert(org_id, members);
 
 			Ok(())
 		}
 
-		fn member_unsigns_vision(from_initiator: &T::AccountId, vision_document: &[u8]) -> Result<(), DispatchError> {
-
+		fn member_unsigns_vision(from_initiator: &T::AccountId, org_id: OrganizationIdOf<T>) -> Result<(), DispatchError> {
+			
 			// Verify that the specified vision has been created.
-			ensure!(Vision::<T>::contains_key(vision_document), Error::<T>::NoSuchVision);
+			ensure!(Organizations::<T>::contains_key(org_id), Error::<T>::InvalidOrganization);
 
-			// TODO: Perhaps use vision Hash instead of vision document
-			// let hash_vision = T::Hashing::hash_of(&vision_document);
-
-			let mut members = <Pallet<T>>::applicants_to_organization(vision_document);
+			let mut members = <Pallet<T>>::applicants_to_organization(org_id);
 
 			// Ensure not signed already
 			ensure!(members.iter().any(|a| *a == *from_initiator), Error::<T>::NotSigned);
+			
 			members = members.into_iter().filter(|a| *a != *from_initiator).collect();
 
 			// Update storage.
-			<ApplicantsToOrganization<T>>::insert(vision_document, members);
+			<ApplicantsToOrganization<T>>::insert(org_id, members);
 
 			Ok(())
 		}
 
-		fn is_dao_founder(from_initiator: &T::AccountId, org_id: DaoIdOf<T>) -> Result<bool, DispatchError> {
+		fn is_dao_founder(from_initiator: &T::AccountId, org_id: OrganizationIdOf<T>) -> Result<bool, DispatchError> {
 			let org = Organizations::<T>::get(org_id).ok_or(Error::<T>::InvalidOrganization)?;
 			if org.owner == *from_initiator {
 				Ok(true)
