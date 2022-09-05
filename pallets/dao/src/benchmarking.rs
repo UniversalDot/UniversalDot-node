@@ -35,7 +35,7 @@ benchmarks! {
 	where_clause { where
 		T::AccountId: UncheckedFrom<T::Hash>,
 	}
-	apply_to_organization {
+	sign_vision {
 		/* setup initial state */
 		let caller: T::AccountId = whitelisted_caller();
 		
@@ -54,7 +54,7 @@ benchmarks! {
 		assert_last_event::<T>(Event::<T>::VisionSigned (caller, org_id).into());
 	}
 
-	remove_application_from_organization {
+	unsign_vision {
 		/* setup initial state */
 		let caller: T::AccountId = whitelisted_caller();
 		let s in 1 .. u8::MAX.into();

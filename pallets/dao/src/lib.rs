@@ -302,7 +302,7 @@ pub mod pallet {
 	{	
 
 		/// Function to apply for organisation and sign the vision associated. [origin, org_id]
-		#[pallet::weight(<T as Config>::WeightInfo::apply_to_organization(0))]
+		#[pallet::weight(<T as Config>::WeightInfo::sign_vision(0))]
 		pub fn apply_to_organization(origin: OriginFor<T>, org_id: DaoIdOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
@@ -317,7 +317,7 @@ pub mod pallet {
 		}
 
 		/// Function for revoking application to organization and vision associated. [origin, org_id]
-		#[pallet::weight(<T as Config>::WeightInfo::remove_application_from_organization(0))]
+		#[pallet::weight(<T as Config>::WeightInfo::unsign_vision(0))]
 		pub fn remove_application_from_organization(origin: OriginFor<T>, org_id: DaoIdOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
