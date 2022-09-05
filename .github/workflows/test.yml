@@ -1,4 +1,4 @@
-name: Check Set-Up & Build
+name: Test
 
 # Controls when the action will run.
 on:
@@ -12,7 +12,7 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  check:
+  test:
     # The type of runner that the job will run on
     runs-on: ubuntu-22.04
     env:
@@ -36,26 +36,28 @@ jobs:
       - name: Setup cache
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "checks-v2"
+          shared-key: "tests-v2"
 
-      # Check default and runtime-benchmarks for errors
-      # todo: can probably be removed to just use clippy below, as it supposedly calls cargo check
-      - name: Check
-        uses: actions-rs/cargo@v1
+      # Install cargo-nextest, 60% faster than cargo test and support for junit output format
+      - name: Install cargo-nextest
+        uses: actions-rs/install@v0.1
         with:
-          command: check
-          args: --features=default,runtime-benchmarks --release
+          crate: cargo-nextest
+          version: latest
 
-      # Run clippy checks (using same arguments as above to re-use built dependencies)
-      - name: Annotate commit with clippy warnings
-        uses: actions-rs/clippy-check@v1
+      # Create profile with JUnit output enabled
+      - name: Configure CI
+        run:  mkdir .config && echo -e "[profile.ci.junit]\npath = \"junit.xml\"" > .config/nextest.toml
+
+      # Run all tests in solution using CI profile created above
+      - name: Run tests
+        run:  cargo nextest run --release --profile ci
+
+      # Report test results
+      - name: Report test results
+        uses: dorny/test-reporter@v1
+        if: success() || failure()    # run this step even if previous step failed
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --release
-
-#      # Check formatting
-#      - name: Check formatting
-#        uses: actions-rs/cargo@v1
-#        with:
-#          command: fmt
-#          args: --all -- --check
+          name: tests
+          path: target/nextest/ci/junit.xml
+          reporter: jest-junit
