@@ -61,7 +61,7 @@
 //! 	Inputs:
 //! 		- name: BoundedNameOf<T>
 //! 		- description: BoundedDescriptionOf<T>,
-//! 		- organization_id: DaoIdOf<T>
+//! 		- vision BoundedVisionOf<T>
 //!
 //! - `transfer_ownership` - Function used to transfer ownership of a DAO organization.
 //! 	Inputs:
