@@ -974,7 +974,11 @@ fn test_update_insufficient_funds_to_reserve() {
 		let task_id = Task::tasks_owned(*ALICE)[0];
 
 		// Update that task with a balance more than signer has
+<<<<<<< HEAD
 		assert_noop!(Task::update_task(Origin::signed(*ALICE), hash, title2(), spec2(), Balances::free_balance(*ALICE) + 1000, get_deadline(), attachments2(), keywords2()), Error::<Test>::NotEnoughBalance);
+=======
+		assert_noop!(Task::update_task(Origin::signed(*ALICE), hash, title2(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(), attachments2(), keywords2()), Error::<Test>::NotEnoughBalance);
+>>>>>>> 5ca34c3 (removed whitespace)
 
 	})
 }	
@@ -983,12 +987,12 @@ fn test_update_insufficient_funds_to_reserve() {
 fn test_create_two_tasks_insufficient_balance() {
 	new_test_ext().execute_with( || {
 		// Create profile (required by task)
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info())));
 
 		// Create a task with an ok balance
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(), attachments(), keywords()));
 		
-		//create a task with a balance not possible
+		// Create a task with a balance not possible
 		assert_noop!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(), attachments(), keywords()), Error::<Test>::NotEnoughBalance);		
 
 	})
