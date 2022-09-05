@@ -114,13 +114,13 @@ fn user_can_unsign_from_vision() {
 		let org_id = create_organization_1();
 
 		// Ensure a user can sign onto vision.
-		assert_ok!(Dao::sign_vision(Origin::signed(*BOB), org_id));
+		assert_ok!(Dao::apply_to_organization(Origin::signed(*BOB), org_id));
 
 		// Ensure the length of VisionSigners has increased
 		assert_eq!(Dao::applicants_to_organization(org_id).len(), 1);
 
 		// Ensure a user can unsign onto vision.
-		assert_ok!(Dao::unsign_vision(Origin::signed(*BOB), org_id));
+		assert_ok!(Dao::remove_application_from_organization(Origin::signed(*BOB), org_id));
 
 		// Ensure the length of VisionSigners has increased
 		assert_eq!(Dao::applicants_to_organization(org_id).len(), 0);
@@ -132,8 +132,8 @@ fn user_can_sign_onto_vision_if_org_exists() {
 	new_test_ext().execute_with(|| {
 		let org_id_1 = create_organization_1();
 		// Assert that the vision cannot be signed if the given org doesnt exist.		
-		assert_noop!(Dao::sign_vision(Origin::signed(*ALICE), H256::from([8u8; 32])), Error::<Test>::InvalidOrganization);
-		assert_ok!(Dao::sign_vision(Origin::signed(*ALICE), org_id_1));
+		assert_noop!(Dao::apply_to_organization(Origin::signed(*ALICE), H256::from([8u8; 32])), Error::<Test>::InvalidOrganization);
+		assert_ok!(Dao::apply_to_organization(Origin::signed(*ALICE), org_id_1));
 	});
 }
 
@@ -143,8 +143,8 @@ fn user_cannot_unsign_if_org_does_not_exist() {
 		let org_id_1 = create_organization_1();
 
 		// Ensure Error is thrown if vision doesn't exist when unsigning
-		assert_ok!(Dao::sign_vision(Origin::signed(*ALICE), org_id_1));
-		assert_noop!(Dao::unsign_vision(Origin::signed(*ALICE), H256::from([8u8; 32])), Error::<Test>::InvalidOrganization);
+		assert_ok!(Dao::apply_to_organization(Origin::signed(*ALICE), org_id_1));
+		assert_noop!(Dao::remove_application_from_organization(Origin::signed(*ALICE), H256::from([8u8; 32])), Error::<Test>::InvalidOrganization);
 	});
 }
 
@@ -154,10 +154,10 @@ fn user_can_sign_onto_vision_only_if_not_signed_previously() {
 		let org_id = create_organization_1();
 
 		// Ensure Vision can be signed
-		assert_ok!(Dao::sign_vision(Origin::signed(*BOB), org_id));
+		assert_ok!(Dao::apply_to_organization(Origin::signed(*BOB), org_id));
 
 		// Ensure Error is thrown if vision is already signed
-		assert_noop!(Dao::sign_vision(Origin::signed(*BOB), org_id), Error::<Test>::AlreadySigned );
+		assert_noop!(Dao::apply_to_organization(Origin::signed(*BOB), org_id), Error::<Test>::AlreadySigned );
 	});
 }
 
@@ -166,7 +166,7 @@ fn user_can_unsign_from_vision_only_if_signed_previously() {
 	new_test_ext().execute_with(|| {
 		let org_id = create_organization_1();
 		// Ensure Error is thrown if vision has not been signed previously
-		assert_noop!(Dao::unsign_vision(Origin::signed(*BOB), org_id), Error::<Test>::NotSigned );
+		assert_noop!(Dao::remove_application_from_organization(Origin::signed(*BOB), org_id), Error::<Test>::NotSigned );
 	});
 }
 

@@ -44,13 +44,13 @@
 //!
 //! ### Public Functions
 //!
-//! - `sign_vision` - Function used to sign user to a vision associated with
+//! - `apply_to_organization` - Function used to sign user to a vision associated with
 //! an organization. Signing a vision indicates interest that the user are 
 //! interested in creating said vision.
 //! 	Inputs: 
 //! 		- organization_id: DaoIdOf<T>
 //!
-//! - `unsign_vision` - Function used to unsign user from a vision associated with 
+//! - `remove_application_from_organization` - Function used to unsign user from a vision associated with 
 //! an organization. Unsigning a vision indicates that a user is no longer 
 //! interested in creating said vision.
 //! 	Inputs: 
