@@ -956,18 +956,10 @@ fn test_multiple_tasks_and_reserve_amounts() {
 #[test]
 fn test_create_insufficient_funds_to_reserve() {
 	new_test_ext().execute_with( || {
-		// Create profile (required by task)
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		
-<<<<<<< HEAD
 		//Create a task with more tokens than the signer has
-		assert_noop!(Task::create_task(Origin::signed(1), title(), spec2(), Balances::free_balance(&1) + 1000, get_deadline(), attachments(), keywords()), Error::<Test>::NotEnoughBalance);
-=======
-		// Create a task with more tokens than the signer has
-		if let Err(n) = Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(), attachments(), keywords(), None) {
-			assert_eq!(n.error, Error::<Test>::NotEnoughBalance.into());	
-		}
->>>>>>> cb0da7e (feat: add dao property to task)
+		assert_noop!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(), attachments(), keywords()), Error::<Test>::NotEnoughBalance);
 	})
 }
 
@@ -981,17 +973,9 @@ fn test_update_insufficient_funds_to_reserve() {
 		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(), attachments(), keywords(), None));
 		let task_id = Task::tasks_owned(*ALICE)[0];
 
-<<<<<<< HEAD
-		//update that task with a balance more than signer has
-		assert_noop!(Task::update_task(Origin::signed(1), hash, title2(), spec2(), Balances::free_balance(&1) + 1000, get_deadline(), attachments2(), keywords2()), Error::<Test>::NotEnoughBalance);
-
-=======
 		// Update that task with a balance more than signer has
-		let res = Task::update_task(Origin::signed(*ALICE), task_id, title2(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(), attachments2(), keywords2(), None);
-		if let Err(n) = res {
-			assert_eq!(n.error, Error::<Test>::NotEnoughBalance.into());	
-		}
->>>>>>> cb0da7e (feat: add dao property to task)
+		assert_noop!(Task::update_task(Origin::signed(*ALICE), hash, title2(), spec2(), Balances::free_balance(*ALICE) + 1000, get_deadline(), attachments2(), keywords2()), Error::<Test>::NotEnoughBalance);
+
 	})
 }	
 
@@ -1004,15 +988,8 @@ fn test_create_two_tasks_insufficient_balance() {
 		// Create a task with an ok balance
 		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(), attachments(), keywords(), None));
 		
-<<<<<<< HEAD
 		//create a task with a balance not possible
-		assert_noop!(Task::create_task(Origin::signed(1), title(), spec2(), Balances::free_balance(&1) + 1000, get_deadline(), attachments(), keywords()), Error::<Test>::NotEnoughBalance);		
+		assert_noop!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(), attachments(), keywords()), Error::<Test>::NotEnoughBalance);		
 
-=======
-		// Create a task with a balance not possible
-		if let Err(n) = Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::balance(&*ALICE), get_deadline(), attachments(), keywords(), None) {
-			assert_eq!(n.error, Error::<Test>::NotEnoughBalance.into());	
-		}
->>>>>>> cb0da7e (feat: add dao property to task)
 	})
 }
