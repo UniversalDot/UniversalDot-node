@@ -159,7 +159,7 @@ pub mod pallet {
 		pub completed_at: <T as frame_system::Config>::BlockNumber,
 		/// The organization to which the task belongs.
 		pub organization: Option<OrganizationIdOf<T>>
-		pub deadline_block: <T as frame_system::Config>::BlockNumber,
+		pub deadline_block: Option<<T as frame_system::Config>::BlockNumber>,
 	}
 
 	// Set TaskStatus enum.
@@ -550,7 +550,7 @@ pub mod pallet {
 				created_at: <frame_system::Pallet<T>>::block_number(),
 				updated_at: Default::default(),
 				completed_at: Default::default(),
-				deadline_block,
+				deadline_block: Some(deadline_block),
 			};
 
 			// Create hash of task
@@ -568,7 +568,8 @@ pub mod pallet {
 			let new_count = Self::task_count().checked_add(1).ok_or(<Error<T>>::TaskCountOverflow)?;
 			<TaskCount<T>>::put(new_count);
 
-			handle_new_task_deadline(task_id, None, deadline_block)
+			// Handle the new deadline
+			handle_new_task_deadline(task_id, None, deadline_block);
 
 			Ok(task_id)
 		}
@@ -588,6 +589,16 @@ pub mod pallet {
 			new_task.keywords = keywords.clone();
 			new_task.organization = organization;
 			new_task.updated_at = <frame_system::Pallet<T>>::block_number();
+			new_task.deadline_block = old_task.deadline_block;
+
+			if old_task.deadline != new_deadline {
+				// Calculate the new deadline_block
+				let blocks_till_deadline: T::BlockNumber = (((deadline_duration - time_of_creation) as f32) / (T::MillisecondsPerBlock as f32 / 1000.0)).round().into();
+				let new_deadline_block = blocks_till_deadline + <frame_system::Pallet<T>>::block_number();
+				new_task.deadline_block = new_deadline_block;
+
+				handle_new_task_deadline(task_id, old_task.deadline_block, new_deadline_block)
+			}
 
 			// Insert task into Hashmap
 			<Tasks<T>>::insert(task_id, new_task);
@@ -620,6 +631,10 @@ pub mod pallet {
 			task.current_owner = volunteer.clone();
 			task.volunteer = volunteer.clone();
 			task.status = TaskStatus::InProgress;
+
+			// Remove the task from expiring list;
+			remove_task_from_expiring(task_id, task.deadline_block);
+
 			<Tasks<T>>::insert(task_id, task);
 
 			// Assign task to volunteer
@@ -807,6 +822,9 @@ pub mod pallet {
 			Ok(())
 		}
 
+		fn remove_task_from_expiring() {
+
+		}
 		///// When a tasks's status from created, the exipiring block storage must be
 		///// updated to maintain storage  
 		//fn handle_status_change(task_hash: T::Hash, old_block_deadline: T::BlockNumber) {
