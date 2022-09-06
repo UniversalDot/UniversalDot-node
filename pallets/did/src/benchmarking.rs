@@ -22,37 +22,37 @@ benchmarks! {
     add_delegate {
         let caller = make_caller!(T);
         let delegate:T::AccountId = account("delegate", 0, 0);
-    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), delegate.clone(), Vec::new(), Some(T::BlockNumber::one()))
+    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), delegate, Vec::new(), Some(T::BlockNumber::one()))
 
     change_owner {
         let caller = make_caller!(T);
         let new_owner:T::AccountId = account("new_owner", 0, 0);
 
-    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), new_owner.clone())
+    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), new_owner)
 
     revoke_delegate {
         let caller = make_caller!(T);
         let delegate:T::AccountId = account("delegate", 0, 0);
         let _ = Did::<T>::add_delegate(RawOrigin::Signed(caller.clone()).into(), caller.clone(), delegate.clone(), Vec::new(), None);
-    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), Vec::new(), delegate.clone())
+    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), Vec::new(), delegate)
 
     add_attribute {
         let caller = make_caller!(T);
         let name = b"name1".to_vec();
         let value = b"value1".to_vec();
-    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), name.clone(), value.clone(), Some(T::BlockNumber::one()))
+    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), name, value, Some(T::BlockNumber::one()))
 
     revoke_attribute {
         let caller = make_caller!(T);
         let name = b"name1".to_vec();
         let value = b"value1".to_vec();
-        let _ = Did::<T>::add_attribute(RawOrigin::Signed(caller.clone()).into(), caller.clone(), name.clone(), value.clone(), None);
-    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), name.clone())
+        let _ = Did::<T>::add_attribute(RawOrigin::Signed(caller.clone()).into(), caller.clone(), name.clone(), value, None);
+    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), name)
 
     delete_attribute {
         let caller = make_caller!(T);
         let name = b"name1".to_vec();
         let value = b"value1".to_vec();
-        let _ = Did::<T>::add_attribute(RawOrigin::Signed(caller.clone()).into(), caller.clone(), name.clone(), value.clone(), None);
-    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), name.clone())
+        let _ = Did::<T>::add_attribute(RawOrigin::Signed(caller.clone()).into(), caller.clone(), name.clone(), value, None);
+    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), name)
 }
