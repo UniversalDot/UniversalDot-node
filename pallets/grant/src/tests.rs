@@ -206,7 +206,7 @@ fn winner_can_be_recieve_grant_reward() {
 		// Add balance to grant treasury account
 		Balances::mutate_account(&Grant::account_id(), |balance| {
 			balance.free = 100;
-		});
+		}).expect("could not set treasury account balance");
 		let treasury = Balances::free_balance(Grant::account_id());
 		assert_eq!(treasury, 100);
 		

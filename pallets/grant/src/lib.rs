@@ -15,7 +15,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 //! # Grant Pallet
 //! 
 //! ## Version: 0.0.1
@@ -34,29 +33,26 @@
 //! The intention is that initially, when there are only few users of the platform, every grant_request is
 //! automatically approved. However, later on when the application reaches more use, grants are offered randomly
 //! to requesting accounts. 
-//! 	
+//!
 //! The Process is envisioned as follows:
 //! 1. Anyone can send Funds into a Treasury Account. The Treasury account is used to distribute grant rewards.
-//! 2. Anyone can request a grant each block.	
+//! 2. Anyone can request a grant each block.
 //! 3. Each block a grant is offered randomly to selected grant requester.
-//! 
-//! 
-//! 	
+//!
 //! ## Interface
 //!
 //! ### Public Functions
 //!  -  request_grant()
-//!		Function used to request grants.
+//!     Function used to request grants.
 //!
 //!  -  transfer_funds()
-//!		Function used to transfer funds into a Treasury Account. Anyone can transfer into Treasury.
+//!     Function used to transfer funds into a Treasury Account. Anyone can transfer into Treasury.
 //!
 //!  -  winner_is()
-//!		Function that announces the winner of the block.
+//!     Function that announces the winner of the block.
 //!
 //! ## Related Modules
 //!
-
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -341,15 +337,5 @@ pub mod pallet {
 
 			Ok(())
 		}
-
-		// Function that check if user has made requests
-		fn has_made_requests(owner: &T::AccountId) -> Result<bool, DispatchError>  {
-
-			// Check if an account has a profile
-			Self::storage_requesters(owner).ok_or(<Error<T>>::RequestAlreadyMade)?;
-
-			Ok(true)
-		}
 	}
-
 }
