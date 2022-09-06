@@ -159,6 +159,7 @@ pub mod pallet {
 		pub completed_at: <T as frame_system::Config>::BlockNumber,
 		/// The organization to which the task belongs.
 		pub organization: Option<OrganizationIdOf<T>>
+		pub deadline_block: <T as frame_system::Config>::BlockNumber,
 	}
 
 	// Set TaskStatus enum.
@@ -526,7 +527,7 @@ pub mod pallet {
 			ensure!(pallet_profile::Pallet::<T>::has_profile(from_initiator).unwrap(), <Error<T>>::NoProfile);
 			let deadline_duration = Duration::from_millis(deadline.saturated_into::<u64>());
 			ensure!(T::Time::now() < deadline_duration, Error::<T>::IncorrectDeadlineTimestamp);
-
+			
 			// Init Task Object
 			let task = Task::<T> {
 				title,
