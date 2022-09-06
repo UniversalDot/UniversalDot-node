@@ -189,7 +189,7 @@ benchmarks! {
 		create_profile::<T>();
 		let _ = PalletTask::<T>::create_task(RawOrigin::Signed(task_creator.clone()).into(), title.try_into().unwrap(), specification.try_into().unwrap(), budget, x.into(), attachments.try_into().unwrap(), keywords.try_into().unwrap(), Some(organization));
 		let hash_task = PalletTask::<T>::tasks_owned(&task_creator)[0];
-		let _ = PalletTask::<T>::start_task(RawOrigin::Signed(volunteer.clone()).into(), hash_task.clone());
+		let _ = PalletTask::<T>::start_task(RawOrigin::Signed(volunteer.clone()).into(), hash_task);
 
 	}: complete_task(RawOrigin::Signed(volunteer.clone()), hash_task)
 		/* the code to be benchmarked */
@@ -218,8 +218,8 @@ benchmarks! {
 		create_profile::<T>();
 		let _ = PalletTask::<T>::create_task(RawOrigin::Signed(task_creator.clone()).into(), title.try_into().unwrap(), specification.try_into().unwrap(), budget, x.into(), attachments.try_into().unwrap(), keywords.try_into().unwrap(), Some(organization));
 		let hash_task = PalletTask::<T>::tasks_owned(&task_creator)[0];
-		let _ = PalletTask::<T>::start_task(RawOrigin::Signed(volunteer.clone()).into(), hash_task.clone());
-		let _ = PalletTask::<T>::complete_task(RawOrigin::Signed(volunteer.clone()).into(), hash_task.clone());
+		let _ = PalletTask::<T>::start_task(RawOrigin::Signed(volunteer.clone()).into(), hash_task);
+		let _ = PalletTask::<T>::complete_task(RawOrigin::Signed(volunteer).into(), hash_task);
 
 	}: accept_task(RawOrigin::Signed(task_creator.clone()), hash_task)
 		/* the code to be benchmarked */
@@ -250,8 +250,8 @@ benchmarks! {
 		create_profile::<T>();
 		let _ = PalletTask::<T>::create_task(RawOrigin::Signed(task_creator.clone()).into(), title.try_into().unwrap(), specification.try_into().unwrap(), budget, x.into(), attachments.try_into().unwrap(), keywords.try_into().unwrap(), Some(organization));
 		let hash_task = PalletTask::<T>::tasks_owned(&task_creator)[0];
-		let _ = PalletTask::<T>::start_task(RawOrigin::Signed(volunteer.clone()).into(), hash_task.clone());
-		let _ = PalletTask::<T>::complete_task(RawOrigin::Signed(volunteer.clone()).into(), hash_task.clone());
+		let _ = PalletTask::<T>::start_task(RawOrigin::Signed(volunteer.clone()).into(), hash_task);
+		let _ = PalletTask::<T>::complete_task(RawOrigin::Signed(volunteer).into(), hash_task);
 
 	}: reject_task(RawOrigin::Signed(task_creator.clone()), hash_task, feedback.try_into().unwrap())
 		/* the code to be benchmarked */

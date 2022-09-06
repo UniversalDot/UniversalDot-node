@@ -34,31 +34,30 @@
 //! ### Public Functions
 //!
 //! - `create_profile` - Function used to create a new user profile.
-//! 	Requirements: 
-//! 	1. Each account can create a single Profile.
-//! 	2. Profiles are mandatory for creating Tasks.
-//! 	Inputs: 
-//! 		- username: BoundedVec,
-//! 		- interests: BoundedVec,
-//! 		- available_hours_per_week: u8,
-//! 		- additional_information
+//!     Requirements:
+//!     1. Each account can create a single Profile.
+//!     2. Profiles are mandatory for creating Tasks.
+//!     Inputs:
+//!         - username: BoundedVec,
+//!         - interests: BoundedVec,
+//!         - available_hours_per_week: u8,
+//!         - additional_information
 //!
 //! - `update_profile` - Function used to update an already existing user profile.
-//! 	Inputs: 
-//! 		- username: BoundedVec,
-//! 		- interests: BoundedVec,
-//! 		- available_hours_per_week: u8,
-//! 		- additional_information
+//!     Inputs:
+//!         - username: BoundedVec,
+//!         - interests: BoundedVec,
+//!         - available_hours_per_week: u8,
+//!         - additional_information
 //!
 //! - `remove_profile` - Function used to delete an existing user profile.
-//! 	Inputs: 
-//! 		No Inputs
+//!     Inputs:
+//!         No Inputs
 //!
 //! Storage Items:
-//! 	Profiles: Stores profile Information
-//! 	ProfileCount: Counts the total number of Profiles
-//! 	CompletedTasks: Stores the completed Tasks history for a Profile
-//! 	
+//!     Profiles: Stores profile Information
+//!     ProfileCount: Counts the total number of Profiles
+//!     CompletedTasks: Stores the completed Tasks history for a Profile
 //!
 //! ## Related Modules
 //!

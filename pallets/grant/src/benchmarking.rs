@@ -21,12 +21,8 @@ use super::*;
 
 #[allow(unused)]
 use crate::Pallet as PalletGrant;
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller, vec};
+use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::RawOrigin;
-use sp_std::convert::TryInto;
-
-use frame_support::{
-	traits::{Currency}};
 
 // Helper function to assert event thrown during verification
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
