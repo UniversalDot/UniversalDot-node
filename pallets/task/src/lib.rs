@@ -494,19 +494,19 @@ pub mod pallet {
 	impl<T:Config> Hooks<T::BlockNumber> for Pallet<T> {
 		fn on_initialize(n: T::BlockNumber) -> frame_support::weights::Weight {
 			// Remove tasks which have not been started, and have passed the deadline
-			let mut weight = 0;
+			let mut weight = 10_000;
 			let current_timestamp = T::Time::now();
 
 			// Collect all dying and expiring tasks.
-			let expiring_tasks = ExpiringTasksPerBlock::<T>::take(n);
-			let dying_tasks = DyingTasksPerBlock::<T>::take(n);
+			let old_expiring_tasks = ExpiringTasksPerBlock::<T>::take(n);
+			let old_dying_tasks = DyingTasksPerBlock::<T>::take(n);
 
 			// Set the new dying tasks as the old expiring tasks.
-			DyingTasksPerBlock::insert(n + T::TaskLongevityAfterExpiration, expiring_tasks);
+			DyingTasksPerBlock::insert(n + T::TaskLongevityAfterExpiration, old_expiring_tasks);
 			
 			// Remove all dying tasks from storage.
-			dying_tasks.iter().map(|task_hash| {
-				let maybe_task = Tasks::<T>::get(th)
+			old_dying_tasks.iter().map(|th| {
+				let maybe_task = Tasks::<T>::get(th);
 				if let Some(task)= maybe_task {
 					if let Ok(()) = Self::delete_task(&task.initiator, &th) {
 						weight += 10_000;
@@ -806,32 +806,25 @@ pub mod pallet {
 		/// Replaces the old task deadline with the new one to track expired tasks.
 		/// If you have no old_task_deadline e.g the state change Status == InProgress to Status == Created
 		/// then old_task_deadline == None.  
-		fn handle_new_task_deadline(task_hash: T::Hash, old_task_deadline: Option<T::BlockNumber>, new_task_deadline: T::BlockNumber) -> Result<(), DispatchError> {
+		fn handle_new_task_deadline(task_id: T::Hash, old_task_deadline: Option<T::BlockNumber>, new_task_deadline: T::BlockNumber) -> Result<(), DispatchError> {
 			
 			if let Some(d) = old_task_deadline {
 				// Remove from old expiring tasks vec;
-				let mut expiring_blocks = ExpiringTasksPerBlock::<T>::take(d);
-				expiring_blocks = expiring_blocks.iter().filter(|h| h != task_hash).collect();
-				ExpiringTasksPerBlock::<T>::insert(d, expiring_blocks);
+				remove_task_from_expiring(task_id, old_task_deadline)
 			}
 			// Add to new expiring tasks vec;`
 			expiring_blocks = ExpiringTasksPerBlock::<T>::take(new_task_deadline);
-			expiring_blocks.try_push(task_hash).ok_or(Error::<T>::ExpiringTaskLimitReached);
+			expiring_blocks.try_push(task_id).ok_or(Error::<T>::ExpiringTaskLimitReached);
 			ExpiringTasksPerBlock::<T>::insert(new_task_deadline, expiring_blocks);
 
 			Ok(())
 		}
 
-		fn remove_task_from_expiring() {
-
+		fn remove_task_from_expiring(task_id: T::Hash, deadline_block: T::BlockNumber) {
+			let mut expiring_blocks = ExpiringTasksPerBlock::<T>::take(deadline_block);
+			expiring_blocks = expiring_blocks.iter().filter(|h| h != task_id).collect();
+			ExpiringTasksPerBlock::<T>::insert(deadline_block, expiring_blocks);
 		}
-		///// When a tasks's status from created, the exipiring block storage must be
-		///// updated to maintain storage  
-		//fn handle_status_change(task_hash: T::Hash, old_block_deadline: T::BlockNumber) {
-		//	let mut expiring_blocks = ExpiringTasksPerBlock::<T>::take(d);
-		//		expiring_blocks = expiring_blocks.iter().filter(|h| h != task_hash).collect();
-		//		ExpiringTasksPerBlock::<T>::insert(d, expiring_blocks);
-		//}
 
 	}
 }
