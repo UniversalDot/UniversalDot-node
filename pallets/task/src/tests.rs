@@ -1064,9 +1064,9 @@ fn update_task_updates_block_expiry_with_different_deadline() {
 		let task_id_0 = Task::tasks_owned(*ALICE)[0];
 		let task0 = Task::tasks(task_id_0).expect("no task found");
 		let dying_deadline_block = get_dying_deadline_block();
-		let deadline_block = get_deadline_block();
+		let deadline_block = get_deadline_block(); 
 	
-		assert_ok!(Task::update_task(Origin::signed(*TED), task_id_0, title2(), spec2(), BUDGET2, get_deadline(1), attachments2(), keywords2(), None));		
+		assert_ok!(Task::update_task(Origin::signed(*ALICE), task_id_0, title2(), spec2(), BUDGET2, get_deadline(1), attachments2(), keywords2(), None));		
 	})
 }
 
