@@ -44,7 +44,7 @@ fn create_profile_works() {
 
 #[test]
 fn verify_inputs_outputs_to_profile(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 
 		// Create Profile
 		assert_ok!(Profile::create_profile(Origin::signed(10), username(), interests(), HOURS, Some(additional_info())));
