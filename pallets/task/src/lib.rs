@@ -158,7 +158,7 @@ pub mod pallet {
 		pub updated_at:<T as frame_system::Config>::BlockNumber,
 		pub completed_at: <T as frame_system::Config>::BlockNumber,
 		/// The organization to which the task belongs.
-		pub organization: Option<OrganizationIdOf<T>>
+		pub organization: Option<OrganizationIdOf<T>>,
 		pub deadline_block: Option<<T as frame_system::Config>::BlockNumber>,
 	}
 
@@ -192,7 +192,7 @@ pub mod pallet {
 		type MillisecondsPerBlock: Get<u64>;
 
 		/// Grace period after a task has expired before it is removed from storage.
-		type TaskLongevityAfterExpiration: Self::BlockNumber;
+		type TaskLongevityAfterExpiration: Get<<Self as frame_system::Config>::BlockNumber>;
 
 		/// The maximum amount of tasks a single account can own.
 		#[pallet::constant]
@@ -227,11 +227,11 @@ pub mod pallet {
 	//TODO!!!!!!! BOUNDED VEC SIZE
 	#[pallet::storage]
 	/// Tasks: The Tasks that end on a given block number [key: Block Number, value: Vec<TaskId>]
-	pub(super) type ExpiringTasksPerBlock<T: Config> = StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<T::Hash, 10000>, ValueQuery>;
+	pub(super) type ExpiringTasksPerBlock<T: Config> = StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<T::Hash, ConstU32<10000>>, ValueQuery>;
 
 	#[pallet::storage]
 	/// Tasks that will be removed from storage on a given block. [key: Block Number, value: Vec<TaskId>]
-	pub(super) type DyingTasksPerBlock<T: Config> = StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<T::Hash, 10000>, ValueQuery>;
+	pub(super) type DyingTasksPerBlock<T: Config> = StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<T::Hash, ConstU32<10000>>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn task_count)]
@@ -303,9 +303,9 @@ pub mod pallet {
 		/// Only Task creator can update the task.
 		OnlyInitiatorUpdatesTask,
 		/// The provided organization identifier does not exist.
-		InvalidOrganization
+		InvalidOrganization,
 		/// Expiry or Dying Tasks limit reached.
-		ExpiringTaskLimitReached
+		ExpiringTaskLimitReached,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -502,7 +502,7 @@ pub mod pallet {
 			let old_dying_tasks = DyingTasksPerBlock::<T>::take(n);
 
 			// Set the new dying tasks as the old expiring tasks.
-			DyingTasksPerBlock::insert(n + T::TaskLongevityAfterExpiration, old_expiring_tasks);
+			DyingTasksPerBlock::<T>::insert(n + T::TaskLongevityAfterExpiration::get(), old_expiring_tasks);
 			
 			// Remove all dying tasks from storage.
 			old_dying_tasks.iter().map(|th| {
@@ -531,7 +531,7 @@ pub mod pallet {
 			ensure!(time_of_creation < deadline_duration, Error::<T>::IncorrectDeadlineTimestamp);
 			
 			// Get the amount of block equal to the deadline duration.
-			let blocks_till_deadline: T::BlockNumber = (((deadline_duration - time_of_creation) as f32) / (T::MillisecondsPerBlock as f32 / 1000.0)).round().into();
+			let blocks_till_deadline: T::BlockNumber = ((((deadline_duration - time_of_creation).as_millis() / T::MillisecondsPerBlock::get() as u128)) as u32).into();
 			let deadline_block = blocks_till_deadline + <frame_system::Pallet<T>>::block_number();
 			// Init Task Object
 			let task = Task::<T> {
@@ -569,7 +569,7 @@ pub mod pallet {
 			<TaskCount<T>>::put(new_count);
 
 			// Handle the new deadline
-			handle_new_task_deadline(task_id, None, deadline_block);
+			Self::handle_new_task_deadline(&task_id, &None, deadline_block);
 
 			Ok(task_id)
 		}
@@ -578,7 +578,7 @@ pub mod pallet {
 		//  Private helper function.
 		fn update_created_task(old_task:Task<T>, task_id: &T::Hash, new_title: BoundedVec<u8, T::MaxTitleLen>, new_specification: BoundedVec<u8, T::MaxSpecificationLen>, new_budget: &BalanceOf<T>,
 			new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>) -> Result<(), DispatchError> {
-
+			
 			let mut new_task: Task<T> = old_task;
 			// Init Task Object
 			new_task.title = new_title.clone();
@@ -589,15 +589,14 @@ pub mod pallet {
 			new_task.keywords = keywords.clone();
 			new_task.organization = organization;
 			new_task.updated_at = <frame_system::Pallet<T>>::block_number();
-			new_task.deadline_block = old_task.deadline_block;
 
-			if old_task.deadline != new_deadline {
+			if new_task.deadline != new_deadline {
 				// Calculate the new deadline_block
-				let blocks_till_deadline: T::BlockNumber = (((deadline_duration - time_of_creation) as f32) / (T::MillisecondsPerBlock as f32 / 1000.0)).round().into();
+				let deadline_duration = Duration::from_millis(new_deadline.saturated_into::<u64>());
+				let blocks_till_deadline: T::BlockNumber = ((((deadline_duration - T::Time::now()).as_millis() / T::MillisecondsPerBlock::get() as u128)) as u32).into();
 				let new_deadline_block = blocks_till_deadline + <frame_system::Pallet<T>>::block_number();
-				new_task.deadline_block = new_deadline_block;
-
-				handle_new_task_deadline(task_id, old_task.deadline_block, new_deadline_block)
+				new_task.deadline_block = Some(new_deadline_block);
+				let _ = Self::handle_new_task_deadline(task_id, &new_task.deadline_block, new_deadline_block)?;
 			}
 
 			// Insert task into Hashmap
@@ -633,7 +632,9 @@ pub mod pallet {
 			task.status = TaskStatus::InProgress;
 
 			// Remove the task from expiring list;
-			remove_task_from_expiring(task_id, task.deadline_block);
+			if let Some(deadline) = task.deadline_block {
+				Self::remove_task_from_expiring(&task_id, deadline);
+			}
 
 			<Tasks<T>>::insert(task_id, task);
 
@@ -805,25 +806,30 @@ pub mod pallet {
 
 		/// Replaces the old task deadline with the new one to track expired tasks.
 		/// If you have no old_task_deadline e.g the state change Status == InProgress to Status == Created
+		/// Or for creating new tasks
 		/// then old_task_deadline == None.  
-		fn handle_new_task_deadline(task_id: T::Hash, old_task_deadline: Option<T::BlockNumber>, new_task_deadline: T::BlockNumber) -> Result<(), DispatchError> {
+		fn handle_new_task_deadline(task_id: &T::Hash, old_task_deadline: &Option<T::BlockNumber>, new_task_deadline: T::BlockNumber) -> Result<(), DispatchError> {
 			
 			if let Some(d) = old_task_deadline {
 				// Remove from old expiring tasks vec;
-				remove_task_from_expiring(task_id, old_task_deadline)
+				Self::remove_task_from_expiring(task_id, d.clone())
 			}
 			// Add to new expiring tasks vec;`
-			expiring_blocks = ExpiringTasksPerBlock::<T>::take(new_task_deadline);
-			expiring_blocks.try_push(task_id).ok_or(Error::<T>::ExpiringTaskLimitReached);
-			ExpiringTasksPerBlock::<T>::insert(new_task_deadline, expiring_blocks);
+			let mut expiring_tasks = ExpiringTasksPerBlock::<T>::take(new_task_deadline);
+			ensure!(expiring_tasks.try_push(task_id.clone()).is_ok(), Error::<T>::ExpiringTaskLimitReached);
+			ExpiringTasksPerBlock::<T>::insert(new_task_deadline, expiring_tasks);
 
 			Ok(())
 		}
 
-		fn remove_task_from_expiring(task_id: T::Hash, deadline_block: T::BlockNumber) {
-			let mut expiring_blocks = ExpiringTasksPerBlock::<T>::take(deadline_block);
-			expiring_blocks = expiring_blocks.iter().filter(|h| h != task_id).collect();
-			ExpiringTasksPerBlock::<T>::insert(deadline_block, expiring_blocks);
+		fn remove_task_from_expiring(task_id: &T::Hash, deadline_block: T::BlockNumber) {
+			let expiring_tasks: BoundedVec<T::Hash, ConstU32<10000>> = ExpiringTasksPerBlock::<T>::take(deadline_block)
+				.into_iter()
+				.filter(|&h| h != *task_id)
+				.collect::<Vec<T::Hash>>()
+				.try_into()
+				.expect("reducing, will not be out of bounds; qed");
+			ExpiringTasksPerBlock::<T>::insert(deadline_block, expiring_tasks);
 		}
 
 	}
