@@ -138,7 +138,7 @@ fn create_new_task(){
 
 #[test]
 fn fund_transfer_on_create_task(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -155,7 +155,7 @@ fn fund_transfer_on_create_task(){
 
 #[test]
 fn increase_task_count_when_creating_task(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -169,7 +169,7 @@ fn increase_task_count_when_creating_task(){
 
 #[test]
 fn increase_task_count_when_creating_two_tasks(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -184,7 +184,7 @@ fn increase_task_count_when_creating_two_tasks(){
 
 #[test]
 fn cant_own_more_tasks_than_max_tasks(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -204,7 +204,7 @@ fn cant_own_more_tasks_than_max_tasks(){
 
 #[test]
 fn assign_task_to_current_owner(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info())));
 
@@ -222,7 +222,7 @@ fn assign_task_to_current_owner(){
 
 #[test]
 fn verify_inputs_outputs_to_tasks(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info())));
 
@@ -247,7 +247,7 @@ fn verify_inputs_outputs_to_tasks(){
 
 #[test]
 fn task_can_be_updated_after_it_is_created(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info())));
 
@@ -282,7 +282,7 @@ fn task_can_be_updated_after_it_is_created(){
 
 #[test]
 fn check_balance_after_update_task(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Get initial balance of account
 		let initial_balance_of_sender = Balances::free_balance(&*TED);
 
@@ -311,7 +311,7 @@ fn check_balance_after_update_task(){
 
 #[test]
 fn check_balance_after_complete_task(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Create profiles
 		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info())));
 		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
@@ -343,7 +343,7 @@ fn check_balance_after_complete_task(){
 
 #[test]
 fn task_can_be_updated_only_by_one_who_created_it(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info())));
@@ -361,7 +361,7 @@ fn task_can_be_updated_only_by_one_who_created_it(){
 
 #[test]
 fn task_can_be_updated_only_after_it_has_been_created(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info())));
 
@@ -381,7 +381,7 @@ fn task_can_be_updated_only_after_it_has_been_created(){
 
 #[test]
 fn start_tasks_assigns_new_current_owner(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
@@ -406,7 +406,7 @@ fn start_tasks_assigns_new_current_owner(){
 
 #[test]
 fn start_tasks_assigns_task_to_volunteer(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -431,7 +431,7 @@ fn start_tasks_assigns_task_to_volunteer(){
 
 #[test]
 fn completing_tasks_assigns_new_current_owner(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -463,7 +463,7 @@ fn completing_tasks_assigns_new_current_owner(){
 
 #[test]
 fn the_volunteer_is_different_from_task_creator(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Ensure profile can be created
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -478,7 +478,7 @@ fn the_volunteer_is_different_from_task_creator(){
 
 #[test]
 fn task_can_only_be_started_once(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Ensure profile can be created
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -494,7 +494,7 @@ fn task_can_only_be_started_once(){
 
 #[test]
 fn task_can_only_be_finished_by_the_user_who_started_it(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Ensure profile can be created
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -512,7 +512,7 @@ fn task_can_only_be_finished_by_the_user_who_started_it(){
 
 #[test]
 fn task_can_be_removed_by_owner(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Ensure profile can be created
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -533,7 +533,7 @@ fn task_can_be_removed_by_owner(){
 
 #[test]
 fn task_can_be_removed_only_when_status_is_created(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Ensure profile can be created
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -551,7 +551,7 @@ fn task_can_be_removed_only_when_status_is_created(){
 
 #[test]
 fn only_creator_accepts_task(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
@@ -587,7 +587,7 @@ fn only_creator_accepts_task(){
 
 #[test]
 fn accepted_task_is_added_to_completed_task_for_volunteer(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
@@ -610,7 +610,7 @@ fn accepted_task_is_added_to_completed_task_for_volunteer(){
 
 #[test]
 fn volunteer_gets_paid_on_task_completion(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
@@ -634,7 +634,7 @@ fn volunteer_gets_paid_on_task_completion(){
 
 #[test]
 fn only_started_task_can_be_completed(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
@@ -661,7 +661,7 @@ fn only_started_task_can_be_completed(){
 
 #[test]
 fn when_task_is_accepted_ownership_is_cleared(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
@@ -700,7 +700,7 @@ fn when_task_is_accepted_ownership_is_cleared(){
 
 #[test]
 fn decrease_task_count_when_accepting_task(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -719,7 +719,7 @@ fn decrease_task_count_when_accepting_task(){
 
 #[test]
 fn task_can_be_rejected_by_creator(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -753,7 +753,7 @@ fn task_can_be_rejected_by_creator(){
 
 #[test]
 fn feedback_is_given_when_task_is_rejected(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -786,7 +786,7 @@ fn feedback_is_given_when_task_is_rejected(){
 
 #[test]
 fn increase_profile_reputation_when_task_completed(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profiles necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
@@ -820,7 +820,7 @@ fn increase_profile_reputation_when_task_completed(){
 
 #[test]
 fn only_add_reputation_when_task_has_been_accepted(){
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -842,7 +842,7 @@ fn only_add_reputation_when_task_has_been_accepted(){
 
 #[test]
 fn delete_task_after_deadline() {
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		run_to_block(1);
 
 		// Profile is necessary for task creation
@@ -867,7 +867,7 @@ fn delete_task_after_deadline() {
 
 #[test]
 fn balance_check_after_task_deletion() {
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Create profile
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		let signer_balance = Balances::balance(&*ALICE);
@@ -897,7 +897,7 @@ fn balance_check_after_task_deletion() {
 
 #[test]
 fn block_time_is_added_when_task_is_updated() {
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
 
 		// Ensure profile is created before task creation
@@ -932,7 +932,7 @@ fn block_time_is_added_when_task_is_updated() {
 
 #[test]
 fn test_multiple_tasks_and_reserve_amounts() {
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Create profile (required by task)
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 
@@ -954,7 +954,9 @@ fn test_multiple_tasks_and_reserve_amounts() {
 }
 #[test]
 fn test_create_insufficient_funds_to_reserve() {
-	new_test_ext().execute_with( || {
+
+	new_test_ext().execute_with(|| {
+		// Create profile (required by task)
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		
 		//Create a task with more tokens than the signer has
@@ -965,7 +967,7 @@ fn test_create_insufficient_funds_to_reserve() {
 
 #[test]
 fn test_update_insufficient_funds_to_reserve() {
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Create profile (required by task)
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		
@@ -981,7 +983,7 @@ fn test_update_insufficient_funds_to_reserve() {
 
 #[test]
 fn test_create_two_tasks_insufficient_balance() {
-	new_test_ext().execute_with( || {
+	new_test_ext().execute_with(|| {
 		// Create profile (required by task)
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 

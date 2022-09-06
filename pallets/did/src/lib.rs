@@ -55,6 +55,8 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use scale_info::TypeInfo;
 
+    type MomentOf<T> = <<T as Config>::Time as Time>::Moment;
+
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
@@ -128,7 +130,7 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         (T::AccountId, [u8; 32]),
-        Attribute<T::BlockNumber, <<T as Config>::Time as Time>::Moment, BoundedNameOf<T>, BoundedValueOf<T>>,
+        Attribute<T::BlockNumber, MomentOf<T>, BoundedNameOf<T>, BoundedValueOf<T>>,
     >;
 
     /// Attribute nonce used to generate a unique hash even if the attribute is deleted and recreated.
@@ -152,7 +154,7 @@ pub mod pallet {
         (
             T::AccountId,
             T::BlockNumber,
-            <<T as Config>::Time as Time>::Moment,
+            MomentOf<T>,
         ),
     >;
 
@@ -350,10 +352,7 @@ impl<T: Config> Pallet<T> {
     /// Get nonce for _identity_ and _name_.
     ///
     fn get_nonce(identity: &T::AccountId, name: &[u8]) -> u64 {
-        match Self::nonce_of((&identity, name.to_vec())) {
-            Some(nonce) => nonce,
-            None => 0u64,
-        }
+        Self::nonce_of((&identity, name.to_vec())).unwrap_or(0u64)
     }
 
     /// Set identity owner.
@@ -407,7 +406,7 @@ impl<T: Config> Pallet<T> {
         Self::valid_signer(
             &transaction.identity,
             &transaction.signature,
-            &encoded,
+            encoded,
             &transaction.signer,
         )?;
         Self::is_owner(&transaction.identity, &transaction.signer)?;
@@ -501,10 +500,10 @@ for Pallet<T>
         delegate_type: &[u8],
         valid_for: Option<T::BlockNumber>,
     ) -> DispatchResult {
-        Self::is_owner(&identity, who)?;
+        Self::is_owner(identity, who)?;
         ensure!(who != delegate, Error::<T>::InvalidDelegate);
         ensure!(
-            !Self::valid_listed_delegate(identity, delegate_type, delegate).is_ok(),
+            Self::valid_listed_delegate(identity, delegate_type, delegate).is_err(),
             Error::<T>::AlreadyExists
         );
 
@@ -539,8 +538,8 @@ for Pallet<T>
         signer: &T::AccountId,
     ) -> DispatchResult {
         // Owner or a delegate signer.
-        Self::valid_delegate(&identity, b"x25519VerificationKey2018", &signer)?;
-        Self::check_signature(&signature, &msg, &signer)
+        Self::valid_delegate(identity, b"x25519VerificationKey2018", signer)?;
+        Self::check_signature(signature, msg, signer)
     }
 
     /// Adds a new attribute to an identity and colects the storage fee.
@@ -551,7 +550,7 @@ for Pallet<T>
         value: &[u8],
         valid_for: Option<T::BlockNumber>,
     ) -> DispatchResult {
-        Self::is_owner(identity, &who)?;
+        Self::is_owner(identity, who)?;
 
         if Self::attribute_and_id(identity, name).is_some() {
             Err(Error::<T>::AttributeAlreadyExists.into())
@@ -593,7 +592,7 @@ for Pallet<T>
 
     /// Updates the attribute validity to make it expire and invalid.
     fn reset_attribute(who: T::AccountId, identity: &T::AccountId, name: &[u8]) -> DispatchResult {
-        Self::is_owner(&identity, &who)?;
+        Self::is_owner(identity, &who)?;
         // If the attribute contains_key, the latest valid block is set to the current block.
         let result = Self::attribute_and_id(identity, name);
         match result {
@@ -654,7 +653,7 @@ for Pallet<T>
         let id = (&identity, name, lookup_nonce).using_encoded(blake2_256);
 
         if <AttributeOf<T>>::contains_key((&identity, &id)) {
-            Self::attribute_of((identity, id)).and_then(|a| Some((a, id)))
+            Self::attribute_of((identity, id)).map(|a| (a, id))
         } else {
             None
         }
