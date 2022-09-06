@@ -46,54 +46,54 @@
 //! ### Public Functions
 //!
 //! - `create_task` - Function used to create a new task.
-//! 	Inputs:
-//! 		- title: BoundedVec,
-//! 		- specification: BoundedVec,
-//! 		- budget: BalanceOf<T>,
-//! 		- deadline: u64
-//! 		- attachments: BoundedVec,
-//! 		- keywords: BoundedVec
-//! 		- organization: Option<OrganizationIdOf<T>>
+//!     Inputs:
+//!         - title: BoundedVec,
+//!         - specification: BoundedVec,
+//!         - budget: BalanceOf<T>,
+//!         - deadline: u64
+//!         - attachments: BoundedVec,
+//!         - keywords: BoundedVec
+//!         - organization: Option<OrganizationIdOf<T>>
 //!
 //! - `update_task` - Function used to update already existing task.
-//! 	Inputs:
-//! 		- task_id: T::Hash,
-//! 		- title: Vec<u8>,
-//! 		- specification: Vec<u8>,
-//! 		- budget: BalanceOf<T>,
-//! 		- deadline: u64,
-//! 		- attachments, BoundedVec
-//! 		- keywords: BoundedVec,
-//! 		- organization: Option<OrganizationIdOf<T>>
-//! 	Only the creator of the task has the update rights.
+//!     Inputs:
+//!         - task_id: T::Hash,
+//!         - title: Vec<u8>,
+//!         - specification: Vec<u8>,
+//!         - budget: BalanceOf<T>,
+//!         - deadline: u64,
+//!         - attachments, BoundedVec
+//!         - keywords: BoundedVec,
+//!         - organization: Option<OrganizationIdOf<T>>
+//!     Only the creator of the task has the update rights.
 //!
 //! - `remove_task` - Function used to remove an already existing task.
-//! 	Inputs:
-//! 		- task_id: T::Hash,
+//!     Inputs:
+//!         - task_id: T::Hash,
 //!
 //! - `start_task` - Function used to start already existing task.
-//! 	Inputs:
-//! 		- task_id: T::Hash,
+//!     Inputs:
+//!         - task_id: T::Hash,
 //!
 //! - `complete_task` - Function used to complete a task.
-//! 	Inputs:
-//! 		- task_id: T::Hash,
+//!     Inputs:
+//!         - task_id: T::Hash,
 //!
 //! - `accept_task` - Function used to accept completed task.
-//! 	Inputs:
-//! 		- task_id: T::Hash,
-//! 	After the task is accepted, its data is removed from storage.
+//!     Inputs:
+//!         - task_id: T::Hash,
+//!     After the task is accepted, its data is removed from storage.
 //!
 //! - `reject_task` - Function used to reject an already completed task.
-//! 	Inputs:
-//! 	- task_id: T::Hash,
-//! 	- feedback : BoundedVec
+//!     Inputs:
+//!     - task_id: T::Hash,
+//!     - feedback : BoundedVec
 //! 
 //! Storage Items:
-//! 	Tasks: Stores Task related information
-//! 	TaskCount: Counts the total number of Tasks in the ecosystem
-//! 	TasksOwned: Keeps track of how many tasks are owned per account
-//! 
+//!     Tasks: Stores Task related information
+//!     TaskCount: Counts the total number of Tasks in the ecosystem
+//!     TasksOwned: Keeps track of how many tasks are owned per account
+//!
 //!
 //! ## Related Modules
 //!
@@ -162,7 +162,7 @@ pub mod pallet {
 	}
 
 	// Set TaskStatus enum.
-	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+	#[derive(Clone, Encode, Decode, PartialEq, Eq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
   	#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
   	pub enum TaskStatus {
@@ -314,7 +314,7 @@ pub mod pallet {
 			// need existential deposit check?
 			ensure!(<T as self::Config>::Currency::can_reserve(&signer, budget), Error::<T>::NotEnoughBalance);
 			// Reserve currency of the task creator.
-			<T as self::Config>::Currency::reserve(&signer, budget.into()).expect("can_reserve has been called; qed");
+			<T as self::Config>::Currency::reserve(&signer, budget).expect("can_reserve has been called; qed");
 
 			// Emit a Task Created Event.
 			Self::deposit_event(Event::TaskCreated(signer, task_id));
@@ -368,7 +368,7 @@ pub mod pallet {
 			}
 
 			// Update storage after as we need to check if sender can reserve new amount.
-			let _task_id = Self::update_created_task(old_task, &task_id, title, specification, &budget, deadline, attachments, keywords, organization)?;
+			Self::update_created_task(old_task, &task_id, title, specification, &budget, deadline, attachments, keywords, organization)?;
 
 			// Emit a Task Updated Event.
 			Self::deposit_event(Event::TaskUpdated(signer, task_id));
@@ -437,7 +437,7 @@ pub mod pallet {
 			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
 
 			// Ensure owner
-			ensure!(&task.current_owner == &signer, Error::<T>::OnlyInitiatorAcceptsTask);
+			ensure!(task.current_owner == signer, Error::<T>::OnlyInitiatorAcceptsTask);
 
 			// Transfer reserved funds of task amount to volunteer.
 			<T as self::Config>::Currency::unreserve(&signer, task.budget);
@@ -518,7 +518,7 @@ pub mod pallet {
 				attachments,
 				keywords,
 				feedback: None, // Only used when task is rejected
-				organization: organization,
+				organization,
 				created_at: <frame_system::Pallet<T>>::block_number(),
 				updated_at: Default::default(),
 				completed_at: Default::default(),
@@ -549,12 +549,12 @@ pub mod pallet {
 
 			let mut new_task: Task<T> = old_task;
 			// Init Task Object
-			new_task.title = new_title.clone();
-			new_task.specification = new_specification.clone();
+			new_task.title = new_title;
+			new_task.specification = new_specification;
 			new_task.budget = *new_budget;
 			new_task.deadline = new_deadline;
-			new_task.attachments = attachments.clone();
-			new_task.keywords = keywords.clone();
+			new_task.attachments = attachments;
+			new_task.keywords = keywords;
 			new_task.organization = organization;
 			new_task.updated_at = <frame_system::Pallet<T>>::block_number();
 
@@ -689,7 +689,7 @@ pub mod pallet {
 			// Set current owner back to volunteer
 			task.current_owner = task.volunteer.clone();
 			task.status = TaskStatus::InProgress;
-			task.feedback = Some(feedback.clone());
+			task.feedback = Some(feedback);
 			let task_volunteer = task.volunteer.clone();
 
 			// Insert task
@@ -718,7 +718,7 @@ pub mod pallet {
 			<Tasks<T>>::remove(task_id);
 
 			// Unreserve balance amount from task creator
-			<T as self::Config>::Currency::unreserve(&task_initiator, task.budget);
+			<T as self::Config>::Currency::unreserve(task_initiator, task.budget);
 
 			// Reduce task count
 			let new_count = Self::task_count().saturating_sub(1);
@@ -738,6 +738,7 @@ pub mod pallet {
 		// Function that generates escrow account based on TaskID
 		// todo: ensure that usage of into_account_truncating is correct
 		// See: https://paritytech.github.io/substrate/master/sp_runtime/traits/trait.AccountIdConversion.html#tymethod.into_sub_account_truncating
+		#[allow(dead_code)] // Used in test only
 		pub(crate) fn account_id(task_id: &T::Hash) -> T::AccountId {
 			T::PalletId::get().into_sub_account_truncating(task_id)
 		}
