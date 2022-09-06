@@ -37,7 +37,7 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
 // This creates an `Profile` object.
 fn create_profile_info<T: Config>(_num_fields: u32) -> Profile<T> {
 
-	let s: u8 = u8::MAX.into();
+	let s: u8 = u8::MAX;
 	let interests = vec![0u8, s as u8];
 	let username = vec![0u8, s as u8];
 	let available_hours_per_week = 40_u8;
@@ -45,7 +45,7 @@ fn create_profile_info<T: Config>(_num_fields: u32) -> Profile<T> {
 	let caller: T::AccountId = whitelisted_caller();
 	let balance = T::Currency::free_balance(&caller);
 
-	let info = Profile {
+	Profile {
 		owner: caller,
 		name: username.try_into().unwrap(),
 		interests: interests.try_into().unwrap(),
@@ -53,9 +53,7 @@ fn create_profile_info<T: Config>(_num_fields: u32) -> Profile<T> {
 		reputation: u32::MAX,
 		available_hours_per_week,
 		additional_information: None,
-	};
-
-	return info
+	}
 }
 
 
