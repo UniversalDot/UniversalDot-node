@@ -495,7 +495,6 @@ pub mod pallet {
 		fn on_initialize(n: T::BlockNumber) -> frame_support::weights::Weight {
 			// Remove tasks which have not been started, and have passed the deadline
 			let mut weight = 10_000;
-			let current_timestamp = T::Time::now();
 
 			// Collect all dying and expiring tasks.
 			let old_expiring_tasks = ExpiringTasksPerBlock::<T>::take(n);
@@ -505,14 +504,15 @@ pub mod pallet {
 			DyingTasksPerBlock::<T>::insert(n + T::TaskLongevityAfterExpiration::get(), old_expiring_tasks);
 			
 			// Remove all dying tasks from storage.
-			old_dying_tasks.iter().map(|th| {
+			let _ = old_dying_tasks.iter().map(|th| {
 				let maybe_task = Tasks::<T>::get(th);
 				if let Some(task)= maybe_task {
+					//also remove from expiring if applicable
 					if let Ok(()) = Self::delete_task(&task.initiator, &th) {
 						weight += 10_000;
-					}
+					} 
 				}
-			});
+			}).collect::<Vec<_>>();
 
 			weight
 		}

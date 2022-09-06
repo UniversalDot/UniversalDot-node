@@ -1,6 +1,6 @@
 use core::convert::TryInto;
 use crate::TaskStatus;
-use crate::{mock::*, Error};
+use crate::{mock::*, Error, Config, ExpiringTasksPerBlock};
 use frame_support::traits::fungible::Inspect;
 use frame_support::storage::bounded_vec::BoundedVec;
 use frame_support::{assert_noop, assert_ok, traits::{UnixTime, Hooks}};
@@ -8,7 +8,7 @@ use sp_core::H256;
 
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  Constants and Functions used in TESTS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-pub const MILLISEC_PER_BLOCK: u64 = 12000; // 12 sec for a block
+pub const MILLISEC_PER_BLOCK: u64 = <Test as Config>::MillisecondsPerBlock::get(); 
 pub const HOURS : u8 = 40_u8;
 pub const BUDGET : u64 = 7_u64;
 pub const BUDGET2 : u64 = 10_u64;
@@ -67,6 +67,14 @@ fn get_deadline() -> u64 {
 	let deadline_u64 = deadline.as_secs() * 1000_u64;
 	assert_eq!(deadline.as_millis(), deadline_u64 as u128);
 	deadline_u64
+}
+
+fn get_deadline_block() -> u64 {
+	// deadline is current time + 1 hour
+	let deadline = <Time as UnixTime>::now() + std::time::Duration::from_millis(3600 * 1000_u64);
+	let deadline_u64 = deadline.as_secs() * 1000_u64;
+	assert_eq!(deadline.as_millis(), deadline_u64 as u128);
+	((deadline_u64 as f64 / MILLISEC_PER_BLOCK as f64).floor() as u64) + System::block_number()
 }
 
 fn run_to_block(n: u64) {
@@ -856,10 +864,9 @@ fn delete_task_after_deadline() {
 		// Ensure task object is created
 		assert!(task.is_some());
 
-		// deadline is 1 hour => 3600 sec => 300 blocks as 12 secs per block
-		run_to_block(302);
-		let task = Task::tasks(task_id);
+		run_to_block(task.unwrap().deadline_block.unwrap() + <Test as Config>::TaskLongevityAfterExpiration::get());
 
+		let task = Task::tasks(task_id);
 		// Ensure task is deleted after deadline has expired
 		assert!(task.is_none());
 	});
@@ -997,5 +1004,69 @@ fn test_create_two_tasks_insufficient_balance() {
 		if let Err(n) = Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::balance(&*ALICE), get_deadline(), attachments(), keywords(), None) {
 			assert_eq!(n.error, Error::<Test>::NotEnoughBalance.into());	
 		}
+	})
+}
+
+#[test]
+fn tasks_are_moved_to_expiry() {
+	new_test_ext().execute_with( || {
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), Balances::free_balance(&*ALICE), get_deadline(), attachments(), keywords(), None));
+		
+		let task_id_0 = Task::tasks_owned(*ALICE)[0];
+		let task_id_1 = Task::tasks_owned(*ALICE)[1];
+		
+		assert!(ExpiringTasksPerBlock::<Test>::get(get_deadline_block()).contains(&task_id_0));
+		assert!(ExpiringTasksPerBlock::<Test>::get(get_deadline_block()).contains(&task_id_1));
+	})
+}
+
+#[test]
+fn tasks_are_moved_to_dying_after_expiry() {
+	new_test_ext().execute_with( || {
+	
+	})
+}
+
+#[test]
+fn dying_task_is_rejuvinated_on_command() {
+	new_test_ext().execute_with( || {
+	
+	})
+}
+
+#[test]
+fn update_task_correctly_modifies_block_expiry() {
+	new_test_ext().execute_with( || {
+	
+	})
+}
+
+#[test]
+fn create_task_correctly_modifies_block_expiry() {
+	new_test_ext().execute_with( || {
+	
+	})
+}
+
+#[test]
+fn dying_tasks_are_removed_after_grace_period() {
+	new_test_ext().execute_with( || {
+	
+	})
+}
+
+#[test]
+fn test_handle_new_deadline() {
+	new_test_ext().execute_with( || {
+	
+	})
+}
+
+#[test]
+fn remove_task_from_expiring() {
+	new_test_ext().execute_with( || {
+	
 	})
 }
