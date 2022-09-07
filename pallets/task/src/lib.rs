@@ -296,6 +296,8 @@ pub mod pallet {
 		NoPermissionToStart,
 		/// You don't have permission to delete this task.
 		NoPermissionToRemove,
+		/// You don't have permission to revive this task.
+		NoPermissionToRevive,
 		/// Only completed tasks can be rejected.
 		OnlyCompletedTaskAreRejected,
 		/// This account has no Profile yet.
@@ -487,6 +489,48 @@ pub mod pallet {
 			Self::reject_completed_task(&signer, &task_id, feedback)?;
 
 			// Emit a Task Rejected Event.
+			Self::deposit_event(Event::TaskRejected(signer, task_id));
+
+			Ok(())
+		}
+		/// Function to revive an expired task. [origin, task_id, new_deadline]
+		/// Something the user does to allow editing of the task as well as keep the task in storage.
+		#[pallet::weight(<T as Config>::WeightInfo::todo(0,0))]
+		pub fn revive_expired_task(origin: OriginFor<T>, task_id: T::Hash, new_deadline: u64) -> DispatchResult {
+
+			// Check that the extrinsic was signed and get the signer;
+			let signer = ensure_signed(origin)?;
+
+			// Ensure task exists;
+			let mut task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
+
+			// Ensure the sender is the initiator;
+			ensure!(Self::is_task_initiator(&task_id, &signer)?, <Error<T>>::OnlyInitiatorUpdatesTask);
+			
+			// Ensure task status is expired;
+			ensure!(task.status == TaskStatus::Expired, Error::<T>::NoPermissionToRevive)
+
+			let old_deadline_block = task.deadline_block;
+			let new_deadline_block = get_deadline_block(new_deadline);
+			
+			task.status = TaskStatus::Created;
+			task.deadline = new_deadline;
+			task.deadline_block = new_deadline_block;
+
+			Tasks::<T>::insert(task_id, task);
+
+			// Remove from the dying tasks storage
+			let expired_tasks: BoundedVec<T::Hash, MaximumTasksPerBlock> = DyingTasksPerBlock::<T>::take(deadline_block)
+				.into_iter()
+				.filter(|&h| h != *task_id)
+				.collect::<Vec<T::Hash>>()
+				.try_into()
+				.expect("reducing, will not be out of bounds; qed");
+			DyingTasksPerBlock::<T>::insert(deadline_block, expired_tasks)
+
+			handle_new_task_deadline(task.task_id, None, new_deadline_block)
+			
+			// Emit a Task Rejected Event;
 			Self::deposit_event(Event::TaskRejected(signer, task_id));
 
 			Ok(())
@@ -817,8 +861,8 @@ pub mod pallet {
 
 		/// Replaces the old task deadline with the new one to track expired tasks.
 		/// If you have no old_task_deadline e.g the state change Status == InProgress to Status == Created
-		/// Or for creating new tasks
-		/// then old_task_deadline == None.  
+		/// Or for creating new tasks, then, old_task_deadline == None.  
+		/// Only for handling NON EXPIRED tasks;
 		fn handle_new_task_deadline(task_id: &T::Hash, old_task_deadline: &Option<T::BlockNumber>, new_task_deadline: &T::BlockNumber) -> Result<(), DispatchError> {
 			
 			if let Some(d) = old_task_deadline {

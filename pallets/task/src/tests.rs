@@ -1039,13 +1039,6 @@ fn tasks_are_moved_to_dying_after_expiry() {
 }
 
 #[test]
-fn dying_task_is_rejuvinated_on_command() {
-	new_test_ext().execute_with( || {
-		
-	})
-}
-
-#[test]
 fn update_task_updates_block_expiry_with_different_deadline() {
 	new_test_ext().execute_with( || {
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
@@ -1079,4 +1072,20 @@ fn dying_tasks_are_removed_after_grace_period() {
 		assert!(!DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id_0));
 	})
 }
+
+#[test]
+fn test_expired_task_revival_status() {
+	new_test_ext().execute_with( || {
+	
+	})
+}
+
+
+#[test]
+fn test_expired_task_revival_storage() {
+	new_test_ext().execute_with( || {
+	
+	})
+}
+
 
