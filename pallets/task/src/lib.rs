@@ -171,7 +171,7 @@ pub mod pallet {
     	InProgress,
 		Completed,
 		Accepted,
-		Dying,
+		Expired,
   	}
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -357,7 +357,7 @@ pub mod pallet {
 
 			// Check if task exists
 			let old_task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
-
+			
 			// Check if the owner is the one who created task
 			ensure!(Self::is_task_initiator(&task_id, &signer)?, <Error<T>>::OnlyInitiatorUpdatesTask);
 
@@ -570,7 +570,7 @@ pub mod pallet {
 			<TaskCount<T>>::put(new_count);
 
 			// Handle the new deadline
-			Self::handle_new_task_deadline(&task_id, &None, deadline_block);
+			Self::handle_new_task_deadline(&task_id, &None, &deadline_block);
 
 			Ok(task_id)
 		}
@@ -580,24 +580,30 @@ pub mod pallet {
 		fn update_created_task(old_task:Task<T>, task_id: &T::Hash, new_title: BoundedVec<u8, T::MaxTitleLen>, new_specification: BoundedVec<u8, T::MaxSpecificationLen>, new_budget: &BalanceOf<T>,
 			new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>) -> Result<(), DispatchError> {
 			
-			let mut new_task: Task<T> = old_task;
-			// Init Task Object
-			new_task.title = new_title;
-			new_task.specification = new_specification;
-			new_task.budget = *new_budget;
-			new_task.deadline = new_deadline;
-			new_task.attachments = attachments;
-			new_task.keywords = keywords;
-			new_task.organization = organization;
-			new_task.updated_at = <frame_system::Pallet<T>>::block_number();
+			let new_task: Task<T> = Task::<T> {
+				title: new_title.clone(),
+				specification: new_specification.clone(),
+				budget: *new_budget,
+				attachments: attachments.clone(),
+				keywords: keywords.clone(),
+				organization: organization,
+				initiator: old_task.initiator.clone(),
+				volunteer: old_task.volunteer.clone(),
+				status: Created,
+				current_owner: old_task.current_owner.clone(),
+				deadline: new_deadline,
+				feedback: None, // Only used when task is rejected
+				created_at: old_task.created_at,
+				updated_at: <frame_system::Pallet<T>>::block_number(),
+				completed_at: Default::default(),
+				deadline_block: Some(Self::get_deadline_block(new_deadline)), 
+			};
 
-			if new_task.deadline != new_deadline {
-				// Calculate the new deadline_block
-				let deadline_duration = Duration::from_millis(new_deadline.saturated_into::<u64>());
-				let blocks_till_deadline: T::BlockNumber = ((((deadline_duration - T::Time::now()).as_millis() / T::MillisecondsPerBlock::get() as u128)) as u32).into();
-				let new_deadline_block = blocks_till_deadline + <frame_system::Pallet<T>>::block_number();
-				new_task.deadline_block = Some(new_deadline_block);
-				let _ = Self::handle_new_task_deadline(task_id, &new_task.deadline_block, new_deadline_block)?;
+			if old_task.deadline != new_deadline {
+				if let Some(d) = new_task.deadline_block {
+				// Make sure to handle the storage changes on deadline change;
+					let _ = Self::handle_new_task_deadline(task_id, &old_task.deadline_block, &d)?;
+				}
 			}
 
 			// Insert task into Hashmap
@@ -810,7 +816,7 @@ pub mod pallet {
 		/// If you have no old_task_deadline e.g the state change Status == InProgress to Status == Created
 		/// Or for creating new tasks
 		/// then old_task_deadline == None.  
-		fn handle_new_task_deadline(task_id: &T::Hash, old_task_deadline: &Option<T::BlockNumber>, new_task_deadline: T::BlockNumber) -> Result<(), DispatchError> {
+		fn handle_new_task_deadline(task_id: &T::Hash, old_task_deadline: &Option<T::BlockNumber>, new_task_deadline: &T::BlockNumber) -> Result<(), DispatchError> {
 			
 			if let Some(d) = old_task_deadline {
 				// Remove from old expiring tasks vec;
@@ -832,6 +838,12 @@ pub mod pallet {
 				.try_into()
 				.expect("reducing, will not be out of bounds; qed");
 			ExpiringTasksPerBlock::<T>::insert(deadline_block, expiring_tasks);
+		}
+
+		fn get_deadline_block(deadline: u64) -> T::BlockNumber {
+			let deadline_duration = Duration::from_millis(deadline.saturated_into::<u64>());
+			let blocks_till_deadline: T::BlockNumber = ((((deadline_duration - T::Time::now()).as_millis() / T::MillisecondsPerBlock::get() as u128)) as u32).into();
+			blocks_till_deadline + <frame_system::Pallet<T>>::block_number()
 		}
 
 	}

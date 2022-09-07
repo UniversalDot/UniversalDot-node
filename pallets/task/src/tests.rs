@@ -69,13 +69,13 @@ fn get_deadline(multiple: u64) -> u64 {
 	deadline_u64
 }
 
-fn get_deadline_block() -> u64 {
+fn get_deadline_block(multiple: u64) -> u64 {
 	// deadline is current time + 1 hour
-	((get_deadline(1) as f64 / MILLISEC_PER_BLOCK as f64).floor() as u64) + System::block_number()
+	((get_deadline(multiple) as f64 / MILLISEC_PER_BLOCK as f64).floor() as u64) + System::block_number()
 }
 
-fn get_dying_deadline_block() -> u64 {
-	get_deadline_block() + <Test as Config>::TaskLongevityAfterExpiration::get()
+fn get_dying_deadline_block(multiple: u64) -> u64 {
+	get_deadline_block(multiple) + <Test as Config>::TaskLongevityAfterExpiration::get()
 }
 
 fn run_to_block(n: u64) {
@@ -1013,8 +1013,8 @@ fn tasks_are_moved_to_expiry() {
 		let task_id_0 = Task::tasks_owned(*ALICE)[0];
 		let task_id_1 = Task::tasks_owned(*ALICE)[1];
 		
-		assert!(ExpiringTasksPerBlock::<Test>::get(get_deadline_block()).contains(&task_id_0));
-		assert!(ExpiringTasksPerBlock::<Test>::get(get_deadline_block()).contains(&task_id_1));
+		assert!(ExpiringTasksPerBlock::<Test>::get(get_deadline_block(1)).contains(&task_id_0));
+		assert!(ExpiringTasksPerBlock::<Test>::get(get_deadline_block(1)).contains(&task_id_1));
 	})
 }
 
@@ -1026,15 +1026,15 @@ fn tasks_are_moved_to_dying_after_expiry() {
 		
 		let task_id_0 = Task::tasks_owned(*ALICE)[0];
 		let task0 = Task::tasks(task_id_0).expect("no task found");
-		let dying_deadline_block = get_dying_deadline_block();
-		let deadline_block = get_deadline_block();
+		let dying_deadline_block = get_dying_deadline_block(1);
+		let deadline_block = get_deadline_block(1);
 
 		assert!(ExpiringTasksPerBlock::<Test>::get(deadline_block).contains(&task_id_0));
+		assert!(!DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id_0));
 
 		run_to_block(dying_deadline_block - 1);
 
 		assert!(!ExpiringTasksPerBlock::<Test>::get(deadline_block).contains(&task_id_0));
-		
 		assert!(DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id_0));
 
 		run_to_block(dying_deadline_block);
@@ -1057,11 +1057,14 @@ fn update_task_updates_block_expiry_with_different_deadline() {
 		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
 		
 		let task_id_0 = Task::tasks_owned(*ALICE)[0];
-		let task0 = Task::tasks(task_id_0).expect("no task found");
-		let dying_deadline_block = get_dying_deadline_block();
-		let deadline_block = get_deadline_block(); 
-	
-		assert_ok!(Task::update_task(Origin::signed(*ALICE), task_id_0, title2(), spec2(), BUDGET2, get_deadline(1), attachments2(), keywords2(), None));		
+		let deadline_block_1 = get_deadline_block(1); 
+		let deadline_block_2 = get_deadline_block(2); 
+
+		assert!(ExpiringTasksPerBlock::<Test>::get(deadline_block_1).contains(&task_id_0));
+		assert_ok!(Task::update_task(Origin::signed(*ALICE), task_id_0, title2(), spec2(), BUDGET2, get_deadline(2), attachments2(), keywords2(), None));		
+
+		assert!(ExpiringTasksPerBlock::<Test>::get(deadline_block_2).contains(&task_id_0));
+		assert!(!ExpiringTasksPerBlock::<Test>::get(deadline_block_1).contains(&task_id_0));
 	})
 }
 
