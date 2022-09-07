@@ -119,7 +119,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use frame_support::{
 		sp_runtime::traits::{Hash, SaturatedConversion, AccountIdConversion},
-		traits::{Currency, ReservableCurrency, tokens::ExistenceRequirement},
+		traits::{Currency, ReservableCurrency, tokens::ExistenceRequirement, ConstU32},
 		transactional};
 	use scale_info::TypeInfo;
 	use sp_std::vec::Vec;
@@ -138,6 +138,8 @@ pub mod pallet {
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
 	type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 	type OrganizationIdOf<T> = <T as frame_system::Config>::Hash;
+
+	type MaximumTasksPerBlock = ConstU32<10_000>;
 
 	// Struct for holding Task information.
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -227,11 +229,11 @@ pub mod pallet {
 	//TODO!!!!!!! BOUNDED VEC SIZE
 	#[pallet::storage]
 	/// Tasks: The Tasks that end on a given block number [key: Block Number, value: Vec<TaskId>]
-	pub(super) type ExpiringTasksPerBlock<T: Config> = StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<T::Hash, ConstU32<10000>>, ValueQuery>;
+	pub(super) type ExpiringTasksPerBlock<T: Config> = StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<T::Hash, MaximumTasksPerBlock>, ValueQuery>;
 
 	#[pallet::storage]
 	/// Tasks that will be removed from storage on a given block. [key: Block Number, value: Vec<TaskId>]
-	pub(super) type DyingTasksPerBlock<T: Config> = StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<T::Hash, ConstU32<10000>>, ValueQuery>;
+	pub(super) type DyingTasksPerBlock<T: Config> = StorageMap<_, Twox64Concat, T::BlockNumber, BoundedVec<T::Hash, MaximumTasksPerBlock>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn task_count)]
@@ -569,7 +571,7 @@ pub mod pallet {
 			<TaskCount<T>>::put(new_count);
 
 			// Handle the new deadline
-			Self::handle_new_task_deadline(&task_id, &None, &deadline_block);
+			let _ = Self::handle_new_task_deadline(&task_id, &None, &deadline_block)?;
 
 			Ok(task_id)
 		}
@@ -579,6 +581,7 @@ pub mod pallet {
 		fn update_created_task(old_task:Task<T>, task_id: &T::Hash, new_title: BoundedVec<u8, T::MaxTitleLen>, new_specification: BoundedVec<u8, T::MaxSpecificationLen>, new_budget: &BalanceOf<T>,
 			new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>) -> Result<(), DispatchError> {
 			
+
 			let new_task: Task<T> = Task::<T> {
 				title: new_title.clone(),
 				specification: new_specification.clone(),
@@ -829,7 +832,7 @@ pub mod pallet {
 		}
 
 		fn remove_task_from_expiring(task_id: &T::Hash, deadline_block: T::BlockNumber) {
-			let expiring_tasks: BoundedVec<T::Hash, ConstU32<10000>> = ExpiringTasksPerBlock::<T>::take(deadline_block)
+			let expiring_tasks: BoundedVec<T::Hash, MaximumTasksPerBlock> = ExpiringTasksPerBlock::<T>::take(deadline_block)
 				.into_iter()
 				.filter(|&h| h != *task_id)
 				.collect::<Vec<T::Hash>>()

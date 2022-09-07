@@ -1030,7 +1030,6 @@ fn tasks_are_moved_to_dying_after_expiry() {
 		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
 		
 		let task_id_0 = Task::tasks_owned(*ALICE)[0];
-		let task0 = Task::tasks(task_id_0).expect("no task found");
 		let dying_deadline_block = get_dying_deadline_block(1);
 		let deadline_block = get_deadline_block(1);
 
@@ -1041,10 +1040,6 @@ fn tasks_are_moved_to_dying_after_expiry() {
 
 		assert!(!ExpiringTasksPerBlock::<Test>::get(deadline_block).contains(&task_id_0));
 		assert!(DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id_0));
-
-		run_to_block(dying_deadline_block);
-
-		assert!(!DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id_0));
 	})
 }
 
@@ -1067,36 +1062,26 @@ fn update_task_updates_block_expiry_with_different_deadline() {
 
 		assert!(ExpiringTasksPerBlock::<Test>::get(deadline_block_1).contains(&task_id_0));
 		assert_ok!(Task::update_task(Origin::signed(*ALICE), task_id_0, title2(), spec2(), BUDGET2, get_deadline(2), attachments2(), keywords2(), None));		
-
 		assert!(ExpiringTasksPerBlock::<Test>::get(deadline_block_2).contains(&task_id_0));
 		assert!(!ExpiringTasksPerBlock::<Test>::get(deadline_block_1).contains(&task_id_0));
 	})
 }
 
 #[test]
-fn create_task_adds_block_expiry() {
-	new_test_ext().execute_with( || {
-	
-	})
-}
-
-#[test]
 fn dying_tasks_are_removed_after_grace_period() {
 	new_test_ext().execute_with( || {
-	
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
+		
+		let task_id_0 = Task::tasks_owned(*ALICE)[0];
+		let dying_deadline_block = get_dying_deadline_block(1);
+		run_to_block(dying_deadline_block - 1);
+
+		assert!(DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id_0));
+
+		run_to_block(dying_deadline_block);
+
+		assert!(!DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id_0));
 	})
 }
 
-#[test]
-fn test_handle_new_deadline() {
-	new_test_ext().execute_with( || {
-	
-	})
-}
-
-#[test]
-fn remove_task_from_expiring() {
-	new_test_ext().execute_with( || {
-	
-	})
-}
