@@ -510,24 +510,28 @@ pub mod pallet {
 			// Ensure task status is expired;
 			ensure!(task.status == TaskStatus::Expired, Error::<T>::NoPermissionToRevive)
 
+			// Get the deadlines for editing;
 			let old_deadline_block = task.deadline_block;
 			let new_deadline_block = get_deadline_block(new_deadline);
 			
+			// Update the task struct;
 			task.status = TaskStatus::Created;
 			task.deadline = new_deadline;
 			task.deadline_block = new_deadline_block;
-
 			Tasks::<T>::insert(task_id, task);
 
-			// Remove from the dying tasks storage
-			let expired_tasks: BoundedVec<T::Hash, MaximumTasksPerBlock> = DyingTasksPerBlock::<T>::take(deadline_block)
+			// Remove from the dying tasks storage;
+			let expired_tasks: BoundedVec<T::Hash, MaximumTasksPerBlock> = DyingTasksPerBlock::<T>::take(old_deadline_block)
 				.into_iter()
 				.filter(|&h| h != *task_id)
 				.collect::<Vec<T::Hash>>()
 				.try_into()
 				.expect("reducing, will not be out of bounds; qed");
-			DyingTasksPerBlock::<T>::insert(deadline_block, expired_tasks)
+			DyingTasksPerBlock::<T>::insert(old_deadline_block, expired_tasks)
 
+			// Handle the new deadline without the old deadline.
+			// Using none here because handle_new_task_deadline only deals with expiring tasks
+			// not expired
 			handle_new_task_deadline(task.task_id, None, new_deadline_block)
 			
 			// Emit a Task Rejected Event;
@@ -887,6 +891,7 @@ pub mod pallet {
 			ExpiringTasksPerBlock::<T>::insert(deadline_block, expiring_tasks);
 		}
 
+		/// Given a unix duration calculate the amount of blocks required to reach that time.
 		fn get_deadline_block(deadline: u64) -> T::BlockNumber {
 			let deadline_duration = Duration::from_millis(deadline.saturated_into::<u64>());
 			let blocks_till_deadline: T::BlockNumber = ((((deadline_duration - T::Time::now()).as_millis() / T::MillisecondsPerBlock::get() as u128)) as u32).into();
