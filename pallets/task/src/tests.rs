@@ -1099,13 +1099,83 @@ fn dying_tasks_are_removed_after_grace_period() {
 #[test]
 fn test_expired_task_revival_status() {
 	new_test_ext().execute_with( || {
+		// Setup state;
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
+		
+		let task_id = Task::tasks_owned(*ALICE)[0];
+		let task = Task::tasks(task_id).expect("no task found");
+		let deadline_block = get_deadline_block(1);
+
+		// Assert that the status is ok and run to expiry deadline;
+		assert!(task.status == TaskStatus::Created);
+		run_to_block(deadline_block);
+
+		// Assert that the status has indeed expired on this block;
+		let task = Task::tasks(task_id).expect("no task found");
+		assert!(task.status == TaskStatus::Expired);
+
+		// Revive the task;
+		Task::revive_expired_task(Origin::signed(*ALICE), task_id, get_deadline(2));
+		let task = Task::tasks(task_id).expect("no task found");
+
+		// Assert that the task state has been updated correctly;
+		assert!(task.status == TaskStatus::Created);
+		assert!(task.deadline_block == get_deadline_block(2));
+		assert!(task.deadline == get_deadline(2));
+	})
+}
+
+#[test]
+fn test_revival_swaps_task_from_dying_to_expired() {
+	new_test_ext().execute_with( || {
+		// Setup state;
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
+		
+		let task_id = Task::tasks_owned(*ALICE)[0];
+		let task = Task::tasks(task_id).expect("no task found");
+		let deadline_block = get_deadline_block(1);
+		let dying_deadline_block = get_dying_deadline_block(1);
+
+
+		// Assert the task exists is expiring storage;
+		assert!(ExpiringTasksPerBlock::<Test>::get(deadline_block).contains(&task_id));
+
+		// Run to expiry deadline;
+		run_to_block(deadline_block);
+
+		// Assert that the task exists in dying storage;
+		assert!(DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id));
+
+		// Revive the task;
+		Task::revive_expired_task(Origin::signed(*ALICE), task_id, get_deadline(2));
+		let task = Task::tasks(task_id).expect("no task found");
+
+		// Assert the task exists in expiring storage and not in dying storage;
+		assert!(!DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id));
+		assert!(ExpiringTasksPerBlock::<Test>::get(get_deadline_block(2)).contains(&task_id));
+	})
+}
+
+#[test]
+fn test_only_initiator_can_revive() {
+	new_test_ext().execute_with( || {
 	
 	})
 }
 
 
+
 #[test]
 fn test_expired_task_revival_storage() {
+	new_test_ext().execute_with( || {
+	
+	})
+}
+
+#[test]
+fn test_expired_task_with_invalid_new_deadline() {
 	new_test_ext().execute_with( || {
 	
 	})
