@@ -308,11 +308,12 @@ pub mod pallet {
 				ensure!(T::Organization::exists(&organization), Error::<T>::InvalidOrganization);
 			}
 
+			// Ensure has enough balance;
+			ensure!(<T as self::Config>::Currency::can_reserve(&signer, budget), Error::<T>::NotEnoughBalance);
+
 			// Update storage.
 			let task_id = Self::new_task(&signer, title, specification, &budget, deadline, attachments, keywords, organization)?;
 
-			// need existential deposit check?
-			ensure!(<T as self::Config>::Currency::can_reserve(&signer, budget), Error::<T>::NotEnoughBalance);
 			// Reserve currency of the task creator.
 			<T as self::Config>::Currency::reserve(&signer, budget).expect("can_reserve has been called; qed");
 
