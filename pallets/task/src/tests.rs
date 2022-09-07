@@ -1011,6 +1011,8 @@ fn test_create_two_tasks_insufficient_balance() {
 #[test]
 fn tasks_are_moved_to_expiry() {
 	new_test_ext().execute_with( || {
+
+		// Setup state;
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
 		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), Balances::free_balance(&*ALICE), get_deadline(1), attachments(), keywords(), None));
@@ -1018,14 +1020,20 @@ fn tasks_are_moved_to_expiry() {
 		let task_id_0 = Task::tasks_owned(*ALICE)[0];
 		let task_id_1 = Task::tasks_owned(*ALICE)[1];
 		
+		// Assert that the tasks have been added to the expiring blocks storage;
 		assert!(ExpiringTasksPerBlock::<Test>::get(get_deadline_block(1)).contains(&task_id_0));
 		assert!(ExpiringTasksPerBlock::<Test>::get(get_deadline_block(1)).contains(&task_id_1));
+	
+		// And not the dying blocks storage;
+		assert!(!DyingTasksPerBlock::<Test>::get(get_deadline_block(1)).contains(&task_id_1));
 	})
 }
 
 #[test]
 fn tasks_are_moved_to_dying_after_expiry() {
 	new_test_ext().execute_with( || {
+
+		// Setup state;
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
 		
@@ -1033,11 +1041,13 @@ fn tasks_are_moved_to_dying_after_expiry() {
 		let dying_deadline_block = get_dying_deadline_block(1);
 		let deadline_block = get_deadline_block(1);
 
+		// Assert state is correct before expiry;
 		assert!(ExpiringTasksPerBlock::<Test>::get(deadline_block).contains(&task_id_0));
 		assert!(!DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id_0));
 
 		run_to_block(dying_deadline_block - 1);
 
+		// Assert that the expiring task has been moved to dying tasks;
 		assert!(!ExpiringTasksPerBlock::<Test>::get(deadline_block).contains(&task_id_0));
 		assert!(DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id_0));
 	})
@@ -1046,6 +1056,8 @@ fn tasks_are_moved_to_dying_after_expiry() {
 #[test]
 fn update_task_updates_block_expiry_with_different_deadline() {
 	new_test_ext().execute_with( || {
+		
+		// Setup state;
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
 		
@@ -1053,8 +1065,11 @@ fn update_task_updates_block_expiry_with_different_deadline() {
 		let deadline_block_1 = get_deadline_block(1); 
 		let deadline_block_2 = get_deadline_block(2); 
 
+		// Assert state is correct and update with new deadline;
 		assert!(ExpiringTasksPerBlock::<Test>::get(deadline_block_1).contains(&task_id_0));
 		assert_ok!(Task::update_task(Origin::signed(*ALICE), task_id_0, title2(), spec2(), BUDGET2, get_deadline(2), attachments2(), keywords2(), None));		
+
+		// Assert that the expiring task has been added to the new deadline block and removed from the old one;
 		assert!(ExpiringTasksPerBlock::<Test>::get(deadline_block_2).contains(&task_id_0));
 		assert!(!ExpiringTasksPerBlock::<Test>::get(deadline_block_1).contains(&task_id_0));
 	})
@@ -1063,17 +1078,20 @@ fn update_task_updates_block_expiry_with_different_deadline() {
 #[test]
 fn dying_tasks_are_removed_after_grace_period() {
 	new_test_ext().execute_with( || {
+		
+		// Setup state;
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
 		
 		let task_id_0 = Task::tasks_owned(*ALICE)[0];
 		let dying_deadline_block = get_dying_deadline_block(1);
+		
+		// Run to block before death and assert its existance;
 		run_to_block(dying_deadline_block - 1);
-
 		assert!(DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id_0));
 
+		// Run to block of death and assert it does not exits anymore;
 		run_to_block(dying_deadline_block);
-
 		assert!(!DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id_0));
 	})
 }
