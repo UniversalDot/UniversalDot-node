@@ -625,7 +625,7 @@ fn test_members_are_mutated_on_ownership_transfer() {
 		assert!(Dao::organizations(org_id_1).unwrap().owner == *ALICE);
 
 		// Transfer ownership to BOB;
-		let _ = Dao::transfer_ownership(Origin::signed(*ALICE), org_id_1, *BOB)?;
+		let _ = Dao::transfer_ownership(Origin::signed(*ALICE), org_id_1, *BOB);
 
 		// Assert Alice is no longer a member of the org;
 		assert!(Dao::member_of(*ALICE).len() == 0);
