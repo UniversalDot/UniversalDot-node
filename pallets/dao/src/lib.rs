@@ -296,7 +296,7 @@ pub mod pallet {
 		/// You cannot create multiple organisations in the same block.
 		AlreadyCreatedOrgThisBlock,
 		/// The user if over the maximum amount of organizations allowed to be affiliated with.
-		MaxOrganizationsReached
+		MaxOrganizationsReached,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
