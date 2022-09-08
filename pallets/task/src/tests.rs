@@ -954,12 +954,8 @@ fn test_multiple_tasks_and_reserve_amounts() {
 }
 #[test]
 fn test_create_insufficient_funds_to_reserve() {
-<<<<<<< HEAD
-	new_test_ext().execute_with( || {
-=======
 	new_test_ext().execute_with(|| {
 		// Create profile (required by task)
->>>>>>> 8c82f43 (refactor(task): implement clippy fixes)
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		
 		//Create a task with more tokens than the signer has

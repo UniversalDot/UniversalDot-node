@@ -292,11 +292,9 @@ pub mod pallet {
 		/// The user is not a member of this organization.
 		NotMember,
 		/// The user if over the maximum amount of organizations allowed to be affiliated with.
-		MaxOrganizationsReached
+		MaxOrganizationsReached,
 		/// You cannot create multiple organisations in the same block.
 		AlreadyCreatedOrgThisBlock,
-		/// The user if over the maximum amount of organizations allowed to be affiliated with.
-		MaxOrganizationsReached,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -547,7 +545,7 @@ pub mod pallet {
 			
 			let current_organizations = current_organizations.into_iter()
 				.filter(|a| *a != org_id)
-				.collect::<Vec<DaoIdOf<T>>>()
+				.collect::<Vec<OrganizationIdOf<T>>>()
 				.try_into()
 				.expect("reducing size of boundedvec; qed");
 			
@@ -624,7 +622,7 @@ pub mod pallet {
 
 				// Update MemberOf
 			current_organizations = current_organizations.into_iter().filter(|a| *a !=
-				org_id).collect::<Vec<DaoIdOf<T>>>().try_into().expect("reducing size of boundedved; qed");
+				org_id).collect::<Vec<OrganizationIdOf<T>>>().try_into().expect("reducing size of boundedved; qed");
 			<MemberOf<T>>::insert(&account, &current_organizations);
 
 			Ok(())
