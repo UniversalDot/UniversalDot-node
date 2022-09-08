@@ -372,7 +372,7 @@ pub mod pallet {
 			// Check if task is in created status. Tasks can be updated only before work has been started.
 			ensure!(TaskStatus::Created == old_task.status, <Error<T>>::NoPermissionToUpdate);
 
-			// Ensure deadline is in the future
+
 			let deadline_duration = Duration::from_millis(old_task.deadline.saturated_into::<u64>());
 			ensure!(T::Time::now() < deadline_duration, Error::<T>::IncorrectDeadlineTimestamp);
 
@@ -496,7 +496,7 @@ pub mod pallet {
 		}
 		/// Function to revive an expired task. [origin, task_id, new_deadline]
 		/// Something the user does to allow editing of the task as well as keep the task in storage.
-		#[pallet::weight(<T as Config>::WeightInfo::todo(0,0))]
+		#[pallet::weight(<T as Config>::WeightInfo::revive_task(0,0))]
 		pub fn revive_expired_task(origin: OriginFor<T>, task_id: T::Hash, new_deadline: u64) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer;
@@ -510,6 +510,9 @@ pub mod pallet {
 			
 			// Ensure task status is expired;
 			ensure!(task.status == TaskStatus::Expired, Error::<T>::NoPermissionToRevive);
+
+			let deadline_duration = Duration::from_millis(new_deadline);
+			ensure!(T::Time::now() < deadline_duration, Error::<T>::IncorrectDeadlineTimestamp);
 
 			// Get the deadlines for editing;
 			let old_deadline_block = task.deadline_block;
@@ -587,6 +590,7 @@ pub mod pallet {
 			// Get the amount of block equal to the deadline duration.
 			let blocks_till_deadline: T::BlockNumber = ((((deadline_duration - time_of_creation).as_millis() / T::MillisecondsPerBlock::get() as u128)) as u32).into();
 			let deadline_block = blocks_till_deadline + <frame_system::Pallet<T>>::block_number();
+
 			// Init Task Object
 			let mut task = Task::<T> {
 				title,

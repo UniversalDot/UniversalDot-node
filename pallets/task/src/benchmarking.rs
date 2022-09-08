@@ -260,6 +260,38 @@ benchmarks! {
 		/* verifying final state */
 		assert_last_event::<T>(Event::<T>::TaskRejected(task_creator, hash_task).into());
 	}
+
+	revive_task {
+		/* setup initial state */
+		let task_creator: T::AccountId = whitelisted_caller();
+		let volunteer: T::AccountId = account("volunteer", 0, SEED);
+
+		// Populate data fields
+		let s in 1 .. u8::MAX.into(); // max bytes for specification
+		let x in 1 .. 4000;
+		let title = vec![0u8, s as u8];
+		let specification = vec![0u8, s as u8];
+		let feedback = vec![0u8, s as u8];
+		let budget = <T as pallet::Config>::Currency::total_balance(&task_creator);
+		let attachments = vec![0u8, s as u8];
+		let keywords = vec![0u8, s as u8];
+		let feedback = vec![0u8, s as u8];
+		let organization = T::Hashing::hash_of(&"some dao");
+
+		// Create profile before creating a task
+		create_profile::<T>();
+		let _ = PalletTask::<T>::create_task(RawOrigin::Signed(task_creator.clone()).into(), title.try_into().unwrap(), specification.try_into().unwrap(), budget, x.into(), attachments.try_into().unwrap(), keywords.try_into().unwrap(), Some(organization));
+		let hash_task = PalletTask::<T>::tasks_owned(&task_creator)[0];
+		//
+		DyingTasksPerBlock::<Test>
+
+	}: revive_task(RawOrigin::Signed(task_creator.clone()), hash_task, feedback.try_into().unwrap())
+		/* the code to be benchmarked */
+
+	verify {
+		/* verifying final state */
+		assert_last_event::<T>(Event::<T>::TaskRejected(task_creator, hash_task).into());
+	}
 }
 
 impl_benchmark_test_suite!(PalletTask, crate::mock::new_test_ext(), crate::mock::Test,);
