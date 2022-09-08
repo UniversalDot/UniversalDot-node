@@ -543,15 +543,6 @@ pub mod pallet {
 			
 			ensure!(current_organizations.iter().any(|a| *a == org_id), Error::<T>::InvalidOrganization);
 			
-			let current_organizations = current_organizations.into_iter()
-				.filter(|a| *a != org_id)
-				.collect::<Vec<OrganizationIdOf<T>>>()
-				.try_into()
-				.expect("reducing size of boundedvec; qed");
-			
-				// Update MemberOf
-			<MemberOf<T>>::set(&from_initiator, current_organizations);
-
 			// Remove Dao struct from Organizations storage
 			<Organizations<T>>::remove(org_id);
 			// Remove organizational instance
@@ -560,6 +551,7 @@ pub mod pallet {
 			// Reduce organization count
 			let new_count = Self::organization_count().saturating_sub(1);
 			<OrganizationCount<T>>::put(new_count);
+
 
 			// Find current organizations and remove org_id from MemberOf user
 			let current_organizations = <Pallet<T>>::member_of(&from_initiator);
@@ -572,7 +564,6 @@ pub mod pallet {
 			
 				// Update MemberOf
 			<MemberOf<T>>::set(&from_initiator, current_organizations);
-
 			Ok(())
 		}
 
@@ -623,6 +614,7 @@ pub mod pallet {
 				// Update MemberOf
 			current_organizations = current_organizations.into_iter().filter(|a| *a !=
 				org_id).collect::<Vec<OrganizationIdOf<T>>>().try_into().expect("reducing size of boundedved; qed");
+
 			<MemberOf<T>>::insert(&account, &current_organizations);
 
 			Ok(())
