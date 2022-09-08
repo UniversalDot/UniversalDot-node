@@ -613,3 +613,30 @@ fn test_org_is_retained_when_multiple_orgs_created() {
 		assert!(Dao::organization_count() == 2);
 	});
 }
+
+#[test]
+fn test_members_are_mutated_on_ownership_transfer() {
+	new_test_ext().execute_with(|| {
+		let org_id_1 = create_organization_1();
+
+		// Assert state is correctly setup;
+		assert!(Dao::member_of(*ALICE).len() == 1);
+		assert_eq!(Dao::members(org_id_1)[0], *ALICE);
+		assert!(Dao::organizations(org_id_1).unwrap().owner == *ALICE);
+
+		// Transfer ownership to BOB;
+		Dao::transfer_ownership(Origin::signed(*ALICE), org_id_1, *BOB);
+
+		// Assert Alice is no longer a member of the org;
+		assert!(Dao::member_of(*ALICE).len() == 0);
+
+		// Assert Bob is now a member of the organisation,
+		// Organisations members have been updated
+		// and Bob is the new owner;
+		assert_eq!(Dao::members(org_id_1)[0], *BOB);
+		assert!(Dao::member_of(*BOB).len() == 1);
+		assert!(Dao::organizations(org_id_1).unwrap().owner == *BOB);
+
+		assert!(Dao::organization_count() == 1);
+	});
+}

@@ -207,13 +207,13 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn organizations)]
 	/// Storage for organizations data, key: hash of Dao struct, Value Dao struct.
-	pub(super) type Organizations<T: Config> = StorageMap<_, Twox64Concat, DaoIdOf<T>, Dao<T>, OptionQuery>;
+	pub(super) type Organizations<T: Config> = StorageMap<_, Twox64Concat, OrganizationIdOf<T>, Dao<T>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn members)]
 	#[pallet::unbounded]
 	/// Create members of organization storage map with key: Hash of Dao, value: Vec<AccountID>
-	pub(super) type Members<T: Config> = StorageMap<_, Twox64Concat, DaoIdOf<T>, Vec<T::AccountId>, ValueQuery>;
+	pub(super) type Members<T: Config> = StorageMap<_, Twox64Concat, OrganizationIdOf<T>, Vec<T::AccountId>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn organization_count)]
@@ -224,7 +224,7 @@ pub mod pallet {
 	#[pallet::getter(fn member_of)]
 	#[pallet::unbounded]
 	/// Storage item that indicates which DAO's a user belongs to [AccountID, Vec]
-	pub(super) type MemberOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, BoundedVec<DaoIdOf<T>, T::MaxMemberOfLen>, ValueQuery>;
+	pub(super) type MemberOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, BoundedVec<OrganizationIdOf<T>, T::MaxMemberOfLen>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn applicants_to_organization)]
@@ -235,10 +235,10 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Vision signed [AccountID, DaoIdOf]
+		/// Vision signed [AccountID, OrganizationIdOf]
 		VisionSigned(T::AccountId, OrganizationIdOf<T>),
 
-		/// Vision signed [AccountID, DaoIdOf]
+		/// Vision signed [AccountID, OrganizationIdOf]
 		VisionUnsigned(T::AccountId, OrganizationIdOf<T>),
 
 		/// DAO Organization was created [AccountID, DAO ID]
@@ -291,18 +291,12 @@ pub mod pallet {
 		OrganizationAlreadyExists,
 		/// The user is not a member of this organization.
 		NotMember,
-<<<<<<< HEAD
 		/// The user if over the maximum amount of organizations allowed to be affiliated with.
 		MaxOrganizationsReached
-=======
-<<<<<<< HEAD
->>>>>>> 34041aa (fix: MemberOf to be a bounded vec and member can create multiple orgs)
 		/// You cannot create multiple organisations in the same block.
 		AlreadyCreatedOrgThisBlock,
-=======
 		/// The user if over the maximum amount of organizations allowed to be affiliated with.
 		MaxOrganizationsReached
->>>>>>> a278dfe (fix: MemberOf to be a bounded vec and member can create multiple orgs)
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -369,7 +363,11 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			Self::change_owner(&who, org_id, &new_owner)?;
 			let org_account : T::AccountId = UncheckedFrom::unchecked_from(org_id);
+			
 			<pallet_did::Pallet<T>>::set_owner(&who, &org_account, &new_owner);
+
+			let _ = Self::add_member_to_organization(&new_owner, org_id, &new_owner)?;
+			let _ = Self::remove_member_from_organization(&new_owner, org_id, &who)?;
 
 			Self::deposit_event(Event::OrganizationOwnerChanged(who, org_id, new_owner));
 
@@ -564,23 +562,18 @@ pub mod pallet {
 			let new_count = Self::organization_count().saturating_sub(1);
 			<OrganizationCount<T>>::put(new_count);
 
-<<<<<<< HEAD
-=======
 			// Find current organizations and remove org_id from MemberOf user
 			let mut current_organizations = <Pallet<T>>::member_of(&from_initiator);
 			
-			ensure!(current_organizations.iter().any(|a| *a == org_id), Error::<T>::InvalidOrganization);
-			
 			let current_organizations = current_organizations.into_iter()
 				.filter(|a| *a != org_id)
-				.collect::<Vec<DaoIdOf<T>>>()
+				.collect::<Vec<OrganizationIdOf<T>>>()
 				.try_into()
 				.expect("reducing size of boundedvec; qed");
 			
 				// Update MemberOf
 			<MemberOf<T>>::set(&from_initiator, current_organizations);
 
->>>>>>> a278dfe (fix: MemberOf to be a bounded vec and member can create multiple orgs)
 			Ok(())
 		}
 
