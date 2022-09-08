@@ -88,6 +88,8 @@ pub trait WeightInfo {
 	
 	fn reject_task(s: u32, x: u32, ) -> Weight;
 
+	fn revive_task(s: u32, x: u32, ) -> Weight;
+
 }
 
 /// Weights for pallet_task using the Substrate node and recommended hardware.
@@ -247,6 +249,19 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 			
 			
 	}
+
+	fn revive_task(_s: u32, _x: u32, ) -> Weight {
+		(28_202_000 as Weight)
+			
+			
+			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
+			
+			
+			
+			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+			
+			
+	}
 	
 }
 
@@ -393,6 +408,19 @@ impl WeightInfo for () {
 	// Storage: Task TasksOwned (r:2 w:2)
 	
 	fn reject_task(_s: u32, _x: u32, ) -> Weight {
+		(28_202_000 as Weight)
+			
+			
+			.saturating_add(RocksDbWeight::get().reads(3 as Weight))
+			
+			
+			
+			.saturating_add(RocksDbWeight::get().writes(3 as Weight))
+			
+			
+	}
+
+	fn revive_task(_s: u32, _x: u32, ) -> Weight {
 		(28_202_000 as Weight)
 			
 			

@@ -316,7 +316,7 @@ pub mod pallet {
 		/// Expiry or Dying Tasks limit reached.
 		ExpiringTaskLimitReached,
 	}
-
+	
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
 	// These functions materialize as "extrinsics", which are often compared to transactions.
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
@@ -497,7 +497,7 @@ pub mod pallet {
 
 			Ok(())
 		}
-		
+
 		/// Function to revive an expired task. [origin, task_id, new_deadline]
 		/// Something the user does to allow editing of the task as well as keep the task in storage.
 		#[pallet::weight(<T as Config>::WeightInfo::revive_task(0,0))]
@@ -526,7 +526,7 @@ pub mod pallet {
 			task.status = TaskStatus::Created;
 			task.deadline = new_deadline;
 			task.deadline_block = Some(new_deadline_block);
-			Tasks::<T>::insert(task_id, task);
+			Tasks::<T>::insert(task_id, &task);
 
 			if let Some(deadline_block) = old_deadline_block {
 				// Remove from the dying tasks storage;
