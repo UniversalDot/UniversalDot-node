@@ -89,11 +89,22 @@
 //!     - task_id: T::Hash,
 //!     - feedback : BoundedVec
 //! 
+//! - 'revive_expired_task' - Used to set a new deadline for a task with status Expired and update its status to Created.  
+//!		Used if a task has expired and the user wants to revive it to edit.
+//! 
 //! Storage Items:
+<<<<<<< HEAD
 //!     Tasks: Stores Task related information
 //!     TaskCount: Counts the total number of Tasks in the ecosystem
 //!     TasksOwned: Keeps track of how many tasks are owned per account
 //!
+=======
+//! 	Tasks: Stores Task related information
+//! 	TaskCount: Counts the total number of Tasks in the ecosystem
+//! 	TasksOwned: Keeps track of how many tasks are owned per account
+//! 	ExpiringTasksPerBlock: A list of task_id that expire on a given block;
+//!		DyingTasksPerBlock: A list of task_id that will die (is removed from storage) on a given block;
+>>>>>>> da67410 (added documentation for revive task)
 //!
 //! ## Related Modules
 //!
@@ -494,6 +505,7 @@ pub mod pallet {
 
 			Ok(())
 		}
+		
 		/// Function to revive an expired task. [origin, task_id, new_deadline]
 		/// Something the user does to allow editing of the task as well as keep the task in storage.
 		#[pallet::weight(<T as Config>::WeightInfo::revive_task(0,0))]
