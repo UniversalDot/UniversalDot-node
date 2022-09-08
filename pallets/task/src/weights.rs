@@ -87,7 +87,7 @@ pub trait WeightInfo {
 	fn accept_task(s: u32, x: u32, ) -> Weight;
 	
 	fn reject_task(s: u32, x: u32, ) -> Weight;
-	
+
 }
 
 /// Weights for pallet_task using the Substrate node and recommended hardware.

@@ -1138,7 +1138,6 @@ fn test_revival_swaps_task_from_dying_to_expired() {
 		let deadline_block = get_deadline_block(1);
 		let dying_deadline_block = get_dying_deadline_block(1);
 
-
 		// Assert the task exists is expiring storage;
 		assert!(ExpiringTasksPerBlock::<Test>::get(deadline_block).contains(&task_id));
 
@@ -1161,23 +1160,40 @@ fn test_revival_swaps_task_from_dying_to_expired() {
 #[test]
 fn test_only_initiator_can_revive() {
 	new_test_ext().execute_with( || {
+			// Setup state;
+			assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+			assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
+			
+			let task_id = Task::tasks_owned(*ALICE)[0];
+			let task = Task::tasks(task_id).expect("no task found");
+			let deadline_block = get_deadline_block(1);
+			
+			// Run to expiry deadline;
+			run_to_block(deadline_block);
+
+			// Assert Bobo cannot revive as he is not task initiator;
+			assert_noop!(Task::revive_expired_task(Origin::signed(*BOB), task_id, get_deadline(2)), Error::<Test>::OnlyInitiatorUpdatesTask);
 	
 	})
 }
 
 
-
 #[test]
-fn test_expired_task_revival_storage() {
+fn test_revive_task_with_invalid_new_deadline() {
 	new_test_ext().execute_with( || {
-	
-	})
-}
+		// Setup state;
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
+		
+		let task_id = Task::tasks_owned(*ALICE)[0];
+		let task = Task::tasks(task_id).expect("no task found");
+		let deadline_block = get_deadline_block(1);
+		
+		// Run to expiry deadline;
+		run_to_block(deadline_block);
 
-#[test]
-fn test_expired_task_with_invalid_new_deadline() {
-	new_test_ext().execute_with( || {
-	
+		// Assert it does not operate with an invalid deadline;
+		assert_noop!(Task::revive_expired_task(Origin::signed(*ALICE), task_id, get_deadline(1) - 1000000), Error::<Test>::OnlyInitiatorUpdatesTask)
 	})
 }
 
