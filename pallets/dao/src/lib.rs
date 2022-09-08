@@ -366,6 +366,7 @@ pub mod pallet {
 			
 			<pallet_did::Pallet<T>>::set_owner(&who, &org_account, &new_owner);
 
+			// Modify the storage of members to matfch the change of ownership. 
 			let _ = Self::add_member_to_organization(&new_owner, org_id, &new_owner)?;
 			let _ = Self::remove_member_from_organization(&new_owner, org_id, &who)?;
 
@@ -563,7 +564,7 @@ pub mod pallet {
 			<OrganizationCount<T>>::put(new_count);
 
 			// Find current organizations and remove org_id from MemberOf user
-			let mut current_organizations = <Pallet<T>>::member_of(&from_initiator);
+			let current_organizations = <Pallet<T>>::member_of(&from_initiator);
 			
 			let current_organizations = current_organizations.into_iter()
 				.filter(|a| *a != org_id)

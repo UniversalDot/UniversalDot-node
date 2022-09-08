@@ -605,8 +605,8 @@ fn owner_can_not_transfer_ownership_to_itself() {
 fn test_org_is_retained_when_multiple_orgs_created() {
 	new_test_ext().execute_with(|| {
 		// ALICE creates 2 organizations. 
-		let org_id_1 = create_organization_1();
-		let org_id_2 = create_organization_2();
+		let _org_id_1 = create_organization_1();
+		let _org_id_2 = create_organization_2();
 
 		// Assert ALICE is a member of 2 Daos + 2 exist
 		assert!(Dao::member_of(*ALICE).len() == 2);
@@ -625,7 +625,7 @@ fn test_members_are_mutated_on_ownership_transfer() {
 		assert!(Dao::organizations(org_id_1).unwrap().owner == *ALICE);
 
 		// Transfer ownership to BOB;
-		Dao::transfer_ownership(Origin::signed(*ALICE), org_id_1, *BOB);
+		let _ = Dao::transfer_ownership(Origin::signed(*ALICE), org_id_1, *BOB)?;
 
 		// Assert Alice is no longer a member of the org;
 		assert!(Dao::member_of(*ALICE).len() == 0);
