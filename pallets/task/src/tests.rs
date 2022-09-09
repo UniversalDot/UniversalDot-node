@@ -967,8 +967,7 @@ fn test_create_insufficient_funds_to_reserve() {
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		
 		//Create a task with more tokens than the signer has
-		assert_noop!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(), attachments(), keywords(), None), Error::<Test>::NotEnoughBalance);
-	
+		assert_noop!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(1), attachments(), keywords(), None), Error::<Test>::NotEnoughBalance);
 	})
 }
 
@@ -983,8 +982,8 @@ fn test_update_insufficient_funds_to_reserve() {
 		let task_id = Task::tasks_owned(*ALICE)[0];
 
 		// Update that task with a balance more than signer has
-		assert_noop!(Task::update_task(Origin::signed(*ALICE), task_id, title2(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(), attachments2(), keywords2(), None), Error::<Test>::NotEnoughBalance);
 
+		assert_noop!(Task::update_task(Origin::signed(*ALICE), task_id, title2(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(1), attachments2(), keywords2(), None), Error::<Test>::NotEnoughBalance);
 	})
 }	
 
@@ -998,7 +997,8 @@ fn test_create_two_tasks_insufficient_balance() {
 		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
 		
 		// Create a task with a balance not possible
-		assert_noop!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(), attachments(), keywords(), None), Error::<Test>::NotEnoughBalance);		
+
+		assert_noop!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(1), attachments(), keywords(), None), Error::<Test>::NotEnoughBalance);		
 
 	})
 }
@@ -1111,7 +1111,7 @@ fn test_expired_task_revival_status() {
 		assert!(task.status == TaskStatus::Expired);
 
 		// Revive the task;
-		Task::revive_expired_task(Origin::signed(*ALICE), task_id, get_deadline(2));
+		let _ = Task::revive_expired_task(Origin::signed(*ALICE), task_id, get_deadline(2));
 		let task = Task::tasks(task_id).expect("no task found");
 
 		// Assert that the task state has been updated correctly;
@@ -1129,7 +1129,6 @@ fn test_revival_swaps_task_from_dying_to_expired() {
 		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
 		
 		let task_id = Task::tasks_owned(*ALICE)[0];
-		let task = Task::tasks(task_id).expect("no task found");
 		let deadline_block = get_deadline_block(1);
 		let dying_deadline_block = get_dying_deadline_block(1);
 
@@ -1143,8 +1142,7 @@ fn test_revival_swaps_task_from_dying_to_expired() {
 		assert!(DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id));
 
 		// Revive the task;
-		Task::revive_expired_task(Origin::signed(*ALICE), task_id, get_deadline(2));
-		let task = Task::tasks(task_id).expect("no task found");
+		let _ = Task::revive_expired_task(Origin::signed(*ALICE), task_id, get_deadline(2));
 
 		// Assert the task exists in expiring storage and not in dying storage;
 		assert!(ExpiringTasksPerBlock::<Test>::get(get_deadline_block(2)).contains(&task_id));
@@ -1160,7 +1158,6 @@ fn test_only_initiator_can_revive() {
 			assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
 			
 			let task_id = Task::tasks_owned(*ALICE)[0];
-			let task = Task::tasks(task_id).expect("no task found");
 			let deadline_block = get_deadline_block(1);
 			
 			// Run to expiry deadline;
@@ -1181,7 +1178,6 @@ fn test_revive_task_with_invalid_new_deadline() {
 		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
 		
 		let task_id = Task::tasks_owned(*ALICE)[0];
-		let task = Task::tasks(task_id).expect("no task found");
 		let deadline_block = get_deadline_block(1);
 		
 		// Run to expiry deadline;
