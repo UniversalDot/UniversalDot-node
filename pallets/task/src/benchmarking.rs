@@ -25,10 +25,9 @@ use crate::{
 	Config as ConfigTask,
 };
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller, vec, Vec};
-use frame_system::{RawOrigin, Origin};
+use frame_system::{RawOrigin};
 use frame_support::{
 	traits::{Currency, Get},
-	sp_runtime::traits::Hash,
 	BoundedVec,
 
 };
