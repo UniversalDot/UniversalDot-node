@@ -143,7 +143,7 @@ pub mod pallet {
 	type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 	type OrganizationIdOf<T> = <T as frame_system::Config>::Hash;
 
-	type MaximumTasksPerBlock = ConstU32<10_000>;
+	pub type MaximumTasksPerBlock = ConstU32<10_000>;
 
 	// Struct for holding Task information.
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -258,26 +258,29 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Event for creation of task [AccountID, hash id]
+		/// Event for creation of task [AccountID, task_id]
 		TaskCreated(T::AccountId, T::Hash),
 
-		/// Event for updating existing task [AccountID, hash id]
+		/// Event for updating existing task [AccountID, task_id]
 		TaskUpdated(T::AccountId, T::Hash),
 
-		/// Task assigned to new account [AccountID, hash id]
+		/// Task assigned to new account [AccountID, task_id]
 		TaskAssigned(T::AccountId, T::Hash),
 
-		/// Task completed by assigned account [AccountID, hash id]
+		/// Task completed by assigned account [AccountID, task_id]
 		TaskCompleted(T::AccountId, T::Hash),
 
-		/// Task accepted by owner [AccountID, hash id]
+		/// Task accepted by owner [AccountID, task_id]
 		TaskAccepted(T::AccountId, T::Hash),
 
-		/// Task rejected by owner [AccountID, hash id]
+		/// Task rejected by owner [AccountID, task_id]
 		TaskRejected(T::AccountId, T::Hash),
 
-		/// Task deleted by owner [AccountID, hash id]
+		/// Task deleted by owner [AccountID, task_id]
 		TaskRemoved(T::AccountId, T::Hash),
+
+		/// Task revivied by owner [AccountID, task_id]
+		TaskRevived(T::AccountId, T::Hash),
 	}
 
 	// Errors inform users that something went wrong.
@@ -545,7 +548,7 @@ pub mod pallet {
 			let _ = Self::handle_new_task_deadline(&task.task_id, &None, &new_deadline_block);
 			
 			// Emit a Task Rejected Event;
-			Self::deposit_event(Event::TaskRejected(signer, task_id));
+			Self::deposit_event(Event::TaskRevived(signer, task_id));
 
 			Ok(())
 		}

@@ -20,12 +20,16 @@
 use super::*;
 
 #[allow(unused)]
-use crate::Pallet as PalletTask;
+use crate::{
+	Pallet as PalletTask,
+	Config as ConfigTask,
+};
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller, vec, Vec};
 use frame_system::{RawOrigin, Origin};
 use frame_support::{
 	traits::{Currency, Get},
-	sp_runtime::traits::Hash
+	sp_runtime::traits::Hash,
+	BoundedVec,
 
 };
 use sp_core::crypto::UncheckedFrom;
@@ -306,29 +310,31 @@ benchmarks! {
 		let attachments = vec![0u8, s as u8];
 		let keywords = vec![0u8, s as u8];
 		let feedback = vec![0u8, s as u8];
-		let organization = T::Hashing::hash_of(&"some dao");
 		
 	// Create profile before creating a task
 	create_profile::<T>();
-	//let org_id = create_organisation::<T>();
-
-	let org_id = T::Hashing::hash_of(b"something");
 
 	let _ = PalletTask::<T>::create_task(RawOrigin::Signed(task_creator.clone()).into(), title.try_into().unwrap(), specification.try_into().unwrap(),
-		budget, x.into(), attachments.try_into().unwrap(), keywords.try_into().unwrap(), Some(org_id));
+		budget, x.into(), attachments.try_into().unwrap(), keywords.try_into().unwrap(), None);
  	
 	let hash_task = PalletTask::<T>::tasks_owned(&task_creator)[0];
-	let _ = PalletTask::<T>::start_task(RawOrigin::Signed(volunteer.clone()).into(), hash_task.clone());
-	let _ = PalletTask::<T>::complete_task(RawOrigin::Signed(volunteer.clone()).into(), hash_task.clone());
-
+	let mut task = Tasks::<T>::get(hash_task).unwrap();
+	task.status = TaskStatus::Expired;
 	
-	}: reject_task(RawOrigin::Signed(task_creator.clone()), hash_task, feedback.try_into().unwrap())
-	//revive_expired_task(RawOrigin::Signed(task_creator.clone()), hash_task, feedback.try_into().unwrap())
+	// Swap these around so that revive works
+	ExpiringTasksPerBlock::<T>::take(task.deadline_block.unwrap());
+
+	let dying_deadline_block = task.deadline_block.unwrap() + <T as ConfigTask>::TaskLongevityAfterExpiration::get();
+	let dying_tasks: BoundedVec<T::Hash, MaximumTasksPerBlock> = vec![hash_task].try_into().unwrap();
+
+	DyingTasksPerBlock::<T>::insert(dying_deadline_block, dying_tasks);
+	
+	}: 	revive_expired_task(RawOrigin::Signed(task_creator.clone()), hash_task, x.into())
 		/* the code to be benchmarked */
 
 	verify {
 		/* verifying final state */
-		assert_last_event::<T>(Event::<T>::TaskRejected(task_creator, hash_task).into());
+		assert_last_event::<T>(Event::<T>::TaskRevived(task_creator.clone(), hash_task).into());
 	}
 }
 
