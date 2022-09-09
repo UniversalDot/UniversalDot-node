@@ -142,10 +142,9 @@ pub mod pallet {
 	pub type BoundedNameOf<T> = BoundedVec<u8, <T as Config>::MaxNameLen>;
 	pub type BoundedVisionOf<T> = BoundedVec<u8, <T as Config>::MaxVisionLen>;
 	
-	type BoundedOrgPerMember<T> = BoundedVec<OrganizationIdOf<T>, T::MaxMembersPerOrganisation>;
-	type BoundedMemberPerOrg<T> = BoundedVec<T::AccountId, T::MaxMembersPerOrganisation>;
-	type BoundedApplicantsPerOrg<T> = BoundedVec<T::AccountId, T::MaxApplicantsToOrganisation>;
-
+	type BoundedOrgPerMember<T> = BoundedVec<OrganizationIdOf<T>, <T as Config>::MaxOrganisationsPerMember>;
+	type BoundedMemberPerOrg<T> = BoundedVec<<T as frame_system::Config>::AccountId, <T as Config>::MaxMembersPerOrganisation>;
+	type BoundedApplicantsPerOrg<T> = BoundedVec<<T as frame_system::Config>::AccountId, <T as Config>::MaxApplicantsToOrganisation>;
 
 	/// Structure used to hold data associated with a vision.
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -313,6 +312,10 @@ pub mod pallet {
 		MaxOrganizationsReached,
 		/// You cannot create multiple organisations in the same block.
 		AlreadyCreatedOrgThisBlock,
+		/// Maximum number of members per organsiation reached.
+		MaximumMembersReached,
+		/// Maximum applicants reached for this organisation.
+		MaximumApplicantsReached,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -490,11 +493,11 @@ pub mod pallet {
 			<Organizations<T>>::insert(org_id, dao);
 
 			// Insert new members into the org storage
-			let bounded: BoundedMemberPerOrg = vec![from_initiator].try_into().expect("will only ever be one person on init; qed");
+			let bounded: BoundedMemberPerOrg<T> = vec![from_initiator.clone()].try_into().expect("will only ever be one person on init; qed");
 			<Members<T>>::insert(org_id, bounded);
 
 			// Insert organizations into MemberOf
-			let mut organizations_for = <MemberOf<T>>::take(&from_initiator);
+			let mut organizations_for = <MemberOf<T>>::get(&from_initiator);
 			ensure!(organizations_for.try_push(org_id).is_ok(),
 			Error::<T>::MaxOrganizationsReached);
 			
@@ -558,7 +561,7 @@ pub mod pallet {
 			Self::is_dao_founder(from_initiator, org_id)?;
 
 			// Find current organizations and remove org_id from MemberOf user
-			let mut current_organizations = <Pallet<T>>::member_of(&from_initiator);
+			let current_organizations = <Pallet<T>>::member_of(&from_initiator);
 			
 			ensure!(current_organizations.iter().any(|a| *a == org_id), Error::<T>::InvalidOrganization);
 			
@@ -599,7 +602,7 @@ pub mod pallet {
 			ensure!(!members.contains(account), <Error<T>>::AlreadyMember);
 
 			// Insert account into organization
-			members.push(account.clone());
+			ensure!(members.try_push(account.clone()).is_ok(), Error::<T>::MaximumMembersReached);
 			<Members<T>>::insert(org_id, &members);
 
 			// Insert organizations into MemberOf
@@ -649,7 +652,7 @@ pub mod pallet {
 			// Ensure not signed already
 			ensure!(!members.contains(from_initiator), <Error<T>>::AlreadySigned);
 			
-			members.push(from_initiator.clone());
+			ensure!(members.try_push(from_initiator.clone()).is_ok(), Error::<T>::MaximumApplicantsReached);
 
 			// Update storage.
 			<ApplicantsToOrganization<T>>::insert(org_id, members);
