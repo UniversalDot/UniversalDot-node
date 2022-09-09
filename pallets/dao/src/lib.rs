@@ -539,7 +539,7 @@ pub mod pallet {
 			Self::is_dao_founder(from_initiator, org_id)?;
 
 			// Find current organizations and remove org_id from MemberOf user
-			let mut current_organizations = <Pallet<T>>::member_of(&from_initiator);
+			let current_organizations = <Pallet<T>>::member_of(&from_initiator);
 			
 			ensure!(current_organizations.iter().any(|a| *a == org_id), Error::<T>::InvalidOrganization);
 			
