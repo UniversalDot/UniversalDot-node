@@ -1,0 +1,1 @@
+SKIP_WASM_BUILD=1 cargo clippy --features=default,runtime-benchmarks --release && cargo test --release
