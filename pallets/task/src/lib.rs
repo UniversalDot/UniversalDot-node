@@ -541,7 +541,7 @@ pub mod pallet {
 
 			if let Some(deadline_block) = old_deadline_block {
 				// Remove from the dying tasks storage;
-				let dying_tasks: BoundedVec<T::Hash, MaximumTasksPerBlock> = DyingTasksPerBlock::<T>::take(deadline_block)
+				let dying_tasks: BoundedVec<T::Hash, MaximumTasksPerBlock> = DyingTasksPerBlock::<T>::take(deadline_block + T::TaskLongevityAfterExpiration::get())
 					.into_iter()
 					.filter(|&h| h != task_id)
 					.collect::<Vec<T::Hash>>()

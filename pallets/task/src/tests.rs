@@ -1147,8 +1147,8 @@ fn test_revival_swaps_task_from_dying_to_expired() {
 		let task = Task::tasks(task_id).expect("no task found");
 
 		// Assert the task exists in expiring storage and not in dying storage;
-		assert!(!DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id));
 		assert!(ExpiringTasksPerBlock::<Test>::get(get_deadline_block(2)).contains(&task_id));
+		assert!(!DyingTasksPerBlock::<Test>::get(dying_deadline_block).contains(&task_id));
 	})
 }
 
