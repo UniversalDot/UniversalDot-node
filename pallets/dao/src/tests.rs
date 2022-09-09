@@ -600,3 +600,43 @@ fn owner_can_not_transfer_ownership_to_itself() {
 
 	});
 }
+
+#[test]
+fn test_org_is_retained_when_multiple_orgs_created() {
+	new_test_ext().execute_with(|| {
+		// ALICE creates 2 organizations. 
+		let _org_id_1 = create_organization_1();
+		let _org_id_2 = create_organization_2();
+
+		// Assert ALICE is a member of 2 Daos + 2 exist
+		assert!(Dao::member_of(*ALICE).len() == 2);
+		assert!(Dao::organization_count() == 2);
+	});
+}
+
+#[test]
+fn test_members_are_mutated_on_ownership_transfer() {
+	new_test_ext().execute_with(|| {
+		let org_id_1 = create_organization_1();
+
+		// Assert state is correctly setup;
+		assert!(Dao::member_of(*ALICE).len() == 1);
+		assert_eq!(Dao::members(org_id_1)[0], *ALICE);
+		assert!(Dao::organizations(org_id_1).unwrap().owner == *ALICE);
+
+		// Transfer ownership to BOB;
+		let _ = Dao::transfer_ownership(Origin::signed(*ALICE), org_id_1, *BOB);
+
+		// Assert Alice is no longer a member of the org;
+		assert!(Dao::member_of(*ALICE).len() == 0);
+
+		// Assert Bob is now a member of the organisation,
+		// Organisations members have been updated
+		// and Bob is the new owner;
+		assert_eq!(Dao::members(org_id_1)[0], *BOB);
+		assert!(Dao::member_of(*BOB).len() == 1);
+		assert!(Dao::organizations(org_id_1).unwrap().owner == *BOB);
+
+		assert!(Dao::organization_count() == 1);
+	});
+}

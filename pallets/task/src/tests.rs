@@ -954,7 +954,6 @@ fn test_multiple_tasks_and_reserve_amounts() {
 }
 #[test]
 fn test_create_insufficient_funds_to_reserve() {
-
 	new_test_ext().execute_with(|| {
 		// Create profile (required by task)
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));

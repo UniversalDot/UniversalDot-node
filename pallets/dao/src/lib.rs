@@ -189,6 +189,10 @@ pub mod pallet {
 
 		/// WeightInfo provider.
 		type WeightInfo: WeightInfo;
+
+		/// Maximum amount of organizations someone can be a member of.
+		type MaxMemberOfLen: Get<u32> + MaxEncodedLen + TypeInfo;
+
 	}
 
 	#[pallet::pallet]
@@ -203,13 +207,13 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn organizations)]
 	/// Storage for organizations data, key: hash of Dao struct, Value Dao struct.
-	pub(super) type Organizations<T: Config> = StorageMap<_, Twox64Concat, T::Hash, Dao<T>, OptionQuery>;
+	pub(super) type Organizations<T: Config> = StorageMap<_, Twox64Concat, OrganizationIdOf<T>, Dao<T>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn members)]
 	#[pallet::unbounded]
-	/// Create members of organization storage map with key: Hash and value: Vec<AccountID>
-	pub(super) type Members<T: Config> = StorageMap<_, Twox64Concat, T::Hash, Vec<T::AccountId>, ValueQuery>;
+	/// Create members of organization storage map with key: Hash of Dao, value: Vec<AccountID>
+	pub(super) type Members<T: Config> = StorageMap<_, Twox64Concat, OrganizationIdOf<T>, Vec<T::AccountId>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn organization_count)]
@@ -220,7 +224,7 @@ pub mod pallet {
 	#[pallet::getter(fn member_of)]
 	#[pallet::unbounded]
 	/// Storage item that indicates which DAO's a user belongs to [AccountID, Vec]
-	pub(super) type MemberOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Vec<OrganizationIdOf<T>>, ValueQuery>;
+	pub(super) type MemberOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, BoundedVec<OrganizationIdOf<T>, T::MaxMemberOfLen>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn applicants_to_organization)]
@@ -231,10 +235,10 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Vision signed [AccountID, DaoIdOf]
+		/// Vision signed [AccountID, OrganizationIdOf]
 		VisionSigned(T::AccountId, OrganizationIdOf<T>),
 
-		/// Vision signed [AccountID, DaoIdOf]
+		/// Vision signed [AccountID, OrganizationIdOf]
 		VisionUnsigned(T::AccountId, OrganizationIdOf<T>),
 
 		/// DAO Organization was created [AccountID, DAO ID]
@@ -287,6 +291,8 @@ pub mod pallet {
 		OrganizationAlreadyExists,
 		/// The user is not a member of this organization.
 		NotMember,
+		/// The user if over the maximum amount of organizations allowed to be affiliated with.
+		MaxOrganizationsReached,
 		/// You cannot create multiple organisations in the same block.
 		AlreadyCreatedOrgThisBlock,
 	}
@@ -321,6 +327,7 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
+			// Member unsigns from vision
 			Self::member_unsigns_vision(&who, org_id)?;
 
 			// Emit an event.
@@ -355,8 +362,14 @@ pub mod pallet {
 			let who = ensure_signed(origin)?;
 			Self::change_owner(&who, org_id, &new_owner)?;
 			let org_account : T::AccountId = UncheckedFrom::unchecked_from(org_id);
+			
 			<pallet_did::Pallet<T>>::set_owner(&who, &org_account, &new_owner);
 
+			// Modify the storage of members to matfch the change of ownership. 
+			Self::add_member_to_organization(&new_owner, org_id, &new_owner)?;
+			Self::remove_member_from_organization(&new_owner, org_id, &who)?;
+
+			// Emit an event.
 			Self::deposit_event(Event::OrganizationOwnerChanged(who, org_id, new_owner));
 
 			Ok(())
@@ -463,13 +476,16 @@ pub mod pallet {
 			// Insert new members into the org storage
 			<Members<T>>::insert(org_id, vec![from_initiator]);
 
-			// Insert organizations into members storage
-			<MemberOf<T>>::insert(&from_initiator, vec![org_id]);
+			// Insert organizations into MemberOf
+			let mut organizations_for = <MemberOf<T>>::take(&from_initiator);
+			ensure!(organizations_for.try_push(org_id).is_ok(), Error::<T>::MaxOrganizationsReached);
+			
+			<MemberOf<T>>::set(&from_initiator, organizations_for);
 
 			// Increase organization count
-			let new_count =
-				Self::organization_count().checked_add(1).ok_or(<Error<T>>::OrganizationCountOverflow)?;
+			let new_count = Self::organization_count().checked_add(1).ok_or(<Error<T>>::OrganizationCountOverflow)?;
 			<OrganizationCount<T>>::put(new_count);
+
 			Ok(org_id)
 		}
 
@@ -524,21 +540,28 @@ pub mod pallet {
 			Self::is_dao_founder(from_initiator, org_id)?;
 
 			// Find current organizations and remove org_id from MemberOf user
-			let mut current_organizations = <Pallet<T>>::member_of(&from_initiator);
+			let current_organizations = <Pallet<T>>::member_of(&from_initiator);
+			
+			// Ensure organizations exists in the list of organizations
 			ensure!(current_organizations.iter().any(|a| *a == org_id), Error::<T>::InvalidOrganization);
-			current_organizations.retain(|a| *a != org_id);
-			// Update MemberOf
-			<MemberOf<T>>::insert(&from_initiator, &current_organizations);
-
+			
 			// Remove Dao struct from Organizations storage
 			<Organizations<T>>::remove(org_id);
-			// Remove organizational instance
 			<Members<T>>::remove(org_id);
 
 			// Reduce organization count
 			let new_count = Self::organization_count().saturating_sub(1);
 			<OrganizationCount<T>>::put(new_count);
 
+			// Collect all current organizations			
+			let current_organizations = current_organizations.into_iter()
+				.filter(|a| *a != org_id)
+				.collect::<Vec<OrganizationIdOf<T>>>()
+				.try_into()
+				.expect("reducing size of boundedvec; qed");
+			
+			// Update MemberOf
+			<MemberOf<T>>::set(&from_initiator, current_organizations);
 			Ok(())
 		}
 
@@ -560,8 +583,10 @@ pub mod pallet {
 
 			// Insert organizations into MemberOf
 			let mut organizations = Self::member_of(&account);
-			organizations.push(org_id);
-			<MemberOf<T>>::insert(&account, organizations);
+			ensure!(organizations.try_push(org_id).is_ok(), Error::<T>::MaxOrganizationsReached);
+
+			// Insert account into MemberOf organization
+			<MemberOf<T>>::set(&account, organizations);	
 
 			Ok(())
 		}
@@ -577,14 +602,19 @@ pub mod pallet {
 			// Find member and remove from Vector
 			ensure!( members.iter().any(|a| *a == *account), Error::<T>::NotMember);
 			members.retain(|a| *a != *account);
+
 			// Update Organization Members
 			<Members<T>>::insert(org_id, members);
 
 			// Find current organizations and remove org_id from MemberOf user
 			let mut current_organizations = <Pallet<T>>::member_of(&account);
 			ensure!(current_organizations.iter().any(|a| *a == org_id), Error::<T>::InvalidOrganization);
-			current_organizations.retain(|a| *a != org_id);
+
 			// Update MemberOf
+			current_organizations = current_organizations.into_iter().filter(|a| *a !=
+				org_id).collect::<Vec<OrganizationIdOf<T>>>().try_into().expect("reducing size of boundedved; qed");
+
+			// Insert account into MemberOf organization
 			<MemberOf<T>>::insert(&account, &current_organizations);
 
 			Ok(())
