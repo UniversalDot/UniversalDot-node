@@ -1188,7 +1188,7 @@ fn test_revive_task_with_invalid_new_deadline() {
 		run_to_block(deadline_block);
 
 		// Assert it does not operate with an invalid deadline;
-		assert_noop!(Task::revive_expired_task(Origin::signed(*ALICE), task_id, get_deadline(1) - 1000000), Error::<Test>::IncorrectDeadlineTimestamp);
+		assert_noop!(Task::revive_expired_task(Origin::signed(*ALICE), task_id, (<Time as UnixTime>::now().as_millis() - 100000) as u64), Error::<Test>::IncorrectDeadlineTimestamp);
 	})
 }
 
