@@ -542,7 +542,7 @@ pub mod pallet {
 			// Handle the new deadline without the old deadline;
 			// Using none here because handle_new_task_deadline only deals with expiring tasks
 			// not expired;
-			Self::handle_new_task_deadline(&task.task_id, &None, &new_deadline_block);
+			let _ = Self::handle_new_task_deadline(&task.task_id, &None, &new_deadline_block);
 			
 			// Emit a Task Rejected Event;
 			Self::deposit_event(Event::TaskRejected(signer, task_id));

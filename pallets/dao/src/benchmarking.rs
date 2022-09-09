@@ -108,9 +108,6 @@ benchmarks! {
 		/* setup initial state */
 		let caller: T::AccountId = whitelisted_caller();
 		
-		// These utilise the config of the pallet for worst case benchmark scenario
-		// as using something less than max may be less costly than expected.
-		// they dynamically change with the runtime logic.
 		let vision: BoundedVisionOf<T> = 
 		vec![2u8; (<T as pallet::Config>::MaxVisionLen::get() - 1) as usize]
 		.try_into()
