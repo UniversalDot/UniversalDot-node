@@ -22,13 +22,20 @@ use super::*;
 #[allow(unused)]
 use crate::Pallet as PalletTask;
 use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller, vec, Vec};
-use frame_system::RawOrigin;
+use frame_system::{RawOrigin, Origin};
 use frame_support::{
-	traits::Currency,
+	traits::{Currency, Get},
 	sp_runtime::traits::Hash
+
 };
+use sp_core::crypto::UncheckedFrom;
 use pallet_profile::Pallet as PalletProfile;
-use pallet_dao::Pallet as PalletDao;
+use pallet_dao::{
+	Pallet as PalletDao,
+	BoundedNameOf,
+	BoundedDescriptionOf,
+	BoundedVisionOf
+};
 use sp_std::convert::TryInto;
 
 const SEED: u32 = 0;
@@ -40,7 +47,9 @@ fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
 
 
 // Helper function to create a profile
-fn create_profile<T: Config>(){
+fn create_profile<T: Config>()
+where T: pallet_profile::Config 
+{
 
 	let username = Vec::new();
 	let interests = Vec::new();
@@ -50,6 +59,31 @@ fn create_profile<T: Config>(){
 	let caller: T::AccountId = whitelisted_caller();
 	let _profile = PalletProfile::<T>::create_profile(RawOrigin::Signed(caller).into(), username.try_into().unwrap(), interests.try_into().unwrap(), available_hours_per_week, Some(information.try_into().unwrap()));
 
+}
+
+// Helper to create organisation, returns OrganizationID
+fn create_organisation<T: Config>() -> T::Hash 
+where 
+	T: pallet_dao::Config,
+	T::AccountId: UncheckedFrom<T::Hash>
+ {
+	let vision: BoundedVisionOf<T> = 
+		vec![2u8; (<T as pallet_dao::Config>::MaxVisionLen::get() - 1) as usize]
+		.try_into()
+		.unwrap(); 
+		
+	let name: BoundedNameOf<T> =
+		vec![0u8; (<T as pallet_dao::Config>::MaxNameLen::get() - 1) as usize]
+		.try_into()
+		.unwrap();
+		
+	let description: BoundedDescriptionOf<T> = 
+		vec![1u8; (<T as pallet_dao::Config>::MaxDescriptionLen::get() - 1) as usize]
+		.try_into()
+		.unwrap();
+
+	let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(whitelisted_caller()).into(), name, description, vision);
+	PalletDao::<T>::member_of(whitelisted_caller::<T::AccountId>())[0]
 }
 
 
@@ -273,19 +307,16 @@ benchmarks! {
 		let keywords = vec![0u8, s as u8];
 		let feedback = vec![0u8, s as u8];
 		let organization = T::Hashing::hash_of(&"some dao");
-		let name = vec![0u8, s as u8];
-		let description = vec![0u8, s as u8];
-		let vision = vec![0u8, s as u8];
-
+		
 	// Create profile before creating a task
 	create_profile::<T>();
-	let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(whitelisted_caller()), name, description.into(), vision.into());
-	
-	let org_id = PalletDao::<T>::member_of(whitelisted_caller())[0];
+	//let org_id = create_organisation::<T>();
+
+	let org_id = T::Hashing::hash_of(b"something");
 
 	let _ = PalletTask::<T>::create_task(RawOrigin::Signed(task_creator.clone()).into(), title.try_into().unwrap(), specification.try_into().unwrap(),
 		budget, x.into(), attachments.try_into().unwrap(), keywords.try_into().unwrap(), Some(org_id));
-
+ 	
 	let hash_task = PalletTask::<T>::tasks_owned(&task_creator)[0];
 	let _ = PalletTask::<T>::start_task(RawOrigin::Signed(volunteer.clone()).into(), hash_task.clone());
 	let _ = PalletTask::<T>::complete_task(RawOrigin::Signed(volunteer.clone()).into(), hash_task.clone());
