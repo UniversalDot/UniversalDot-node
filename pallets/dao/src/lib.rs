@@ -542,20 +542,18 @@ pub mod pallet {
 			// Find current organizations and remove org_id from MemberOf user
 			let current_organizations = <Pallet<T>>::member_of(&from_initiator);
 			
+			// Ensure organizations exists in the list of organizations
 			ensure!(current_organizations.iter().any(|a| *a == org_id), Error::<T>::InvalidOrganization);
 			
 			// Remove Dao struct from Organizations storage
 			<Organizations<T>>::remove(org_id);
-			// Remove organizational instance
 			<Members<T>>::remove(org_id);
 
 			// Reduce organization count
 			let new_count = Self::organization_count().saturating_sub(1);
 			<OrganizationCount<T>>::put(new_count);
 
-			// Find current organizations and remove org_id from MemberOf user
-			let current_organizations = <Pallet<T>>::member_of(&from_initiator);
-			
+			// Collect all current organizations			
 			let current_organizations = current_organizations.into_iter()
 				.filter(|a| *a != org_id)
 				.collect::<Vec<OrganizationIdOf<T>>>()
