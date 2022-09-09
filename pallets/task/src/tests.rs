@@ -71,7 +71,7 @@ fn get_deadline(multiple: u64) -> u64 {
 
 fn get_deadline_block(multiple: u64) -> u64 {
 	// deadline is current time + 1 hour
-	((get_deadline(multiple) as f64 / MILLISEC_PER_BLOCK as f64).floor() as u64) + System::block_number()
+	(((get_deadline(multiple) - <Time as UnixTime>::now().as_millis() as u64) as f64 / MILLISEC_PER_BLOCK as f64).floor() as u64) + System::block_number()
 }
 
 fn get_dying_deadline_block(multiple: u64) -> u64 {
@@ -865,7 +865,7 @@ fn delete_task_after_deadline() {
 		// Ensure task object is created
 		assert!(task.is_some());
 
-		run_to_block(task.unwrap().deadline_block.unwrap() + <Test as Config>::TaskLongevityAfterExpiration::get());
+		run_to_block(get_dying_deadline_block(1));
 
 		let task = Task::tasks(task_id);
 		// Ensure task is deleted after deadline has expired
@@ -1109,7 +1109,7 @@ fn test_expired_task_revival_status() {
 
 		// Assert that the status is ok and run to expiry deadline;
 		assert!(task.status == TaskStatus::Created);
-		run_to_block(deadline_block);
+		run_to_block(deadline_block + 1);
 
 		// Assert that the status has indeed expired on this block;
 		let task = Task::tasks(task_id).expect("no task found");
@@ -1121,7 +1121,7 @@ fn test_expired_task_revival_status() {
 
 		// Assert that the task state has been updated correctly;
 		assert!(task.status == TaskStatus::Created);
-		assert!(task.deadline_block == get_deadline_block(2));
+		assert!(task.deadline_block.unwrap() == get_deadline_block(2));
 		assert!(task.deadline == get_deadline(2));
 	})
 }
@@ -1193,7 +1193,7 @@ fn test_revive_task_with_invalid_new_deadline() {
 		run_to_block(deadline_block);
 
 		// Assert it does not operate with an invalid deadline;
-		assert_noop!(Task::revive_expired_task(Origin::signed(*ALICE), task_id, get_deadline(1) - 1000000), Error::<Test>::OnlyInitiatorUpdatesTask)
+		assert_noop!(Task::revive_expired_task(Origin::signed(*ALICE), task_id, get_deadline(1) - 1000000), Error::<Test>::IncorrectDeadlineTimestamp);
 	})
 }
 

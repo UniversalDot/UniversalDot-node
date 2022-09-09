@@ -565,9 +565,23 @@ pub mod pallet {
 			let old_dying_tasks = DyingTasksPerBlock::<T>::take(n);
 
 			// Set the new dying tasks as the old expiring tasks.
-			DyingTasksPerBlock::<T>::insert(n + T::TaskLongevityAfterExpiration::get(), old_expiring_tasks);
-			
-			// Remove all dying tasks from storage.
+			DyingTasksPerBlock::<T>::insert(n + T::TaskLongevityAfterExpiration::get(), &old_expiring_tasks);
+
+			// Update the dying/expired tasks.
+			let _ = old_expiring_tasks.iter().map(|th| {
+				let maybe_task = Tasks::<T>::get(th);
+				if let Some(mut task)= maybe_task {
+					// Update the tasks status to expired;
+					task.status = TaskStatus::Expired;
+					task.updated_at = n;
+
+					Tasks::insert(th, task);
+					weight += 10_000;
+				}
+			}).collect::<Vec<_>>();
+
+
+			// Remove all dead tasks from storage.
 			let _ = old_dying_tasks.iter().map(|th| {
 				let maybe_task = Tasks::<T>::get(th);
 				if let Some(task)= maybe_task {
@@ -834,7 +848,7 @@ pub mod pallet {
 			ensure!(Self::is_task_initiator(task_id, task_initiator)?, <Error<T>>::NoPermissionToRemove);
 
 			// Ensure that only Created Task can be deleted
-			ensure!(TaskStatus::Created == task.status, <Error<T>>::NoPermissionToRemove);
+			ensure!(TaskStatus::Created == task.status || TaskStatus::Expired == task.status, <Error<T>>::NoPermissionToRemove);
 
 			// remove task from storage
 			<Tasks<T>>::remove(task_id);
