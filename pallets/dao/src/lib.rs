@@ -490,8 +490,8 @@ pub mod pallet {
 			<Organizations<T>>::insert(org_id, dao);
 
 			// Insert new members into the org storage
-			let bounded: Bounded 
-			<Members<T>>::insert(org_id, vec![from_initiator]);
+			let bounded: BoundedMemberPerOrg = vec![from_initiator].try_into().expect("will only ever be one person on init; qed");
+			<Members<T>>::insert(org_id, bounded);
 
 			// Insert organizations into MemberOf
 			let mut organizations_for = <MemberOf<T>>::take(&from_initiator);
