@@ -101,7 +101,7 @@ benchmarks! {
 	verify {
 		// let hash = PalletDao::<T>::get_hash_for_dao(&caller, &name, &description, &vision, 1_u32.into(), 1_u32.into());
 		let hash = PalletDao::<T>::member_of(&caller)[0];
-		assert_last_event::<T>(Event::<T>::OrganizationCreated(caller, hash.into()).into())
+		assert_last_event::<T>(Event::<T>::OrganizationCreated(caller, hash).into())
 	}
 
 	update_organization {
@@ -129,7 +129,7 @@ benchmarks! {
 	}: update_organization(RawOrigin::Signed(caller.clone()), org_id, Some(name), Some(description), Some(vision))
 	verify {
 		let hash = PalletDao::<T>::member_of(&caller)[0];
-		assert_last_event::<T>(Event::<T>::OrganizationUpdated(caller, hash.into()).into())
+		assert_last_event::<T>(Event::<T>::OrganizationUpdated(caller, hash).into())
 	}
 
 	transfer_ownership {
@@ -147,7 +147,7 @@ benchmarks! {
 	}: transfer_ownership(RawOrigin::Signed(caller.clone()), org_id, caller.clone())
 	verify {
 		let hash = PalletDao::<T>::member_of(&caller)[0];
-		assert_last_event::<T>(Event::<T>::OrganizationOwnerChanged(caller.clone(), hash.into(), caller).into())
+		assert_last_event::<T>(Event::<T>::OrganizationOwnerChanged(caller.clone(), hash, caller).into())
 	}
 
 	dissolve_organization {
@@ -164,7 +164,7 @@ benchmarks! {
 		// let org_id = PalletDao::<T>::get_hash_for_dao(&caller, &name, &description, &vision, 0_u32.into(), 0_u32.into());
 		let org_id = PalletDao::<T>::member_of(&caller)[0];
 
-	}: dissolve_organization(RawOrigin::Signed(caller.clone()), org_id.clone())
+	}: dissolve_organization(RawOrigin::Signed(caller.clone()), org_id)
 		/* the code to be benchmarked */
 
 	verify {
@@ -189,7 +189,7 @@ benchmarks! {
 		// let org_id = PalletDao::<T>::get_hash_for_dao(&caller, &name, &description, &vision, 0_u32.into(), 0_u32.into());
 		let org_id = PalletDao::<T>::member_of(&caller)[0];
 
-	}: add_members(RawOrigin::Signed(caller.clone()), org_id.clone(), account.clone())
+	}: add_members(RawOrigin::Signed(caller.clone()), org_id, account.clone())
 		/* the code to be benchmarked */
 	verify {
 		/* verifying final state */
@@ -213,14 +213,14 @@ benchmarks! {
 		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name, description, vision);
 		// let org_id = PalletDao::<T>::get_hash_for_dao(&caller, &name, &description, &vision, 0_u32.into(), 0_u32.into());
 		let org_id = PalletDao::<T>::member_of(&caller)[0];
-		let _ = PalletDao::<T>::add_members(RawOrigin::Signed(caller.clone()).into(), org_id.clone(), account.clone());
-		assert_eq!(PalletDao::<T>::members(org_id.clone()).len(), 2);
+		let _ = PalletDao::<T>::add_members(RawOrigin::Signed(caller.clone()).into(), org_id, account.clone());
+		assert_eq!(PalletDao::<T>::members(org_id).len(), 2);
 
-	}: remove_members(RawOrigin::Signed(caller.clone()), org_id.clone(), account.clone() )
+	}: remove_members(RawOrigin::Signed(caller.clone()), org_id, account.clone() )
 		/* the code to be benchmarked */
 	verify {
 		/* verifying final state */
-		assert_eq!(PalletDao::<T>::members(org_id.clone()).len(), 1);
+		assert_eq!(PalletDao::<T>::members(org_id).len(), 1);
 		assert_last_event::<T>(Event::<T>::MemberRemoved (caller, account, org_id).into());
 	}
 }

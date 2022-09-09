@@ -47,61 +47,59 @@
 //! - `apply_to_organization` - Function used to sign user to a vision associated with
 //! an organization. Signing a vision indicates interest that the user are 
 //! interested in creating said vision.
-//! 	Inputs: 
-//! 		- organization_id: OrganizationIdOf<T>
+//!     Inputs:
+//!         - organization_id: OrganizationIdOf<T>
 //!
 //! - `remove_application_from_organization` - Function used to unsign user 
 //! from a vision associated with 
 //! an organization. Unsigning a vision indicates that a user is no longer 
 //! interested in creating said vision.
-//! 	Inputs: 
-//! 		- organization_id: OrganizationIdOf<T>
+//!     Inputs:
+//!         - organization_id: OrganizationIdOf<T>
 //!
 //! - `create_organization` - Function used to create a DAO organization.
-//! 	Inputs:
-//! 		- name: BoundedNameOf<T>
-//! 		- description: BoundedDescriptionOf<T>,
-//! 		- vision BoundedVisionOf<T>
+//!     Inputs:
+//!         - name: BoundedNameOf<T>
+//!         - description: BoundedDescriptionOf<T>,
+//!         - vision BoundedVisionOf<T>
 //!
 //! - `transfer_ownership` - Function used to transfer ownership of a DAO organization.
-//! 	Inputs:
-//! 		- org_id: OrganizationIdOf<T>
-//! 		- new_owner: AccountID,
-//!
+//!     Inputs:
+//!         - org_id: OrganizationIdOf<T>
+//!         - new_owner: AccountID,
 //!
 //! - `update_organization` - Function used to update an existing organization.
 //! WARNING: this function will only update a value if Some(value) is given.
 //! if Some("") is given then the value will be updated to "".
 //! None is used to signify the value has not been changed.
-//! 	Inputs:
-//! 		- org_id: OrganizationIdOf<T>
-//! 		- name: Option<BoundedNameOf<T>>
-//! 		- description: Option<BoundedDescriptionOf<T>>,
-//! 		- vision: Option<BoundedVisionOf<T>>
+//!     Inputs:
+//!         - org_id: OrganizationIdOf<T>
+//!         - name: Option<BoundedNameOf<T>>
+//!         - description: Option<BoundedDescriptionOf<T>>,
+//!         - vision: Option<BoundedVisionOf<T>>
 //!
 //! - `add_members` - Function used for a visionary to add members to his organization.
-//! 	Inputs:
-//! 		- org_id: OrganizationIdOf<T>
-//! 		- account: AccountID
+//!     Inputs:
+//!     - org_id: OrganizationIdOf<T>
+//!         - account: AccountID
 //!
 //! - `remove_members` - Function used for a visionary to remove members from his organization.
-//! 	Inputs:
-//! 		- org_id: OrganizationIdOf<T>
-//! 		- account: AccountID
+//!     Inputs:
+//!         - org_id: OrganizationIdOf<T>
+//!         - account: AccountID
 //!
 //! - `dissolve_organization` - Function used for a visionary to dissolve his organization.
-//!		Inputs:
-//! 		- org_id: OrganizationIdOf<T>
+//!     Inputs:
+//!         - org_id: OrganizationIdOf<T>
 //!
 //! Storage Items:
-//! 	Vision: Vision document 
-//! 	VisionCount: Number of total visions in the system
-//! 	Organizations: List of all organizations in the system
+//!     Vision: Vision document
+//!     VisionCount: Number of total visions in the system
+//!     Organizations: List of all organizations in the system
 //!     OrganizationCount: Total numbers of organizations in the system
-//! 	Members: List the members of give organizations
-//! 	MemberOf: Lists which organizations a single member belongs to
-//! 	ApplicantsToOrganization: Lists who are the users who want to join an organization
-//! 	
+//!     Members: List the members of give organizations
+//!     MemberOf: Lists which organizations a single member belongs to
+//!     ApplicantsToOrganization: Lists who are the users who want to join an organization
 //!
 //! ## Related Modules
 //!
@@ -355,7 +353,7 @@ pub mod pallet {
 		#[pallet::weight(<T as Config>::WeightInfo::transfer_ownership(0))]
 		pub fn transfer_ownership(origin: OriginFor<T>, org_id: OrganizationIdOf<T>, new_owner: T::AccountId) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let _ = Self::change_owner(&who, org_id, &new_owner)?;
+			Self::change_owner(&who, org_id, &new_owner)?;
 			let org_account : T::AccountId = UncheckedFrom::unchecked_from(org_id);
 			<pallet_did::Pallet<T>>::set_owner(&who, &org_account, &new_owner);
 
@@ -445,8 +443,8 @@ pub mod pallet {
 				updated_on: current_block,
 			};
 			let dao = Dao::<T> {
-				name: name,
-				description: description,
+				name,
+				description,
 				owner: from_initiator.clone(),
 				vision: vision_doc,
 				created_time: current_block,
@@ -455,7 +453,7 @@ pub mod pallet {
 			let org_id = T::Hashing::hash_of(&dao);
 
 			// Ensures duplicate organisations cannot be created
-			ensure!(<Organizations<T>>::get(org_id) == None, <Error<T>>::OrganizationAlreadyExists);
+			ensure!(<Organizations<T>>::get(org_id).is_none(), <Error<T>>::OrganizationAlreadyExists);
 
 			// Todo? Ensure an account cannot create multiple orgs in the same block. 
 
@@ -528,8 +526,7 @@ pub mod pallet {
 			// Find current organizations and remove org_id from MemberOf user
 			let mut current_organizations = <Pallet<T>>::member_of(&from_initiator);
 			ensure!(current_organizations.iter().any(|a| *a == org_id), Error::<T>::InvalidOrganization);
-			current_organizations = current_organizations.into_iter().filter(|a| *a !=
-				org_id).collect();
+			current_organizations.retain(|a| *a != org_id);
 			// Update MemberOf
 			<MemberOf<T>>::insert(&from_initiator, &current_organizations);
 
@@ -579,15 +576,14 @@ pub mod pallet {
 
 			// Find member and remove from Vector
 			ensure!( members.iter().any(|a| *a == *account), Error::<T>::NotMember);
-			members = members.into_iter().filter(|a| *a != *account).collect();
+			members.retain(|a| *a != *account);
 			// Update Organization Members
 			<Members<T>>::insert(org_id, members);
 
 			// Find current organizations and remove org_id from MemberOf user
 			let mut current_organizations = <Pallet<T>>::member_of(&account);
 			ensure!(current_organizations.iter().any(|a| *a == org_id), Error::<T>::InvalidOrganization);
-			current_organizations = current_organizations.into_iter().filter(|a| *a !=
-				org_id).collect();
+			current_organizations.retain(|a| *a != org_id);
 			// Update MemberOf
 			<MemberOf<T>>::insert(&account, &current_organizations);
 
@@ -622,7 +618,7 @@ pub mod pallet {
 			// Ensure not signed already
 			ensure!(members.iter().any(|a| *a == *from_initiator), Error::<T>::NotSigned);
 			
-			members = members.into_iter().filter(|a| *a != *from_initiator).collect();
+			members.retain(|a| *a != *from_initiator);
 
 			// Update storage.
 			<ApplicantsToOrganization<T>>::insert(org_id, members);
