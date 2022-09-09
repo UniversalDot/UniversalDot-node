@@ -179,7 +179,8 @@ fn can_create_an_organization() {
 		let members = Dao::members(org_id);
 
 		// Ensure the length of organization is equal to 1, and that member is creater of org.
-		assert_eq!(members, &[*ALICE]);
+		assert_eq!(members.len(), 1);
+		assert_eq!(Dao::members(org_id)[0], *ALICE);
 	});
 }
 
