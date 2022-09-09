@@ -137,10 +137,16 @@ pub mod pallet {
 	// Account used in Dao Struct
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
 	type OrganizationIdOf<T> = <T as frame_system::Config>::Hash;
+	
 	pub type BoundedDescriptionOf<T> = BoundedVec<u8, <T as Config>::MaxDescriptionLen>;
 	pub type BoundedNameOf<T> = BoundedVec<u8, <T as Config>::MaxNameLen>;
 	pub type BoundedVisionOf<T> = BoundedVec<u8, <T as Config>::MaxVisionLen>;
 	
+	type BoundedOrgPerMember<T> = BoundedVec<OrganizationIdOf<T>, T::MaxMembersPerOrganisation>;
+	type BoundedMemberPerOrg<T> = BoundedVec<T::AccountId, T::MaxMembersPerOrganisation>;
+	type BoundedApplicantsPerOrg<T> = BoundedVec<T::AccountId, T::MaxApplicantsToOrganisation>;
+
+
 	/// Structure used to hold data associated with a vision.
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
@@ -187,6 +193,18 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxVisionLen: Get<u32> + MaxEncodedLen + TypeInfo;
 
+		/// The bound specifying the maximum # of members possible in an org;
+		#[pallet::constant]
+		type MaxMembersPerOrganisation: Get<u32> + MaxEncodedLen + TypeInfo;
+		
+		/// The maximum number of organisations a member can be associated with;
+		#[pallet::constant]
+		type MaxOrganisationsPerMember: Get<u32> + MaxEncodedLen + TypeInfo;
+
+		/// The maximum number of people that agree with the vision of the organisation;
+		#[pallet::constant]
+		type MaxApplicantsToOrganisation: Get<u32> + MaxEncodedLen + TypeInfo;
+
 		/// WeightInfo provider.
 		type WeightInfo: WeightInfo;
 
@@ -212,8 +230,8 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn members)]
 	#[pallet::unbounded]
-	/// Create members of organization storage map with key: Hash of Dao, value: Vec<AccountID>
-	pub(super) type Members<T: Config> = StorageMap<_, Twox64Concat, OrganizationIdOf<T>, Vec<T::AccountId>, ValueQuery>;
+	/// Create members of organization storage map with key: Hash and value: BoundedVec<AccountID>
+	pub(super) type Members<T: Config> = StorageMap<_, Twox64Concat, T::Hash, BoundedMemberPerOrg<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn organization_count)]
@@ -223,14 +241,14 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn member_of)]
 	#[pallet::unbounded]
-	/// Storage item that indicates which DAO's a user belongs to [AccountID, Vec]
-	pub(super) type MemberOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, BoundedVec<OrganizationIdOf<T>, T::MaxMemberOfLen>, ValueQuery>;
+	/// Storage item that indicates which DAO's a user belongs to [AccountID, BoundedVec<OrganisationId>]
+	pub(super) type MemberOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, BoundedOrgPerMember<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn applicants_to_organization)]
 	#[pallet::unbounded]
-	/// Storage Map to indicate which user agree with a proposed Vision of an Organisation [DaoId, Vec[Account]]
-	pub(super) type ApplicantsToOrganization<T: Config> = StorageMap<_, Twox64Concat, OrganizationIdOf<T>, Vec<T::AccountId>, ValueQuery>;
+	/// Storage Map to indicate which user agree with a proposed Vision of an Organisation [OrganizationId, BoundedVec[Account]]
+	pub(super) type ApplicantsToOrganization<T: Config> = StorageMap<_, Twox64Concat, OrganizationIdOf<T>, BoundedApplicantsPerOrg<T>, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -472,6 +490,7 @@ pub mod pallet {
 			<Organizations<T>>::insert(org_id, dao);
 
 			// Insert new members into the org storage
+			let bounded: Bounded 
 			<Members<T>>::insert(org_id, vec![from_initiator]);
 
 			// Insert organizations into MemberOf
