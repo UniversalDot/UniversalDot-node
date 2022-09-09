@@ -206,10 +206,6 @@ pub mod pallet {
 
 		/// WeightInfo provider.
 		type WeightInfo: WeightInfo;
-
-		/// Maximum amount of organizations someone can be a member of.
-		type MaxMemberOfLen: Get<u32> + MaxEncodedLen + TypeInfo;
-
 	}
 
 	#[pallet::pallet]

@@ -310,8 +310,9 @@ impl pallet_dao::Config for Runtime {
 	type MaxDescriptionLen =();
 	type MaxNameLen = ();
 	type MaxVisionLen = ();
-	type MaxMemberOfLen = ();
-
+	type MaxMembersPerOrganisation = ();
+	type MaxOrganisationsPerMember = ();
+	type MaxApplicantsToOrganisation = ();
 	type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
 }
 
