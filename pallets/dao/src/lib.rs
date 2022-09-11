@@ -248,28 +248,28 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Vision signed [AccountID, OrganizationIdOf]
+		/// Vision signed [AccountID, OrganizationId]
 		VisionSigned(T::AccountId, OrganizationIdOf<T>),
 
-		/// Vision signed [AccountID, OrganizationIdOf]
+		/// Vision signed [AccountID, OrganizationId]
 		VisionUnsigned(T::AccountId, OrganizationIdOf<T>),
 
-		/// DAO Organization was created [AccountID, DAO ID]
+		/// DAO Organization was created [AccountID, OrganisationId]
 		OrganizationCreated(T::AccountId, OrganizationIdOf<T>),
 
-		/// DAO Owner changed [old owner id, DAO ID, new owner id]
+		/// DAO Owner changed [old owner id, OrganisationID, new owner id]
 		OrganizationOwnerChanged(T::AccountId, OrganizationIdOf<T>, T::AccountId),
 
-		/// DAO Organization updated [owner, DAO ID]
+		/// DAO Organization updated [owner, OrganisationId]
 		OrganizationUpdated(T::AccountId, OrganizationIdOf<T>),
 
-		/// DAO Organization was dissolved [AccountID, DAO ID]
+		/// DAO Organization was dissolved [AccountID, OrganisationId]
 		OrganizationDissolved(T::AccountId, OrganizationIdOf<T>),
 
-		/// Member has been added to an organization [AccountID, AccountID, DAO ID]
+		/// Member has been added to an organization [AccountID, AccountID, OrganisationId]
 		MemberAdded(T::AccountId, T::AccountId, OrganizationIdOf<T>),
 
-		/// Member removed from an organization [AccountID, AccountID, DAO ID]
+		/// Member removed from an organization [AccountID, AccountID, OrganisationId]
 		MemberRemoved(T::AccountId, T::AccountId, OrganizationIdOf<T>),
 	}
 
@@ -296,15 +296,15 @@ pub mod pallet {
 		NotSigned,
 		/// No rights to remove. Only Owner can remove an organization
 		NotOrganizationOwner,
-		/// User is already a member of this DAO.
+		/// User is already a member of this organisation.
 		AlreadyMember,
 		/// The organization doesn't exist.
 		InvalidOrganization,
 		/// The organization already exists.
 		OrganizationAlreadyExists,
-		/// The user is not a member of this organization.
+		/// You are not a member of this organisation.
 		NotMember,
-		/// The user if over the maximum amount of organizations allowed to be affiliated with.
+		/// You have reached the maximum number of organisations.
 		MaxOrganizationsReached,
 		/// You cannot create multiple organisations in the same block.
 		AlreadyCreatedOrgThisBlock,
