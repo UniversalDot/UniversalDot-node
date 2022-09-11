@@ -233,6 +233,21 @@ docker pull universaldot/node
 ```
 
 Furthermore, we provide a [Docker-Compose](https://github.com/UniversalDot/compose-service) service that is able to start a blockchain with basic front-end application. 
+
+#### Development
+A `develop` image is also available, which is automatically updated on each push to the `develop` branch.
+To pull/update the image locally, run the following command in your terminal.
+
+    docker pull universaldot/node:develop
+
+To run the image interactively, exposing the port and removing the container on exit:
+
+    docker run -it --rm -p 9944:9944 universaldot/node:develop
+
+Or alternatively to use a single container to preserve any data during development:
+
+    docker run -d -p 9944:9944 --name node universaldot/node:develop
+
 <!-- 
 Then run the following command to start a single node development chain.
 

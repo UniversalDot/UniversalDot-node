@@ -344,6 +344,7 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let who = ensure_signed(origin)?;
 
+			// Member unsigns from vision
 			Self::member_unsigns_vision(&who, org_id)?;
 
 			// Emit an event.
@@ -382,9 +383,10 @@ pub mod pallet {
 			<pallet_did::Pallet<T>>::set_owner(&who, &org_account, &new_owner);
 
 			// Modify the storage of members to matfch the change of ownership. 
-			let _ = Self::add_member_to_organization(&new_owner, org_id, &new_owner)?;
-			let _ = Self::remove_member_from_organization(&new_owner, org_id, &who)?;
+			Self::add_member_to_organization(&new_owner, org_id, &new_owner)?;
+			Self::remove_member_from_organization(&new_owner, org_id, &who)?;
 
+			// Emit an event.
 			Self::deposit_event(Event::OrganizationOwnerChanged(who, org_id, new_owner));
 
 			Ok(())
@@ -494,15 +496,15 @@ pub mod pallet {
 
 			// Insert organizations into MemberOf
 			let mut organizations_for = <MemberOf<T>>::get(&from_initiator);
-			ensure!(organizations_for.try_push(org_id).is_ok(),
-			Error::<T>::MaxOrganizationsReached);
+			ensure!(organizations_for.try_push(org_id).is_ok(), Error::<T>::MaxOrganizationsReached);
+
 			
 			<MemberOf<T>>::set(&from_initiator, organizations_for);
 
 			// Increase organization count
-			let new_count =
-				Self::organization_count().checked_add(1).ok_or(<Error<T>>::OrganizationCountOverflow)?;
+			let new_count = Self::organization_count().checked_add(1).ok_or(<Error<T>>::OrganizationCountOverflow)?;
 			<OrganizationCount<T>>::put(new_count);
+
 			Ok(org_id)
 		}
 
@@ -559,28 +561,25 @@ pub mod pallet {
 			// Find current organizations and remove org_id from MemberOf user
 			let current_organizations = <Pallet<T>>::member_of(&from_initiator);
 			
+			// Ensure organizations exists in the list of organizations
 			ensure!(current_organizations.iter().any(|a| *a == org_id), Error::<T>::InvalidOrganization);
 			
 			// Remove Dao struct from Organizations storage
 			<Organizations<T>>::remove(org_id);
-			// Remove organizational instance
 			<Members<T>>::remove(org_id);
 
 			// Reduce organization count
 			let new_count = Self::organization_count().saturating_sub(1);
 			<OrganizationCount<T>>::put(new_count);
 
-
-			// Find current organizations and remove org_id from MemberOf user
-			let current_organizations = <Pallet<T>>::member_of(&from_initiator);
-			
+			// Collect all current organizations			
 			let current_organizations = current_organizations.into_iter()
 				.filter(|a| *a != org_id)
 				.collect::<Vec<OrganizationIdOf<T>>>()
 				.try_into()
 				.expect("reducing size of boundedvec; qed");
 			
-				// Update MemberOf
+			// Update MemberOf
 			<MemberOf<T>>::set(&from_initiator, current_organizations);
 			Ok(())
 		}
@@ -603,9 +602,9 @@ pub mod pallet {
 
 			// Insert organizations into MemberOf
 			let mut organizations = Self::member_of(&account);
-			ensure!(organizations.try_push(org_id).is_ok(),
-			Error::<T>::MaxOrganizationsReached);
+			ensure!(organizations.try_push(org_id).is_ok(), Error::<T>::MaxOrganizationsReached);
 
+			// Insert account into MemberOf organization
 			<MemberOf<T>>::set(&account, organizations);	
 
 			Ok(())
@@ -622,6 +621,7 @@ pub mod pallet {
 			// Find member and remove from Vector
 			ensure!( members.iter().any(|a| *a == *account), Error::<T>::NotMember);
 			members.retain(|a| *a != *account);
+
 			// Update Organization Members
 			<Members<T>>::insert(org_id, members);
 
@@ -629,10 +629,11 @@ pub mod pallet {
 			let mut current_organizations = <Pallet<T>>::member_of(&account);
 			ensure!(current_organizations.iter().any(|a| *a == org_id), Error::<T>::InvalidOrganization);
 
-				// Update MemberOf
+			// Update MemberOf
 			current_organizations = current_organizations.into_iter().filter(|a| *a !=
 				org_id).collect::<Vec<OrganizationIdOf<T>>>().try_into().expect("reducing size of boundedved; qed");
 
+			// Insert account into MemberOf organization
 			<MemberOf<T>>::insert(&account, &current_organizations);
 
 			Ok(())
