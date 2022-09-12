@@ -262,15 +262,15 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Reached maximum number of tasks.
 		TaskCountOverflow,
-		/// The given task doesn't exists. Try again
+		/// The given task doesn't exists. Try again.
 		TaskNotExist,
-		/// Only the initiator of task has the rights to remove task
+		/// Only the initiator of task has the rights to remove task.
 		OnlyInitiatorAcceptsTask,
-		/// Not enough balance to pay
+		/// Not enough balance to pay.
 		NotEnoughBalance,
-		/// Exceed maximum tasks owned
+		/// Exceed maximum tasks owned.
 		ExceedMaxTasksOwned,
-		/// You are not allowed to complete this task
+		/// You are not allowed to complete this task.
 		NoPermissionToComplete,
 		/// You are not allowed to update this task. Task is already in progress.
 		NoPermissionToUpdate,

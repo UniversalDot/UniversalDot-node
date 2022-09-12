@@ -137,10 +137,15 @@ pub mod pallet {
 	// Account used in Dao Struct
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
 	type OrganizationIdOf<T> = <T as frame_system::Config>::Hash;
+	
 	pub type BoundedDescriptionOf<T> = BoundedVec<u8, <T as Config>::MaxDescriptionLen>;
 	pub type BoundedNameOf<T> = BoundedVec<u8, <T as Config>::MaxNameLen>;
 	pub type BoundedVisionOf<T> = BoundedVec<u8, <T as Config>::MaxVisionLen>;
 	
+	type BoundedOrgPerMember<T> = BoundedVec<OrganizationIdOf<T>, <T as Config>::MaxOrganisationsPerMember>;
+	type BoundedMemberPerOrg<T> = BoundedVec<<T as frame_system::Config>::AccountId, <T as Config>::MaxMembersPerOrganisation>;
+	type BoundedApplicantsPerOrg<T> = BoundedVec<<T as frame_system::Config>::AccountId, <T as Config>::MaxApplicantsToOrganisation>;
+
 	/// Structure used to hold data associated with a vision.
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
 	#[scale_info(skip_type_params(T))]
@@ -187,12 +192,20 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxVisionLen: Get<u32> + MaxEncodedLen + TypeInfo;
 
+		/// The bound specifying the maximum # of members possible in an org;
+		#[pallet::constant]
+		type MaxMembersPerOrganisation: Get<u32> + MaxEncodedLen + TypeInfo;
+		
+		/// The maximum number of organisations a member can be associated with;
+		#[pallet::constant]
+		type MaxOrganisationsPerMember: Get<u32> + MaxEncodedLen + TypeInfo;
+
+		/// The maximum number of people that agree with the vision of the organisation;
+		#[pallet::constant]
+		type MaxApplicantsToOrganisation: Get<u32> + MaxEncodedLen + TypeInfo;
+
 		/// WeightInfo provider.
 		type WeightInfo: WeightInfo;
-
-		/// Maximum amount of organizations someone can be a member of.
-		type MaxMemberOfLen: Get<u32> + MaxEncodedLen + TypeInfo;
-
 	}
 
 	#[pallet::pallet]
@@ -212,8 +225,8 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn members)]
 	#[pallet::unbounded]
-	/// Create members of organization storage map with key: Hash of Dao, value: Vec<AccountID>
-	pub(super) type Members<T: Config> = StorageMap<_, Twox64Concat, OrganizationIdOf<T>, Vec<T::AccountId>, ValueQuery>;
+	/// Create members of organization storage map with key: Hash and value: BoundedVec<AccountID>
+	pub(super) type Members<T: Config> = StorageMap<_, Twox64Concat, T::Hash, BoundedMemberPerOrg<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn organization_count)]
@@ -223,40 +236,40 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn member_of)]
 	#[pallet::unbounded]
-	/// Storage item that indicates which DAO's a user belongs to [AccountID, Vec]
-	pub(super) type MemberOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, BoundedVec<OrganizationIdOf<T>, T::MaxMemberOfLen>, ValueQuery>;
+	/// Storage item that indicates which DAO's a user belongs to [AccountID, BoundedVec<OrganisationId>]
+	pub(super) type MemberOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, BoundedOrgPerMember<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn applicants_to_organization)]
 	#[pallet::unbounded]
-	/// Storage Map to indicate which user agree with a proposed Vision of an Organisation [DaoId, Vec[Account]]
-	pub(super) type ApplicantsToOrganization<T: Config> = StorageMap<_, Twox64Concat, OrganizationIdOf<T>, Vec<T::AccountId>, ValueQuery>;
+	/// Storage Map to indicate which user agree with a proposed Vision of an Organisation [OrganizationId, BoundedVec[Account]]
+	pub(super) type ApplicantsToOrganization<T: Config> = StorageMap<_, Twox64Concat, OrganizationIdOf<T>, BoundedApplicantsPerOrg<T>, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Vision signed [AccountID, OrganizationIdOf]
+		/// Vision signed [AccountID, OrganizationId]
 		VisionSigned(T::AccountId, OrganizationIdOf<T>),
 
-		/// Vision signed [AccountID, OrganizationIdOf]
+		/// Vision signed [AccountID, OrganizationId]
 		VisionUnsigned(T::AccountId, OrganizationIdOf<T>),
 
-		/// DAO Organization was created [AccountID, DAO ID]
+		/// DAO Organization was created [AccountID, OrganisationId]
 		OrganizationCreated(T::AccountId, OrganizationIdOf<T>),
 
-		/// DAO Owner changed [old owner id, DAO ID, new owner id]
+		/// DAO Owner changed [old owner id, OrganisationID, new owner id]
 		OrganizationOwnerChanged(T::AccountId, OrganizationIdOf<T>, T::AccountId),
 
-		/// DAO Organization updated [owner, DAO ID]
+		/// DAO Organization updated [owner, OrganisationId]
 		OrganizationUpdated(T::AccountId, OrganizationIdOf<T>),
 
-		/// DAO Organization was dissolved [AccountID, DAO ID]
+		/// DAO Organization was dissolved [AccountID, OrganisationId]
 		OrganizationDissolved(T::AccountId, OrganizationIdOf<T>),
 
-		/// Member has been added to an organization [AccountID, AccountID, DAO ID]
+		/// Member has been added to an organization [AccountID, AccountID, OrganisationId]
 		MemberAdded(T::AccountId, T::AccountId, OrganizationIdOf<T>),
 
-		/// Member removed from an organization [AccountID, AccountID, DAO ID]
+		/// Member removed from an organization [AccountID, AccountID, OrganisationId]
 		MemberRemoved(T::AccountId, T::AccountId, OrganizationIdOf<T>),
 	}
 
@@ -283,18 +296,22 @@ pub mod pallet {
 		NotSigned,
 		/// No rights to remove. Only Owner can remove an organization
 		NotOrganizationOwner,
-		/// User is already a member of this DAO.
+		/// User is already a member of this organisation.
 		AlreadyMember,
 		/// The organization doesn't exist.
 		InvalidOrganization,
 		/// The organization already exists.
 		OrganizationAlreadyExists,
-		/// The user is not a member of this organization.
+		/// You are not a member of this organisation.
 		NotMember,
-		/// The user if over the maximum amount of organizations allowed to be affiliated with.
+		/// You have reached the maximum number of organisations.
 		MaxOrganizationsReached,
 		/// You cannot create multiple organisations in the same block.
 		AlreadyCreatedOrgThisBlock,
+		/// Maximum number of members per organsiation reached.
+		MaximumMembersReached,
+		/// Maximum applicants reached for this organisation.
+		MaximumApplicantsReached,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -474,11 +491,13 @@ pub mod pallet {
 			<Organizations<T>>::insert(org_id, dao);
 
 			// Insert new members into the org storage
-			<Members<T>>::insert(org_id, vec![from_initiator]);
+			let bounded: BoundedMemberPerOrg<T> = vec![from_initiator.clone()].try_into().expect("will only ever be one person on init; qed");
+			<Members<T>>::insert(org_id, bounded);
 
 			// Insert organizations into MemberOf
-			let mut organizations_for = <MemberOf<T>>::take(&from_initiator);
+			let mut organizations_for = <MemberOf<T>>::get(&from_initiator);
 			ensure!(organizations_for.try_push(org_id).is_ok(), Error::<T>::MaxOrganizationsReached);
+
 			
 			<MemberOf<T>>::set(&from_initiator, organizations_for);
 
@@ -578,7 +597,7 @@ pub mod pallet {
 			ensure!(!members.contains(account), <Error<T>>::AlreadyMember);
 
 			// Insert account into organization
-			members.push(account.clone());
+			ensure!(members.try_push(account.clone()).is_ok(), Error::<T>::MaximumMembersReached);
 			<Members<T>>::insert(org_id, &members);
 
 			// Insert organizations into MemberOf
@@ -630,7 +649,7 @@ pub mod pallet {
 			// Ensure not signed already
 			ensure!(!members.contains(from_initiator), <Error<T>>::AlreadySigned);
 			
-			members.push(from_initiator.clone());
+			ensure!(members.try_push(from_initiator.clone()).is_ok(), Error::<T>::MaximumApplicantsReached);
 
 			// Update storage.
 			<ApplicantsToOrganization<T>>::insert(org_id, members);
