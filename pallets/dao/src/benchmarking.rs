@@ -134,20 +134,21 @@ benchmarks! {
 
 	transfer_ownership {
 		/* setup initial state */
-		let caller: T::AccountId = whitelisted_caller();
-
+		let first_owner: T::AccountId = whitelisted_caller();
+		let new_owner: T::AccountId = account("new owner", 0, SEED);
+		
 		let s in 1 .. u8::MAX.into();
 		let name = vec![0u8, s as u8].try_into().unwrap();
 		let description = vec![0u8, s as u8].try_into().unwrap();
 		let vision = vec![0u8, s as u8].try_into().unwrap();
 
-		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(caller.clone()).into(), name, description, vision);
-		let org_id = PalletDao::<T>::member_of(&caller)[0];
+		let _ = PalletDao::<T>::create_organization(RawOrigin::Signed(first_owner.clone()).into(), name, description, vision);
+		let org_id = PalletDao::<T>::member_of(&first_owner)[0];
 
-	}: transfer_ownership(RawOrigin::Signed(caller.clone()), org_id, caller.clone())
+	}: transfer_ownership(RawOrigin::Signed(first_owner.clone()), org_id, new_owner.clone())
 	verify {
-		let hash = PalletDao::<T>::member_of(&caller)[0];
-		assert_last_event::<T>(Event::<T>::OrganizationOwnerChanged(caller.clone(), hash, caller).into())
+		let hash = PalletDao::<T>::member_of(&new_owner)[0];
+		assert_last_event::<T>(Event::<T>::OrganizationOwnerChanged(first_owner.clone(), hash, new_owner).into())
 	}
 
 	dissolve_organization {

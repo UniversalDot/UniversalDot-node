@@ -98,6 +98,12 @@ parameter_types! {
 	pub const MaxDaoNameLen: u32 = 64;
 	#[derive(TypeInfo, MaxEncodedLen, Encode)]
 	pub const MaxVisionLen: u32 = 64;
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxMembersPerOrganisation: u32 = 150;
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxOrganisationsPerMember: u32 = 150;
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxApplicantsToOrganisation: u32 = 150;
 }
 
 impl pallet_dao::Config for Test {
@@ -105,6 +111,10 @@ impl pallet_dao::Config for Test {
 	type MaxDescriptionLen = MaxDescriptionLen;
 	type MaxNameLen = MaxDaoNameLen;
 	type MaxVisionLen = MaxVisionLen;
+	type MaxMembersPerOrganisation = MaxMembersPerOrganisation;
+	type MaxOrganisationsPerMember = MaxOrganisationsPerMember;
+	type MaxApplicantsToOrganisation = MaxApplicantsToOrganisation;
+
 	type WeightInfo = ();
 }
 
