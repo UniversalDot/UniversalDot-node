@@ -93,18 +93,11 @@
 //!		Used if a task has expired and the user wants to revive it to edit.
 //! 
 //! Storage Items:
-<<<<<<< HEAD
-//!     Tasks: Stores Task related information
-//!     TaskCount: Counts the total number of Tasks in the ecosystem
-//!     TasksOwned: Keeps track of how many tasks are owned per account
-//!
-=======
 //! 	Tasks: Stores Task related information
 //! 	TaskCount: Counts the total number of Tasks in the ecosystem
 //! 	TasksOwned: Keeps track of how many tasks are owned per account
 //! 	ExpiringTasksPerBlock: A list of task_id that expire on a given block;
 //!		DyingTasksPerBlock: A list of task_id that will die (is removed from storage) on a given block;
->>>>>>> da67410 (added documentation for revive task)
 //!
 //! ## Related Modules
 //!
