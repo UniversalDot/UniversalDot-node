@@ -15,6 +15,9 @@ use sp_runtime::{
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+type BlockNumber = u64;
+/// Change this to adjust the block time.
+pub const MILLISECS_PER_BLOCK: u64 = 6000;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -46,7 +49,7 @@ impl system::Config for Test {
 	type Origin = Origin;
 	type Call = Call;
 	type Index = u64;
-	type BlockNumber = u64;
+	type BlockNumber = BlockNumber;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = sr25519::Public;
@@ -171,6 +174,9 @@ parameter_types! {
 	pub const MaxFeedbackLen: u32 = 5000;
 	#[derive(TypeInfo, MaxEncodedLen, Encode)]
 	pub const MaxKeywordsLen: u32 = 100;
+	// 100 blocks longevity
+	pub const TaskLongevityAfterExpiration: BlockNumber = 100;
+	pub const MilisPerBlock: u64 = MILLISECS_PER_BLOCK; 
 }
 
 impl pallet_task::Config for Test {
@@ -186,6 +192,8 @@ impl pallet_task::Config for Test {
 	type MaxAttachmentsLen = MaxAttachmentsLen;
 	type MaxFeedbackLen = MaxFeedbackLen;
 	type MaxKeywordsLen = MaxKeywordsLen;
+	type MillisecondsPerBlock = MilisPerBlock;
+	type TaskLongevityAfterExpiration = TaskLongevityAfterExpiration;
 }
 
 impl pallet_task::traits::Organization<H256> for Test {

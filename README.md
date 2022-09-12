@@ -234,6 +234,7 @@ docker pull universaldot/node
 
 Furthermore, we provide a [Docker-Compose](https://github.com/UniversalDot/compose-service) service that is able to start a blockchain with basic front-end application. 
 
+
 #### Development
 A `develop` image is also available, which is automatically updated on each push to the `develop` branch.
 To pull/update the image locally, run the following command in your terminal.
@@ -248,7 +249,6 @@ Or alternatively to use a single container to preserve any data during developme
 
     docker run -d -p 9944:9944 --name node universaldot/node:develop
 
-<!-- 
 Then run the following command to start a single node development chain.
 
 ```bash
@@ -271,11 +271,19 @@ by appending your own. A few useful ones are as follow.
 ./scripts/docker_run.sh cargo check
 ```
 
-### Regenerate Weights for pallets
+ Regenerate Weights for pallets
 
 - Each pallet task,profile and dao contains weights for extrinsics in weights.rs file for respective pallet directory.
 - weights.rs contains command to regenerate weights. The command looks like following:
-`./target/release/node-template benchmark --chain dev --execution wasm --wasm-execution compiled --pallet 'pallet_profile' --extrinsic '*' --steps 100 --repeat 50 --output ./pallets/profile/src/weights.rs --template .maintain/frame-weight-template.hbs`
+
+ ./target/release/node-template benchmark pallet --chain dev --execution wasm --wasm-execution compiled --pallet 'pallet_profile' --extrinsic '*' --steps 100 --repeat 50 --output ./pallets/profile/src/weights.rs --template .maintain/frame-weight-template.hbs
+
+ or
+
+ ./target/release/node-template benchmark --chain dev --execution wasm --wasm-execution compiled --pallet 'pallet_profile' --extrinsic '*' --steps 100 --repeat 50 --output ./pallets/profile/src/weights.rs --template .maintain/frame-weight-template.hbs
+
+depending on cli version.
+
 - Make sure node is built in release mode with runtime-benchmark features enabled.
     `cargo build --release --features runtime-benchmarks`
 - For more information on benchmakring including recommended hardware check https://docs.substrate.io/v3/runtime/benchmarking/

@@ -279,6 +279,9 @@ parameter_types! {
 	pub const MaxFeedbackLen: u32 = 5000;
 	#[derive(TypeInfo, MaxEncodedLen, Encode)]
 	pub const MaxKeywordsLen: u32 = 100;
+	// 2 weeks
+	pub const TaskLongevityAfterExpiration: BlockNumber = ((2 * 7 * 24 * 60 * 60 * 1000) as u32) / MILLISECS_PER_BLOCK as u32;
+	pub const MilisPerBlock: u64 = MILLISECS_PER_BLOCK; 
 }
 
 // Configure the pallet-task.
@@ -295,6 +298,9 @@ impl pallet_task::Config for Runtime {
 	type MaxAttachmentsLen = MaxAttachmentsLen;
 	type MaxFeedbackLen = MaxFeedbackLen;
 	type MaxKeywordsLen = MaxKeywordsLen;
+	type MillisecondsPerBlock = MilisPerBlock;
+	type TaskLongevityAfterExpiration = TaskLongevityAfterExpiration;
+
 }
 
 impl pallet_task::traits::Organization<Hash> for Runtime {
