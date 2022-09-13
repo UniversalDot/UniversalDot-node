@@ -398,16 +398,16 @@ impl pallet_treasury::Config for Runtime {
 	type RejectOrigin = EnsureRoot<AccountId>;
 	type Event = Event;
 
-	//todo: on slash account
+	// can use DealWIthFeesHere
 	type OnSlash = ();
 	type ProposalBond = ProposalBond;
 	type ProposalBondMinimum = ProposalBondMinimum;
 	type ProposalBondMaximum = ();
 	type SpendPeriod = SpendPeriod;
 	type Burn = Burn;
-	//todo: on burn account
+	// can use DealWIthFeesHere
 	type BurnDestination = ();
-	//todo: on slash account
+	// will be used by external pallet to compute spending of funds
 	type SpendFunds = ();
 	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
 	type MaxApprovals = MaxApprovals;
