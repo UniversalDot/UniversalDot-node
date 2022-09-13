@@ -234,7 +234,6 @@ docker pull universaldot/node
 
 Furthermore, we provide a [Docker-Compose](https://github.com/UniversalDot/compose-service) service that is able to start a blockchain with basic front-end application. 
 
-<<<<<<< HEAD
 #### Development
 A `develop` image is also available, which is automatically updated on each push to the `develop` branch.
 To pull/update the image locally, run the following command in your terminal.
@@ -249,9 +248,7 @@ Or alternatively to use a single container to preserve any data during developme
 
     docker run -d -p 9944:9944 --name node universaldot/node:develop
 
-<!-- 
-=======
->>>>>>> 90c7195 (uncommented regen weights in readme)
+
 Then run the following command to start a single node development chain.
 
 ```bash
@@ -289,6 +286,6 @@ depending on cli version.
 
 - Make sure node is built in release mode with runtime-benchmark features enabled.
     `cargo build --release --features runtime-benchmarks`
-- For more information on benchmakring including recommended hardware check https://docs.substrate.io/v3/runtime/benchmarking/
+- For more information on benchmarking including recommended hardware check https://docs.substrate.io/v3/runtime/benchmarking/
 
 
