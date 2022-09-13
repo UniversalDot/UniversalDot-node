@@ -966,7 +966,6 @@ fn test_create_insufficient_funds_to_reserve() {
 		// Create profile (required by task)
 		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
 		
-
 		//Create a task with more tokens than the signer has
 		assert_noop!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(1), attachments(), keywords(), None), Error::<Test>::NotEnoughBalance);
 	})

@@ -286,6 +286,6 @@ depending on cli version.
 
 - Make sure node is built in release mode with runtime-benchmark features enabled.
     `cargo build --release --features runtime-benchmarks`
-- For more information on benchmakring including recommended hardware check https://docs.substrate.io/v3/runtime/benchmarking/
+- For more information on benchmarking including recommended hardware check https://docs.substrate.io/v3/runtime/benchmarking/
 
 

@@ -319,7 +319,7 @@ benchmarks! {
 	let hash_task = PalletTask::<T>::tasks_owned(&task_creator)[0];
 	let mut task = Tasks::<T>::get(hash_task).unwrap();
 	task.status = TaskStatus::Expired;
-	
+	Tasks::<T>::insert(&hash_task, &task);
 	// Swap these around so that revive works
 	ExpiringTasksPerBlock::<T>::take(task.deadline_block.unwrap());
 
