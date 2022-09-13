@@ -234,21 +234,6 @@ docker pull universaldot/node
 
 Furthermore, we provide a [Docker-Compose](https://github.com/UniversalDot/compose-service) service that is able to start a blockchain with basic front-end application. 
 
-
-#### Development
-A `develop` image is also available, which is automatically updated on each push to the `develop` branch.
-To pull/update the image locally, run the following command in your terminal.
-
-    docker pull universaldot/node:develop
-
-To run the image interactively, exposing the port and removing the container on exit:
-
-    docker run -it --rm -p 9944:9944 universaldot/node:develop
-
-Or alternatively to use a single container to preserve any data during development:
-
-    docker run -d -p 9944:9944 --name node universaldot/node:develop
-
 Then run the following command to start a single node development chain.
 
 ```bash
@@ -271,16 +256,34 @@ by appending your own. A few useful ones are as follow.
 ./scripts/docker_run.sh cargo check
 ```
 
- Regenerate Weights for pallets
+#### Development
+A `develop` image is also available, which is automatically updated on each push to the `develop` branch.
+To pull/update the image locally, run the following command in your terminal.
 
-- Each pallet task,profile and dao contains weights for extrinsics in weights.rs file for respective pallet directory.
-- weights.rs contains command to regenerate weights. The command looks like following:
+    docker pull universaldot/node:develop
 
- ./target/release/node-template benchmark pallet --chain dev --execution wasm --wasm-execution compiled --pallet 'pallet_profile' --extrinsic '*' --steps 100 --repeat 50 --output ./pallets/profile/src/weights.rs --template .maintain/frame-weight-template.hbs
+To run the image interactively, exposing the port and removing the container on exit:
 
- or
+    docker run -it --rm -p 9944:9944 universaldot/node:develop
 
- ./target/release/node-template benchmark --chain dev --execution wasm --wasm-execution compiled --pallet 'pallet_profile' --extrinsic '*' --steps 100 --repeat 50 --output ./pallets/profile/src/weights.rs --template .maintain/frame-weight-template.hbs
+Or alternatively to use a single container to preserve any data during development:
+
+    docker run -d -p 9944:9944 --name node universaldot/node:develop
+
+### Regenerate Weights for pallets
+
+- Each pallet task, profile and dao contains weights for extrinsics in `weights.rs` file for respective pallet directory.
+- `weights.rs` contains command to regenerate weights. The command looks like following:
+
+```bash
+./target/release/node-template benchmark pallet --chain dev --execution wasm --wasm-execution compiled --pallet 'pallet_profile' --extrinsic '*' --steps 100 --repeat 50 --output ./pallets/profile/src/weights.rs --template .maintain/frame-weight-template.hbs
+```
+
+or
+
+```bash
+./target/release/node-template benchmark --chain dev --execution wasm --wasm-execution compiled --pallet 'pallet_profile' --extrinsic '*' --steps 100 --repeat 50 --output ./pallets/profile/src/weights.rs --template .maintain/frame-weight-template.hbs
+```
 
 depending on cli version.
 
