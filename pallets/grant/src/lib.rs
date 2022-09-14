@@ -252,8 +252,6 @@ pub mod pallet {
 
 
 		// Generates treasury account
-		// todo: ensure that usage of into_account_truncating is correct
-		// See: https://paritytech.github.io/substrate/master/sp_runtime/traits/trait.AccountIdConversion.html#tymethod.into_sub_account_truncating
 		pub(crate) fn account_id() -> T::AccountId {
 			T::PalletId::get().into_account_truncating()
 		}
