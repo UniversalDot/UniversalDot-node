@@ -115,6 +115,12 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		type Randomness: Randomness<Self::Hash, Self::BlockNumber>;
+
+		/// The configured account of the treasury.
+		type TreasuryAccount: Get<Self::AccountId>;
+
+		/// The total amount of tokens per grant.
+		type GrantAmount: Get<BalanceOf<Self>>;
 	}
 
 	#[pallet::pallet]
@@ -163,6 +169,8 @@ pub mod pallet {
 		TooManyRequesters,
 		// No winner exists
 		NoWinner
+		// Treasury is out of fund!
+		TreasuryEmpty
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -250,16 +258,8 @@ pub mod pallet {
 	// ** Helper internal functions ** //
 	impl<T:Config> Pallet<T> {
 
-
-		// Generates treasury account
-		// todo: ensure that usage of into_account_truncating is correct
-		// See: https://paritytech.github.io/substrate/master/sp_runtime/traits/trait.AccountIdConversion.html#tymethod.into_sub_account_truncating
-		pub(crate) fn account_id() -> T::AccountId {
-			T::PalletId::get().into_account_truncating()
-		}
-
 		fn treasury_account() -> (T::AccountId, BalanceOf<T>) {
-			let account_id = Self::account_id();
+			let account_id = T::TreasuryAccount::get();
 			let balance =
 				T::Currency::free_balance(&account_id).saturating_sub(T::Currency::minimum_balance());
 	
@@ -308,7 +308,7 @@ pub mod pallet {
 
 			<Winner<T>>::put(winner);
 
-			let _ = Self::transfer_funds_to_winner();
+			let _ = Self::transfer_funds_to_winner()?;
 
 			Ok(())
 		}
@@ -324,15 +324,14 @@ pub mod pallet {
 		// Function that allows funds to be sent to winner
 		fn transfer_funds_to_winner() -> Result<(), DispatchError> {
 
-			let (_lottery_account, lottery_balance) = Self::treasury_account();
+			let (treasury_account, treasury_balance) = Self::treasury_account();
+			let grant_total = T::GrantAmount::get();
 
-			let treasury= &Self::account_id();
-
-			// TODO: Implement formula that grants based on total supply and not whole balance
-			let _total = T::Currency::total_issuance();
+			ensure!(treasury_balance > grant_total, Error::<T>::TreasuryEmpty);
 
 			let winner = &Self::winner().ok_or(<Error<T>>::NoWinner)?; // AccountId should not use default: https://substrate.stackexchange.com/a/1814
-			let transfer = T::Currency::transfer(treasury, winner, lottery_balance, ExistenceRequirement::KeepAlive);
+			
+			let transfer = T::Currency::transfer(treasury_account, winner, grant_total, ExistenceRequirement::KeepAlive);
 			debug_assert!(transfer.is_ok());
 
 			Ok(())
