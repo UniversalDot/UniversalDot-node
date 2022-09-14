@@ -498,7 +498,11 @@ mod benches {
 		[frame_system, SystemBench::<Runtime>]
 		[pallet_balances, Balances]
 		[pallet_timestamp, Timestamp]
-		[pallet_template, TemplateModule]
+		[pallet_profile, Profile]
+		[pallet_task, Task]
+		[pallet_dao, Dao]
+		[pallet_grant, Grant]
+		[pallet_did, Did]
 	);
 }
 
@@ -645,18 +649,9 @@ impl_runtime_apis! {
 			use baseline::Pallet as BaselineBench;
 
 			let mut list = Vec::<BenchmarkList>::new();
-			// todo: use https://paritytech.github.io/substrate/master/node_template_runtime/macro.list_benchmarks.html
-			// list_benchmarks!(list, extra);
+			list_benchmarks!(list, extra);
 
-			list_benchmark!(list, extra, frame_benchmarking, BaselineBench::<Runtime>);
-			list_benchmark!(list, extra, frame_system, SystemBench::<Runtime>);
-			list_benchmark!(list, extra, pallet_balances, Balances);
-			list_benchmark!(list, extra, pallet_timestamp, Timestamp);
-			list_benchmark!(list, extra, pallet_profile, Profile);
-			list_benchmark!(list, extra, pallet_task, Task);
-			list_benchmark!(list, extra, pallet_dao, Dao);
-			list_benchmark!(list, extra, pallet_grant, Grant);
-			list_benchmark!(list, extra, pallet_did, Did);
+			// Note: benchmark definitions moved to benches::define_benchmarks! above
 
 			let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -689,20 +684,9 @@ impl_runtime_apis! {
 
 			let mut batches = Vec::<BenchmarkBatch>::new();
 			let params = (&config, &whitelist);
+			add_benchmarks!(params, batches);
 
-			// todo: use https://paritytech.github.io/substrate/master/node_template_runtime/macro.add_benchmarks.html
-			// add_benchmarks!(params, batches);
-
-			add_benchmark!(params, batches, frame_benchmarking, BaselineBench::<Runtime>);
-			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_balances, Balances);
-			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
-			add_benchmark!(params, batches, pallet_profile, Profile);
-			add_benchmark!(params, batches, pallet_task, Task);
-			add_benchmark!(params, batches, pallet_dao, Dao);
-			add_benchmark!(params, batches, pallet_grant, Grant);
-			add_benchmark!(params, batches, pallet_did, Did);
-
+			// Note: benchmark definitions moved to benches::define_benchmarks! above
 
 			Ok(batches)
 		}
