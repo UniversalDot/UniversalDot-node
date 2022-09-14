@@ -19,7 +19,7 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys, Percent,
 	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, NumberFor, Verify},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, MultiSignature,
+	ApplyExtrinsicResult, MultiSignature, BoundedVec
 };
 use scale_info::TypeInfo;
 use codec::{Encode, MaxEncodedLen};
@@ -50,6 +50,7 @@ use pallet_transaction_payment::CurrencyAdapter;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
+use sp_runtime::traits::Get;
 
 
 pub const MILLICENTS: Balance = 1_000_000_000;
@@ -379,6 +380,8 @@ impl pallet_grant::Config for Runtime {
 
 parameter_types! {
 	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxDelegateTypeLen: u32 = 64;
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
 	pub const MaxNameLen: u32 = 64; // Value used from existing length checks in did pallet
 	#[derive(TypeInfo, MaxEncodedLen, Encode)]
 	pub const MaxValueLen: u32 = 64; // Value used from existing length checks in did pallet
@@ -386,6 +389,8 @@ parameter_types! {
 
 impl pallet_did::Config for Runtime {
 	type Event = Event;
+	type DelegateType = Runtime;
+	type MaxDelegateTypeLen = MaxDelegateTypeLen;
 	type MaxNameLen = MaxNameLen;
 	type MaxValueLen = MaxValueLen;
 	type Public = <Signature as Verify>::Signer;
@@ -394,6 +399,11 @@ impl pallet_did::Config for Runtime {
 	type WeightInfo = pallet_did::weights::SubstrateWeight<Runtime>;
 }
 
+impl Get<BoundedVec<u8, MaxDelegateTypeLen>> for Runtime {
+	fn get() -> BoundedVec<u8, MaxDelegateTypeLen> {
+		b"x25519VerificationKey2018".to_vec().try_into().expect("could not convert delegate type into boundedvec")
+	}
+}
 
 parameter_types! {
 	pub const ProposalBond: Permill = Permill::from_percent(5);

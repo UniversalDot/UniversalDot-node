@@ -1,7 +1,9 @@
-use crate::{did::Did, mock::*, AttributeTransaction, Error};
+use crate::{did::Did, mock::*, AttributeTransaction, Error, Config, BoundedNameOf, BoundedValueOf};
 use codec::Encode;
 use frame_support::{assert_noop, assert_ok};
 use sp_core::Pair;
+use sp_runtime::bounded_vec;
+use sp_runtime::traits::Get;
 
 #[test]
 fn validate_claim() {
@@ -41,7 +43,7 @@ fn validate_delegated_claim() {
         System::set_block_number(1);
 
         // Predefined delegate type: "Sr25519VerificationKey2018"
-        let delegate_type = b"x25519VerificationKey2018".to_vec();
+        let delegate_type = <Test as Config>::DelegateType::get();
         let data = b"I am Satoshi Nakamoto".to_vec();
 
         let satoshi_public = account_key("Satoshi"); // Get Satoshi's public key.
@@ -85,8 +87,8 @@ fn validate_delegated_claim() {
 #[test]
 fn add_on_chain_and_revoke_off_chain_attribute() {
     new_test_ext().execute_with(|| {
-        let name = b"MyAttribute".to_vec();
-        let mut value = [1, 2, 3].to_vec();
+        let name: BoundedNameOf<Test> = b"MyAttribute".to_vec().try_into().unwrap();
+        let mut value: BoundedValueOf<Test> = bounded_vec![1, 2, 3];
         let mut validity: u32 = 1000;
 
         // Create a new account pair and get the public key.
@@ -108,7 +110,7 @@ fn add_on_chain_and_revoke_off_chain_attribute() {
         // Revoke attribute off-chain
         // Set validity to 0 in order to revoke the attribute.
         validity = 0;
-        value = [0].to_vec();
+        value = bounded_vec![0];
         let mut encoded = name.encode();
         encoded.extend(value.encode());
         encoded.extend(validity.encode());
@@ -133,7 +135,7 @@ fn add_on_chain_and_revoke_off_chain_attribute() {
 
         // Validate that the attribute was revoked.
         assert_noop!(
-            DID::valid_attribute(&alice_public, &name, &[1, 2, 3].to_vec()),
+            DID::valid_attribute(&alice_public, &name, &bounded_vec![1, 2, 3]),
             Error::<Test>::InvalidAttribute
         );
     });
@@ -177,7 +179,7 @@ fn attacker_add_new_delegate_should_fail() {
     new_test_ext().execute_with(|| {
         // BadBoy is an invalid delegate previous to attack.
         assert_noop!(
-            DID::valid_delegate(&account_key("Alice"), &[7, 7, 7], &account_key("BadBoy")),
+            DID::valid_delegate(&account_key("Alice"), &bounded_vec![7, 7, 7], &account_key("BadBoy")),
             Error::<Test>::InvalidDelegate
         );
 
@@ -187,7 +189,7 @@ fn attacker_add_new_delegate_should_fail() {
                 Origin::signed(account_key("BadBoy")),
                 account_key("Alice"),
                 account_key("BadBoy"),
-                vec![7, 7, 7],
+                bounded_vec![7, 7, 7],
                 Some(20)
             ),
             Error::<Test>::NotOwner
@@ -195,7 +197,7 @@ fn attacker_add_new_delegate_should_fail() {
 
         // BadBoy is an invalid delegate.
         assert_noop!(
-            DID::valid_delegate(&account_key("Alice"), &[7, 7, 7], &account_key("BadBoy")),
+            DID::valid_delegate(&account_key("Alice"), &bounded_vec![7, 7, 7], &account_key("BadBoy")),
             Error::<Test>::InvalidDelegate
         );
     });
@@ -207,7 +209,7 @@ fn revoke_delegate_works() {
         System::set_block_number(1);
 
         // Predefined delegate type: "Sr25519VerificationKey2018"
-        let delegate_type = b"x25519VerificationKey2018".to_vec();
+        let delegate_type = <Test as Config>::DelegateType::get();
 
         let satoshi_public = account_key("Satoshi"); // Get Satoshi's public key.
         let nakamoto_pair = account_pair("Nakamoto"); // Create a new delegate account pair.
@@ -256,7 +258,7 @@ fn non_owner_cannot_revoke_delegate() {
         System::set_block_number(1);
 
         // Predefined delegate type: "Sr25519VerificationKey2018"
-        let delegate_type = b"x25519VerificationKey2018".to_vec();
+        let delegate_type = <Test as Config>::DelegateType::get();
 
         let satoshi_public = account_key("Satoshi"); // Get Satoshi's public key.
         let nakamoto_pair = account_pair("Nakamoto"); // Create a new delegate account pair.
@@ -293,65 +295,39 @@ fn non_owner_cannot_revoke_delegate() {
 fn add_remove_add_remove_attr() {
     new_test_ext().execute_with(|| {
         let acct = "Alice";
-        let vec = vec![7, 7, 7];
-        assert_eq!(DID::get_nonce(&account_key(acct), &vec), 0);
+        let name: BoundedNameOf<Test> = bounded_vec![7, 7, 7];
+        let value: BoundedValueOf<Test> = bounded_vec![7, 7, 7];
+        assert_eq!(DID::get_nonce(&account_key(acct), &name), 0);
         assert_ok!(DID::add_attribute(
             Origin::signed(account_key(acct)),
             account_key(acct),
-            vec.to_vec(),
-            vec.to_vec(),
+            name.clone(),
+            value.clone(),
             None
         ));
-        assert_eq!(DID::get_nonce(&account_key(acct), &vec), 1);
+        assert_eq!(DID::get_nonce(&account_key(acct), &name), 1);
         assert_ok!(DID::delete_attribute(
             Origin::signed(account_key(acct)),
             account_key(acct),
-            vec.to_vec()
+            name.clone()
         ));
         assert_ok!(DID::add_attribute(
             Origin::signed(account_key(acct)),
             account_key(acct),
-            vec.to_vec(),
-            vec.to_vec(),
+            name.clone(),
+            value,
             None
         ));
-        assert_eq!(DID::get_nonce(&account_key(acct), &vec), 2);
+        assert_eq!(DID::get_nonce(&account_key(acct), &name), 2);
         assert_ok!(DID::delete_attribute(
             Origin::signed(account_key(acct)),
             account_key(acct),
-            vec.to_vec()
+            name
         ));
     });
 }
 
 #[test]
-fn create_attribute_checks_attribute_name_length() {
-    new_test_ext().execute_with(|| {
-        let account = account_key("Alice");
-        let name = vec![1u8; MaxNameLen::get() as usize + 1];
-        let value = vec![1u8; MaxValueLen::get() as usize];
-        assert_noop!(DID::create_attribute(
-            &account,
-            &account,
-            &name,
-            &value,
-            None
-        ), <Error<Test>>::AttributeNameTooLong);
-    });
-}
-
-#[test]
-fn create_attribute_checks_attribute_value_length() {
-    new_test_ext().execute_with(|| {
-        let account = account_key("Alice");
-        let name = vec![1u8; MaxNameLen::get() as usize];
-        let value = vec![1u8; MaxValueLen::get() as usize + 1];
-        assert_noop!(DID::create_attribute(
-            &account,
-            &account,
-            &name,
-            &value,
-            None
-        ), <Error<Test>>::AttributeValueTooLong);
-    });
+fn delegate_type_matches() {
+    assert_eq!(b"x25519VerificationKey2018", <Test as Config>::DelegateType::get().to_vec().as_slice())
 }
