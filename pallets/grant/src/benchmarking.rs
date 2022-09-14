@@ -44,28 +44,25 @@ benchmarks! {
 		assert_last_event::<T>(Event::<T>::GrantRequested { who: caller }.into());
 	}
 
-	transfer_funds {
+	transfer_to_treasury {
 		/* setup initial state */
 		let caller: T::AccountId = whitelisted_caller();
-		let grant_receiver:  T::AccountId = whitelisted_caller();
-	}: transfer_funds(RawOrigin::Signed(caller), grant_receiver)
+	}: transfer_to_treasury(RawOrigin::Signed(caller), 100u32.into())
 	verify {
 			/* verifying final state */
 		let caller: T::AccountId = whitelisted_caller();
-		assert_last_event::<T>(Event::<T>::GrantIssued{ who: caller }.into());
+		assert_last_event::<T>(Event::<T>::TreasuryDonation{ who: caller }.into());
 	}
 
 	 winner_is {
 	 	/* setup initial state */
-	 	let treasury_account: T::AccountId = whitelisted_caller();
-	 	let grant_receiver: T::AccountId = whitelisted_caller()
-	 }: winner_is(RawOrigin::Signed(treasury_account)
+	 	let grant_receiver: T::AccountId = whitelisted_caller();
+	 }: winner_is(RawOrigin::Signed(grant_receiver))
 	 verify {
 	 	/* verifying final state */
 	 	let caller: T::AccountId = whitelisted_caller();
 	 	assert_last_event::<T>(Event::<T>::WinnerSelected { who: caller }.into());
 	 }
-
 }
 
-impl_benchmark_test_suite!(PalletGrant, crate::mock::new_test_ext(), crate::mock::Test,);
+impl_benchmark_test_suite!(PalletGrant, crate::mock::new_test_ext(), crate::mock::Test);

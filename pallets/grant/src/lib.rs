@@ -153,6 +153,9 @@ pub mod pallet {
 
 		/// Profile was successfully updated.
 		WinnerSelected { who: T::AccountId },
+
+		/// There was a donation to treasury
+		TreasuryDonation { who: T::AccountId },
 	}
 
 	// Errors inform users that something went wrong.
@@ -179,7 +182,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 
 		/// Dispatchable call that ensures grants can be requested
-		#[pallet::weight(<T as Config>::WeightInfo::request_grant())]
+		#[pallet::weight((<T as Config>::WeightInfo::request_grant(), Pays::No))]
 		pub fn request_grant(origin: OriginFor<T>, grant_requester: T::AccountId) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
@@ -197,19 +200,19 @@ pub mod pallet {
 
 		/// Dispatchable call that enables transfer of funds
 		#[pallet::weight(<T as Config>::WeightInfo::request_grant())]
-		pub fn transfer_funds(origin: OriginFor<T>, treasury: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+		pub fn transfer_to_treasury(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
 			// Ensure no conflicts of interest
-			ensure!(account != treasury, Error::<T>::CantGrantToSelf);
+			ensure!(&account != &T::TreasuryAccount::get(), Error::<T>::CantGrantToSelf);
 
-			// Transfer ammount from one account to treasury
-            <T as self::Config>::Currency::transfer(&account, &treasury, amount, ExistenceRequirement::KeepAlive)?;
+			// Transfer amount from one account to treasury
+            <T as self::Config>::Currency::transfer(&account, &T::TreasuryAccount::get(), amount, ExistenceRequirement::KeepAlive)?;
 
 			// Emit an event.
-			Self::deposit_event(Event::GrantIssued{ who:account });
+			Self::deposit_event(Event::TreasuryDonation{ who:account });
 
 			Ok(())
 		}
