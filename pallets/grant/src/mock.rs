@@ -14,7 +14,8 @@ use frame_support::PalletId;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-
+type AccountId = u128;
+type Balance = u64;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -37,7 +38,7 @@ parameter_types! {
 
 impl system::Config for Test {
 	type AccountData = pallet_balances::AccountData<u64>;
-	type AccountId = u128;
+	type AccountId = AccountId;
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
@@ -62,6 +63,10 @@ impl system::Config for Test {
 	type MaxConsumers = ConstU32<16>;
 }
 
+parameter_types! {
+	GrantAmount: Balance = 10;
+	TreasuryAccount: AccountId = 10000;
+}
 
 impl pallet_grant::Config for Test {
 	type Event = Event;
@@ -69,6 +74,8 @@ impl pallet_grant::Config for Test {
 	type WeightInfo = ();
 	type PalletId = LotteryPalletId;
 	type Randomness = TestRandomness<Self>;
+	type TreasuryAccount = TreasuryAccount;
+	type GrantAmount = GrantAmount;
 }
 
 parameter_types! {

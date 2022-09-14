@@ -356,12 +356,18 @@ impl pallet_profile::Config for Runtime {
 	type MaxCompletedTasksLen = MaxCompletedTasksLen;
 }
 
+parameter_types! {
+	type GrantAmount: Balance = 10;
+}
+
 impl pallet_grant::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type WeightInfo = pallet_grant::weights::SubstrateWeight<Runtime>;
 	type PalletId = RandomnessPalletId;
 	type Randomness = RandomnessCollectiveFlip;
+	type TreasuryAccount = TreasuryPalletId;
+	type GrantAmount = GrantAmount;  
 
 }
 

@@ -23,7 +23,7 @@ where
 {
 	fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance<R>>) {
 		if let Some(fees) = fees_then_tips.next() {
-			// for fees, 100% to treasury, 0% to author
+			// for fees, 50% to treasury, 50%
 			let mut split = fees.ration(50, 50);
 			if let Some(tips) = fees_then_tips.next() {
 				// for tips, if any, 100% is burnt.
