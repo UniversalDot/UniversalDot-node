@@ -14,8 +14,8 @@ use frame_support::PalletId;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-type AccountId = u128;
-type Balance = u64;
+pub type AccountId = u128;
+pub type Balance = u64;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -64,8 +64,8 @@ impl system::Config for Test {
 }
 
 parameter_types! {
-	GrantAmount: Balance = 10;
-	TreasuryAccount: AccountId = 10000;
+	pub GrantAmount: Balance = 10;
+	pub TreasuryAccount: AccountId = 10000;
 }
 
 impl pallet_grant::Config for Test {

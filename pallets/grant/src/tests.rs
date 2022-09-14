@@ -1,7 +1,7 @@
-use crate::{mock::*, Error};
+use crate::{mock::*, Error, Config};
 use frame_support::{assert_noop, assert_ok};
 use frame_support::traits::{Hooks};
-
+use crate::Pallet as PalletGrant;
 
 // <<<<<<<<<<<<<<<<<< Helper functions and constants >>>>>>>>>>>>>>>>>>
 
@@ -21,6 +21,14 @@ fn next_block(n: u64) {
 	Grant::on_initialize(n);
 }
 
+
+fn treasury_account() -> AccountId {
+	<Test as Config>::TreasuryAccount::get()
+}
+
+fn grant_amount() -> Balance {
+	<Test as Config>::GrantAmount::get()
+}
 
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< TESTS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -103,7 +111,6 @@ fn ensure_request_is_stored() {
 
         // Ensure we can access the storage requests
         assert_eq!(requests.owner, 5);
-        assert_eq!(requests.balance,Some(0));
 		assert_eq!(requests.block_number, 7);
 
 	});
@@ -202,12 +209,12 @@ fn winner_can_be_selected_per_block() {
 #[test]
 fn winner_can_be_recieve_grant_reward() {
 	new_test_ext().execute_with(|| {
-
+		
 		// Add balance to grant treasury account
-		Balances::mutate_account(&Grant::account_id(), |balance| {
+		Balances::mutate_account(&treasury_account(), |balance| {
 			balance.free = 100;
 		}).expect("could not set treasury account balance");
-		let treasury = Balances::free_balance(Grant::account_id());
+		let treasury = Balances::free_balance(&treasury_account());
 		assert_eq!(treasury, 100);
 		
 		// Check initial account getting grant is zero.
@@ -221,6 +228,6 @@ fn winner_can_be_recieve_grant_reward() {
 		assert_eq!(Grant::winner().unwrap(), 5);
 
 		//Ensure money is tranfered todo:: look for minimum balance
-		assert!(Balances::free_balance(5) == 100 - 1);
+		assert!(Balances::free_balance(5) == grant_amount());
 	});
 }
