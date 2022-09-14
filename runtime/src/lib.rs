@@ -319,16 +319,28 @@ impl pallet_task::traits::Organization<Hash> for Runtime {
 	}
 }
 
+parameter_types! {
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const DunbarsNumber: u32 = 150;
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxDescriptionLen: u32 = 500;
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const DaoMaxNameLen: u32 = 100;
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxVisionLen: u32 = 46; // CID's in IPFS are 46 characters long
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxApplicantsToOrganisation: u32 = 1_000;
+}
+
 // Configure the pallet-dao.
 impl pallet_dao::Config for Runtime {
 	type Event = Event;
-	// todo: set lengths
-	type MaxDescriptionLen =();
-	type MaxNameLen = ();
-	type MaxVisionLen = ();
-	type MaxMembersPerOrganisation = ();
-	type MaxOrganisationsPerMember = ();
-	type MaxApplicantsToOrganisation = ();
+	type MaxDescriptionLen = MaxDescriptionLen;
+	type MaxNameLen = DaoMaxNameLen;
+	type MaxVisionLen = MaxVisionLen;
+	type MaxMembersPerOrganisation = DunbarsNumber;
+	type MaxOrganisationsPerMember = DunbarsNumber;
+	type MaxApplicantsToOrganisation = MaxApplicantsToOrganisation;
 	type WeightInfo = pallet_dao::weights::SubstrateWeight<Runtime>;
 }
 
