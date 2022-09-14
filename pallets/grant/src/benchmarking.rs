@@ -36,8 +36,6 @@ benchmarks! {
 
 		let caller: T::AccountId = whitelisted_caller();
 		let grant_receiver:  T::AccountId = whitelisted_caller();
-
-
 	}: request_grant(RawOrigin::Signed(caller), grant_receiver)
 
 	verify {
@@ -46,18 +44,27 @@ benchmarks! {
 		assert_last_event::<T>(Event::<T>::GrantRequested { who: caller }.into());
 	}
 
-	// winner_is {
-	// 	/* setup initial state */
-	// 	let treasury_account: T::AccountId = whitelisted_caller();
-	// 	let grant_receiver: T::AccountId = whitelisted_caller();
+	transfer_funds {
+		/* setup initial state */
+		let caller: T::AccountId = whitelisted_caller();
+		let grant_receiver:  T::AccountId = whitelisted_caller();
+	}: transfer_funds(RawOrigin::Signed(caller), grant_receiver)
+	verify {
+			/* verifying final state */
+		let caller: T::AccountId = whitelisted_caller();
+		assert_last_event::<T>(Event::<T>::GrantIssued{ who: caller }.into());
+	}
 
-	// }: winner_is(RawOrigin::Signed(treasury_account))
-
-	// verify {
-	// 	/* verifying final state */
-	// 	let caller: T::AccountId = whitelisted_caller();
-	// 	assert_last_event::<T>(Event::<T>::WinnerSelected { who: caller }.into());
-	// }
+	 winner_is {
+	 	/* setup initial state */
+	 	let treasury_account: T::AccountId = whitelisted_caller();
+	 	let grant_receiver: T::AccountId = whitelisted_caller()
+	 }: winner_is(RawOrigin::Signed(treasury_account)
+	 verify {
+	 	/* verifying final state */
+	 	let caller: T::AccountId = whitelisted_caller();
+	 	assert_last_event::<T>(Event::<T>::WinnerSelected { who: caller }.into());
+	 }
 
 }
 

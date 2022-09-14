@@ -95,7 +95,6 @@ pub mod pallet {
 	#[scale_info(skip_type_params(T))]
 	pub struct Requesters<T: Config> {
 		pub owner: AccountOf<T>,
-		pub balance: Option<BalanceOf<T>>,
 		pub block_number: <T as frame_system::Config>::BlockNumber,
 	}
 
@@ -278,7 +277,6 @@ pub mod pallet {
 			// Populate Requesters struct
 			let requesters = Requesters::<T> {
 				owner: grant_receiver.clone(),
-				balance: Some(balance),
 				block_number: <frame_system::Pallet<T>>::block_number(),
 			};
 			
@@ -299,8 +297,7 @@ pub mod pallet {
 
 			let requestor: Vec<T::AccountId> = <StorageRequesters<T>>::iter_keys().collect();
 
-			// Generate randomness
-			// let _random_material = <pallet_randomness_collective_flip::Pallet<T>>::random_material();
+			//TODO: come up with a proper seed. Unix time in ns?
 			let get_random_number = Self::generate_random_number(0);
 			let total_requestors: u32 = requestor.len().try_into().unwrap();
 			let winner_index: usize = (get_random_number % total_requestors).try_into().unwrap();

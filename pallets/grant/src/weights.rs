@@ -75,6 +75,10 @@ use sp_std::marker::PhantomData;
 pub trait WeightInfo {
 	
 	fn request_grant() -> Weight;
+
+	fn transfer_funds() -> Weight;
+	
+	fn winner_is() -> Weight;
 	
 }
 
@@ -88,6 +92,28 @@ impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Grant StorageRequesters (r:0 w:1)
 	
 	fn request_grant() -> Weight {
+		(34_000_000 as Weight)
+			
+			
+			
+			
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+			
+			
+	}
+
+	fn transfer_funds() -> Weight {
+		(34_000_000 as Weight)
+			
+			
+			
+			
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+			
+			
+	}
+
+	fn winner_is() -> Weight {
 		(34_000_000 as Weight)
 			
 			
@@ -117,4 +143,24 @@ impl WeightInfo for () {
 			
 	}
 	
+	fn transfer_funds() -> Weight {
+		(34_000_000 as Weight)
+			
+			
+			
+			
+		.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+			
+	}
+
+	fn winner_is() -> Weight {
+		(34_000_000 as Weight)
+			
+			
+			
+			
+		.saturating_add(RocksDbWeight::get().writes(1 as Weight))
+			
+			
+	}
 }
