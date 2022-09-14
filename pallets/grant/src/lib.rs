@@ -167,9 +167,9 @@ pub mod pallet {
 		// Too many requesters in current block
 		TooManyRequesters,
 		// No winner exists
-		NoWinner
+		NoWinner,
 		// Treasury is out of fund!
-		TreasuryEmpty
+		TreasuryEmpty,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -328,7 +328,7 @@ pub mod pallet {
 
 			let winner = &Self::winner().ok_or(<Error<T>>::NoWinner)?; // AccountId should not use default: https://substrate.stackexchange.com/a/1814
 			
-			let transfer = T::Currency::transfer(treasury_account, winner, grant_total, ExistenceRequirement::KeepAlive);
+			let transfer = T::Currency::transfer(&treasury_account, winner, grant_total, ExistenceRequirement::KeepAlive);
 			debug_assert!(transfer.is_ok());
 
 			Ok(())

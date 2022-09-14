@@ -290,7 +290,7 @@ parameter_types! {
 	#[derive(TypeInfo, MaxEncodedLen, Encode)]
 	pub const MaxKeywordsLen: u32 = 100;
 	// 2 weeks
-	pub const TaskLongevityAfterExpiration: BlockNumber = ((2 * 7 * 24 * 60 * 60 * 1000) as u32) / MILLISECS_PER_BLOCK as u32;
+	pub const TaskLongevityAfterExpiration: BlockNumber = 14 * DAYS;
 	pub const MilisPerBlock: u64 = MILLISECS_PER_BLOCK; 
 }
 
@@ -357,8 +357,10 @@ impl pallet_profile::Config for Runtime {
 }
 
 parameter_types! {
-	type GrantAmount: Balance = 10;
+	pub const GrantAmount: Balance = 10;
+	pub TreasuryAccountID: AccountId = pallet_treasury::Pallet::<Runtime>::account_id();
 }
+
 
 impl pallet_grant::Config for Runtime {
 	type Event = Event;
@@ -366,7 +368,7 @@ impl pallet_grant::Config for Runtime {
 	type WeightInfo = pallet_grant::weights::SubstrateWeight<Runtime>;
 	type PalletId = RandomnessPalletId;
 	type Randomness = RandomnessCollectiveFlip;
-	type TreasuryAccount = TreasuryPalletId;
+	type TreasuryAccount = TreasuryAccountID;
 	type GrantAmount = GrantAmount;  
 
 }
