@@ -87,7 +87,7 @@ pub mod pallet {
 
 	// Account, Balance
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
-	type BalanceOf<T> =
+	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	// Struct for holding Request information.
@@ -140,7 +140,6 @@ pub mod pallet {
 	#[pallet::getter(fn requesters_count)]
 	/// Store requester count
 	pub(super) type RequestersCount<T: Config> = StorageValue<_, u32, ValueQuery>;
-
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]

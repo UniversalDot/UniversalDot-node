@@ -21,14 +21,25 @@ use super::*;
 
 #[allow(unused)]
 use crate::Pallet as PalletGrant;
-use frame_benchmarking::{benchmarks, impl_benchmark_test_suite, whitelisted_caller};
+use crate::Config as PalletConfig;
+use frame_benchmarking::{account, benchmarks, impl_benchmark_test_suite, whitelisted_caller};
 use frame_system::RawOrigin;
+use frame_support::traits::Currency;
+
+const SEED: u32 = 10; 
+
 
 // Helper function to assert event thrown during verification
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
 	frame_system::Pallet::<T>::assert_last_event(generic_event.into());
 }
 
+fn setup_account<T: Config>() -> (T::AccountId, BalanceOf<T>) {
+	let account = account("account", SEED, SEED);
+	let value: BalanceOf<T> = 10_000_000u32.into();
+	let _ = T::Currency::make_free_balance_be(&account, value);
+	(account, value)	
+}
 
 benchmarks! {
 	request_grant {
@@ -45,23 +56,23 @@ benchmarks! {
 	}
 
 	transfer_to_treasury {
-		/* setup initial state */
-		let caller: T::AccountId = whitelisted_caller();
-	}: transfer_to_treasury(RawOrigin::Signed(caller), 100u32.into())
+		let (account_id, value) = setup_account::<T>();
+		
+	}: transfer_to_treasury(RawOrigin::Signed(account_id.clone()), 100u32.into())
 	verify {
-			/* verifying final state */
-		let caller: T::AccountId = whitelisted_caller();
-		assert_last_event::<T>(Event::<T>::TreasuryDonation{ who: caller }.into());
+		assert_last_event::<T>(Event::<T>::TreasuryDonation{ who: account_id }.into());
 	}
 
 	 winner_is {
-	 	/* setup initial state */
-	 	let grant_receiver: T::AccountId = whitelisted_caller();
-	 }: winner_is(RawOrigin::Signed(grant_receiver))
+		 let (account_id, value) = setup_account::<T>();
+		 
+		 PalletGrant::<T>::transfer_to_treasury(RawOrigin::Signed(account_id.clone()).into(), 900u32.into());
+		 
+		 let grant_receiver: T::AccountId = whitelisted_caller();
+
+	 }: winner_is(RawOrigin::Signed(grant_receiver.clone()))
 	 verify {
-	 	/* verifying final state */
-	 	let caller: T::AccountId = whitelisted_caller();
-	 	assert_last_event::<T>(Event::<T>::WinnerSelected { who: caller }.into());
+	 	assert_last_event::<T>(Event::<T>::WinnerSelected { who: grant_receiver }.into());
 	 }
 }
 
