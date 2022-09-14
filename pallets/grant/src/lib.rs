@@ -182,16 +182,16 @@ pub mod pallet {
 
 		/// Dispatchable call that ensures grants can be requested
 		#[pallet::weight((<T as Config>::WeightInfo::request_grant(), Pays::No))]
-		pub fn request_grant(origin: OriginFor<T>, grant_requester: T::AccountId) -> DispatchResult {
+		pub fn request_grant(origin: OriginFor<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
-			let _account = ensure_signed(origin)?;
+			let account = ensure_signed(origin)?;
 
-			// Generate requests and store them 
-			let _requests = Self::generate_requests(&grant_requester)?;
+			// Generate requests and store them. 
+			let _requests = Self::generate_requests(&account)?;
 
-			// Deposit event for grant requested			
-			Self::deposit_event(Event::GrantRequested{ who:grant_requester });
+			// Deposit event for grant requested.			
+			Self::deposit_event(Event::GrantRequested{who: account});
 
 			// pays no fees
 			Ok(())
@@ -211,7 +211,7 @@ pub mod pallet {
             <T as self::Config>::Currency::transfer(&account, &T::TreasuryAccount::get(), amount, ExistenceRequirement::KeepAlive)?;
 
 			// Emit an event.
-			Self::deposit_event(Event::TreasuryDonation{ who:account });
+			Self::deposit_event(Event::TreasuryDonation{who: account});
 
 			Ok(())
 		}

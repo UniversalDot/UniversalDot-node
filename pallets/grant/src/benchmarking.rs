@@ -47,7 +47,7 @@ benchmarks! {
 
 		let caller: T::AccountId = whitelisted_caller();
 		let grant_receiver:  T::AccountId = whitelisted_caller();
-	}: request_grant(RawOrigin::Signed(caller), grant_receiver)
+	}: request_grant(RawOrigin::Signed(caller))
 
 	verify {
 		/* verifying final state */

@@ -26,6 +26,10 @@ fn treasury_account() -> AccountId {
 	<Test as Config>::TreasuryAccount::get()
 }
 
+fn fund_treasury(u: u64) {
+	<Test as Config>::Currency::make_free_balance_be(&treasury_account(), u);
+}
+
 fn grant_amount() -> Balance {
 	<Test as Config>::GrantAmount::get()
 }
@@ -37,7 +41,7 @@ fn accounts_can_request_a_grant() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure we can request grants
-		assert_ok!(Grant::request_grant(Origin::signed(1), 7 ));
+		assert_ok!(Grant::request_grant(Origin::signed(1)));
 
 	});
 }
@@ -47,8 +51,8 @@ fn requests_can_be_counted() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure we can request grants
-		assert_ok!(Grant::request_grant(Origin::signed(1), 7 ));
-		assert_ok!(Grant::request_grant(Origin::signed(1), 6 ));
+		assert_ok!(Grant::request_grant(Origin::signed(1)));
+		assert_ok!(Grant::request_grant(Origin::signed(1)));
 		
 		// Ensure we can count requests
 		assert_eq!(Grant::requesters_count(), 2);
@@ -61,29 +65,18 @@ fn ensure_funds_can_be_transfered() {
 	new_test_ext().execute_with(|| {
 
 		// Account starts with balance of 10
-		assert_eq!(Balances::free_balance(&2), 10);
 
+		let init_user_balance = Balances::free_balance(&2);
+		let init_treasry_balance = Balances::free_balance(&treasury_account());
+		let amount = 1;
 		// Ensure we can transfer
-		assert_ok!(Grant::transfer_funds(Origin::signed(1), 2 , 1));
+		assert_ok!(Grant::transfer_to_treasury(Origin::signed(1), amount));
 
-		// User balance has increased by ammount
-        assert_eq!(Balances::free_balance(&2), 11);
-	});
-}
+		// User balance has decreaed by amount.
+        assert_eq!(Balances::free_balance(&2), init_user_balance - amount);
 
-#[test]
-fn ensure_exact_amount_is_transfered() {
-	new_test_ext().execute_with(|| {
-
-		// Account starts with balance of 10
-		assert_eq!(Balances::free_balance(&2), 10);
-
-		// Ensure we can transfer
-		assert_ok!(Grant::transfer_funds(Origin::signed(1), 2 , 2));
-
-		// Ensure user balance is not equal to 11 since we increased 10 + 2
-        assert_ne!(Balances::free_balance(&2), 11);
-
+		// Treasury balance has increased by amount.
+		assert!(Balances::free_balance(treasury_account()) == init_treasry_balance + amount);
 	});
 }
 
@@ -91,8 +84,9 @@ fn ensure_exact_amount_is_transfered() {
 fn throw_error_when_granting_to_self() {
 	new_test_ext().execute_with(|| {
 
+		fund_treasury(100_000u64);
 		// Ensure treasury can't issue funds to self
-		assert_noop!(Grant::transfer_funds(Origin::signed(1), 1 , 3 ), Error::<Test>::CantGrantToSelf);
+		assert_noop!(Grant::transfer_to_treasury(Origin::signed(treasury_account()), 100), Error::<Test>::CantGrantToSelf);
 	});
 }
 
@@ -104,7 +98,7 @@ fn ensure_request_is_stored() {
 		run_to_block(7);
 
 		// Ensure a user can request a grant
-		assert_ok!(Grant::request_grant(Origin::signed(1), 5 ));
+		assert_ok!(Grant::request_grant(Origin::signed(1)));
 
         // Find the request
         let requests = Grant::storage_requesters(5).expect("should find requests");
@@ -121,8 +115,8 @@ fn ensure_requests_can_be_made_by_separate_accounts() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure a user can request a grant
-		assert_ok!(Grant::request_grant(Origin::signed(1), 5 ));
-        assert_ok!(Grant::request_grant(Origin::signed(1), 6 ));
+		assert_ok!(Grant::request_grant(Origin::signed(1)));
+        assert_ok!(Grant::request_grant(Origin::signed(1)));
 
         // Find the request
         let request1 = Grant::storage_requesters(5).expect("should find requests");
@@ -140,11 +134,11 @@ fn ensure_only_users_with_no_balance_can_request_grants() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure a user can request a grant
-		assert_ok!(Grant::request_grant(Origin::signed(3), 7 ));
+		assert_ok!(Grant::request_grant(Origin::signed(3)));
 		assert_eq!(Balances::free_balance(7), 0);
         
         // Ensure only empty balance can make requests
-        assert_noop!(Grant::request_grant(Origin::signed(3), 1), Error::<Test>::NonEmptyBalance);
+        assert_noop!(Grant::request_grant(Origin::signed(3)), Error::<Test>::NonEmptyBalance);
 
 	});
 }
@@ -154,7 +148,7 @@ fn winner_can_be_selected() {
 	new_test_ext().execute_with(|| {
 
 		// Request grant
-		assert_ok!(Grant::request_grant(Origin::signed(1), 7 ));
+		assert_ok!(Grant::request_grant(Origin::signed(1)));
 
 		// go to later block 
 		run_to_block(4);
@@ -170,7 +164,7 @@ fn winner_can_be_queried_by_anyone() {
 	new_test_ext().execute_with(|| {
 
 		// Request grant
-		assert_ok!(Grant::request_grant(Origin::signed(1), 7 ));
+		assert_ok!(Grant::request_grant(Origin::signed(1)));
 
 		// go to later block 
 		run_to_block(2);
@@ -188,15 +182,15 @@ fn winner_can_be_selected_per_block() {
 	new_test_ext().execute_with(|| {
 		
 		// Request grant and run to block
-		assert_ok!(Grant::request_grant(Origin::signed(1), 5 ));
+		assert_ok!(Grant::request_grant(Origin::signed(1)));
 		run_to_block(2);
 
 		// Ensure we have selected the correct winner
 		assert_eq!(Grant::winner().unwrap(), 5);
 		
 		// Request additional grant for different block
-		assert_ok!(Grant::request_grant(Origin::signed(1), 8 ));
-		assert_ok!(Grant::request_grant(Origin::signed(1), 7 ));
+		assert_ok!(Grant::request_grant(Origin::signed(1)));
+		assert_ok!(Grant::request_grant(Origin::signed(1)));
 		
 		run_to_block(5);
 
@@ -211,17 +205,15 @@ fn winner_can_be_recieve_grant_reward() {
 	new_test_ext().execute_with(|| {
 		
 		// Add balance to grant treasury account
-		Balances::mutate_account(&treasury_account(), |balance| {
-			balance.free = 100;
-		}).expect("could not set treasury account balance");
+		fund_treasury(100_000u64);		
 		let treasury = Balances::free_balance(&treasury_account());
-		assert_eq!(treasury, 100);
+		assert_eq!(treasury, 100_000u64);
 		
 		// Check initial account getting grant is zero.
 		assert_eq!(Balances::free_balance(5), 0);
 		
 		// Request grant and run to block
-		assert_ok!(Grant::request_grant(Origin::signed(1), 5));
+		assert_ok!(Grant::request_grant(Origin::signed(1)));
 		run_to_block(2);
 
 		// Ensure we have selected the correct winner
@@ -229,5 +221,17 @@ fn winner_can_be_recieve_grant_reward() {
 
 		//Ensure money is tranfered todo:: look for minimum balance
 		assert!(Balances::free_balance(5) == grant_amount());
+	});
+}
+
+#[test]
+fn test_error_when_treasury_is_depleted() {
+	new_test_ext().execute_with(|| {
+		fund_treasury(0);
+
+		assert_ok!(Grant::request_grant(Origin::signed(1)));
+
+		run_to_block(2)
+
 	});
 }
