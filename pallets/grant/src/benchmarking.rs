@@ -65,10 +65,10 @@ benchmarks! {
 
 	 winner_is {
 		 let (account_id, value) = setup_account::<T>();
-		 
-		 PalletGrant::<T>::transfer_to_treasury(RawOrigin::Signed(account_id.clone()).into(), 900u32.into());
-		 
 		 let grant_receiver: T::AccountId = whitelisted_caller();
+
+		 let _ = PalletGrant::<T>::transfer_to_treasury(RawOrigin::Signed(account_id.clone()).into(), 900u32.into())?;
+		 <Winner<T>>::put(&grant_receiver);
 
 	 }: winner_is(RawOrigin::Signed(grant_receiver.clone()))
 	 verify {
