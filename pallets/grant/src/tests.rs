@@ -1,4 +1,4 @@
-use crate::{mock::*, Error, Config, StorageRequesters};
+use crate::{mock::*, Error, Config, StorageRequesters, RequestersCount};
 use frame_support::{assert_noop, assert_ok};
 use frame_support::traits::{Hooks};
 use crate::Pallet as PalletGrant;
@@ -261,6 +261,17 @@ fn test_requestors_is_cleared_each_block() {
 		// Assert they have been clear on exactly the next block. 
 		assert!(Grant::requesters_count() == 0);
 		assert!(StorageRequesters::<Test>::iter_keys().count() == 0);
+	});
+}
+
+#[test]
+fn test_max_requestors_errs_gracefully() {
+	new_test_ext().execute_with(|| {
+		// Get to limit of requestors
+
+		RequestersCount::<Test>::set(u16::MAX);
+
+		assert_noop!(Grant::request_grant(Origin::signed(49)), Error::<Test>::TooManyRequesters);
 	});
 }
 

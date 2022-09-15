@@ -138,8 +138,8 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn requesters_count)]
-	/// Store requester count
-	pub(super) type RequestersCount<T: Config> = StorageValue<_, u32, ValueQuery>;
+	/// Store requester count, is u16 to defend against spam, checked add is used
+	pub(super) type RequestersCount<T: Config> = StorageValue<_, u16, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -245,19 +245,23 @@ pub mod pallet {
 			let requests = Self::requesters_count();
 
 			// Only select winners when we have requests
-			if requests > 0u32 {
+			if requests > 0u16 {
 				let _winner = Self::select_winner();
 				
 				// Flush Requests each block
 				<RequestersCount<T>>::kill();
-				<StorageRequesters<T>>::drain();
 
+				// The first parameter is the limit of iterations, set to RequesterCount max value.
+				<StorageRequesters<T>>::clear(requests.into(), None);
 			}
 			
 			// return weight
 			weight
 		}
 	}
+
+
+
 
 	// ** Helper internal functions ** //
 	impl<T:Config> Pallet<T> {
@@ -288,13 +292,14 @@ pub mod pallet {
 			// Get hash of profile
 			let requesters_id = T::Hashing::hash_of(&requesters);
 
-			// Insert profile into HashMap
-			<StorageRequesters<T>>::insert(grant_receiver, requesters);
-
 			// Increase count for requesters
 			let new_count = Self::requesters_count().checked_add(1).ok_or(<Error<T>>::TooManyRequesters)?;
 			<RequestersCount<T>>::put(new_count);
 
+			// Insert profile into HashMap
+			<StorageRequesters<T>>::insert(grant_receiver, requesters);
+
+			
 			Ok(requesters_id)
 		}
 
