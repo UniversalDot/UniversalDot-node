@@ -140,7 +140,6 @@ pub mod pallet {
     /// Attribute nonce used to generate a unique hash even if the attribute is deleted and recreated.
     #[pallet::storage]
     #[pallet::getter(fn nonce_of)]
-    #[pallet::unbounded]
     pub type AttributeNonce<T: Config> = StorageMap<_, Twox64Concat, (T::AccountId, BoundedNameOf<T>), u64>;
 
     /// Identity owner.
@@ -613,7 +612,6 @@ for Pallet<T>
 
     /// Validates if an attribute belongs to an identity and it has not expired.
     fn valid_attribute(identity: &T::AccountId, name: &BoundedNameOf<T>, value: &BoundedValueOf<T>) -> DispatchResult {
-        ensure!(name.len() <= 64, Error::<T>::InvalidAttribute);
         let result = Self::attribute_and_id(identity, name);
 
         let (attr, _) = match result {
