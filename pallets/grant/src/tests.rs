@@ -222,4 +222,19 @@ fn winner_can_be_recieve_grant_reward() {
 		assert!(Balances::free_balance(50) == grant_amount());
 	});
 }
+#[test]
+fn test_reciever_can_only_request_once_per_block() {
+	new_test_ext().execute_with(|| {
+		fund_treasury(100_000u64);
+		assert_ok!(Grant::request_grant(Origin::signed(50)));
+
+		// Assert it is not possible to request from the same account twice in the same block.
+		assert_noop!(Grant::request_grant(Origin::signed(50)), Error::<Test>::RequestAlreadyMade);
+
+		// Assert that the requesterscount is only one.
+		assert!(Grant::requesters_count() == 1u32);
+
+	});
+}
+
 

@@ -36,7 +36,7 @@
 //!
 //! The Process is envisioned as follows:
 //! 1. Anyone can send Funds into a Treasury Account. The Treasury account is used to distribute grant rewards.
-//! 2. Anyone can request a grant each block.
+//! 2. Anyone can request a single grant each block.
 //! 3. Each block a grant is offered randomly to selected grant requester.
 //!
 //! ## Interface
@@ -45,7 +45,7 @@
 //!  -  request_grant()
 //!     Function used to request grants.
 //!
-//!  -  transfer_funds()
+//!  -  transfer_to_treasury()
 //!     Function used to transfer funds into a Treasury Account. Anyone can transfer into Treasury.
 //!
 //!  -  winner_is()
@@ -197,8 +197,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Dispatchable call that enables transfer of funds
-		#[pallet::weight(<T as Config>::WeightInfo::request_grant())]
+		/// Dispatchable call that enables transfer of funds to the treasury.
+		#[pallet::weight(<T as Config>::WeightInfo::transfer_to_treasury())]
 		pub fn transfer_to_treasury(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
@@ -217,7 +217,7 @@ pub mod pallet {
 		}
 
 		// Dispatchable calls that allows to query the winner
-		#[pallet::weight(<T as Config>::WeightInfo::request_grant())]
+		#[pallet::weight(<T as Config>::WeightInfo::winner_is())]
 		pub fn winner_is(origin: OriginFor<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
@@ -259,7 +259,7 @@ pub mod pallet {
 	// ** Helper internal functions ** //
 	impl<T:Config> Pallet<T> {
 
-		fn treasury_account() -> (T::AccountId, BalanceOf<T>) {
+		pub fn treasury_account() -> (T::AccountId, BalanceOf<T>) {
 			let account_id = T::TreasuryAccount::get();
 			let balance =
 				T::Currency::free_balance(&account_id).saturating_sub(T::Currency::minimum_balance());
