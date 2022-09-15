@@ -187,6 +187,8 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
+			ensure!(!Self::storage_requesters(&account).is_some(), Error::<T>::RequestAlreadyMade);
+
 			// Generate requests and store them. 
 			let _requests = Self::generate_requests(&account)?;
 
@@ -249,6 +251,7 @@ pub mod pallet {
 				// Flush Requests each block
 				<RequestersCount<T>>::kill();
 				<StorageRequesters<T>>::drain();
+
 			}
 			
 			// return weight

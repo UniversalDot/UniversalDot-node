@@ -1,7 +1,8 @@
-use crate::{mock::*, Error, Config};
+use crate::{mock::*, Error, Config, StorageRequesters};
 use frame_support::{assert_noop, assert_ok};
 use frame_support::traits::{Hooks};
 use crate::Pallet as PalletGrant;
+
 
 // <<<<<<<<<<<<<<<<<< Helper functions and constants >>>>>>>>>>>>>>>>>>
 
@@ -222,6 +223,9 @@ fn winner_can_be_recieve_grant_reward() {
 		assert!(Balances::free_balance(50) == grant_amount());
 	});
 }
+
+//TODO: regen weights
+
 #[test]
 fn test_reciever_can_only_request_once_per_block() {
 	new_test_ext().execute_with(|| {
@@ -232,9 +236,31 @@ fn test_reciever_can_only_request_once_per_block() {
 		assert_noop!(Grant::request_grant(Origin::signed(50)), Error::<Test>::RequestAlreadyMade);
 
 		// Assert that the requesterscount is only one.
-		assert!(Grant::requesters_count() == 1u32);
+		assert!(Grant::requesters_count() == 1);
 
 	});
 }
 
+#[test]
+fn test_requestors_is_cleared_each_block() {
+	new_test_ext().execute_with(|| {
+
+		//Setup state.
+		run_to_block(9);
+		fund_treasury(100_000u64);
+		assert_ok!(Grant::request_grant(Origin::signed(50)));
+		assert_ok!(Grant::request_grant(Origin::signed(70)));
+		assert_ok!(Grant::request_grant(Origin::signed(60)));
+
+		// Assert that the storage has the right amount of elements.
+		assert!(Grant::requesters_count() == 3);
+		assert!(StorageRequesters::<Test>::iter_keys().count() == 3);
+
+		run_to_block(10);
+
+		// Assert they have been clear on exactly the next block. 
+		assert!(Grant::requesters_count() == 0);
+		assert!(StorageRequesters::<Test>::iter_keys().count() == 0);
+	});
+}
 
