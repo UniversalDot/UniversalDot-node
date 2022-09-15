@@ -3,14 +3,10 @@ use frame_support::{parameter_types, weights::Weight, traits::Everything};
 use frame_system as system;
 use pallet_timestamp as timestamp;
 use sp_core::{sr25519, Pair, H256};
-use sp_runtime::{
-    testing::Header,
-    traits::{BlakeTwo256, IdentityLookup},
-    Perbill,
-    traits::ConstU32
-};
+use sp_runtime::{testing::Header, traits::{BlakeTwo256, IdentityLookup}, Perbill, traits::ConstU32, BoundedVec};
 use scale_info::TypeInfo;
 use codec::{Encode, MaxEncodedLen};
+use sp_runtime::traits::Get;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -72,6 +68,8 @@ impl timestamp::Config for Test {
 }
 
 parameter_types! {
+    #[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxDelegateTypeLen: u32 = 64;
 	#[derive(TypeInfo, MaxEncodedLen, Encode)]
 	pub const MaxNameLen: u32 = 64;
 	#[derive(TypeInfo, MaxEncodedLen, Encode)]
@@ -80,12 +78,22 @@ parameter_types! {
 
 impl Config for Test {
     type Event = Event;
+    type DelegateType = DelegateTypeProvider;
+    type MaxDelegateTypeLen = MaxDelegateTypeLen;
     type MaxNameLen = MaxNameLen;
     type MaxValueLen = MaxValueLen;
     type Public = sr25519::Public;
     type Signature = sr25519::Signature;
     type Time = Timestamp;
     type WeightInfo = pallet_did::weights::SubstrateWeight<Self>;
+}
+
+pub struct DelegateTypeProvider;
+impl Get<BoundedVec<u8, MaxDelegateTypeLen>> for DelegateTypeProvider {
+    // Provide the default delegate type as a BoundedVec
+    fn get() -> BoundedVec<u8, MaxDelegateTypeLen> {
+        b"x25519VerificationKey2018".to_vec().try_into().expect("could not convert delegate type into boundedvec")
+    }
 }
 
 pub type DID = Pallet<Test>;

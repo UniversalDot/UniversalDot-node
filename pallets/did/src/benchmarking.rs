@@ -22,7 +22,7 @@ benchmarks! {
     add_delegate {
         let caller = make_caller!(T);
         let delegate:T::AccountId = account("delegate", 0, 0);
-    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), delegate, Vec::new(), Some(T::BlockNumber::one()))
+    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), delegate, BoundedVec::default(), Some(T::BlockNumber::one()))
 
     change_owner {
         let caller = make_caller!(T);
@@ -33,26 +33,26 @@ benchmarks! {
     revoke_delegate {
         let caller = make_caller!(T);
         let delegate:T::AccountId = account("delegate", 0, 0);
-        let _ = Did::<T>::add_delegate(RawOrigin::Signed(caller.clone()).into(), caller.clone(), delegate.clone(), Vec::new(), None);
-    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), Vec::new(), delegate)
+        let _ = Did::<T>::add_delegate(RawOrigin::Signed(caller.clone()).into(), caller.clone(), delegate.clone(), BoundedVec::default(), None);
+    }: _(RawOrigin::Signed(caller.clone()), caller.clone(), BoundedVec::default(), delegate)
 
     add_attribute {
         let caller = make_caller!(T);
-        let name = b"name1".to_vec();
-        let value = b"value1".to_vec();
+        let name : BoundedNameOf<T> = b"name1".to_vec().try_into().unwrap();
+        let value : BoundedValueOf<T> = b"value1".to_vec().try_into().unwrap();
     }: _(RawOrigin::Signed(caller.clone()), caller.clone(), name, value, Some(T::BlockNumber::one()))
 
     revoke_attribute {
         let caller = make_caller!(T);
-        let name = b"name1".to_vec();
-        let value = b"value1".to_vec();
+        let name : BoundedNameOf<T> = b"name1".to_vec().try_into().unwrap();
+        let value : BoundedValueOf<T> = b"value1".to_vec().try_into().unwrap();
         let _ = Did::<T>::add_attribute(RawOrigin::Signed(caller.clone()).into(), caller.clone(), name.clone(), value, None);
     }: _(RawOrigin::Signed(caller.clone()), caller.clone(), name)
 
     delete_attribute {
         let caller = make_caller!(T);
-        let name = b"name1".to_vec();
-        let value = b"value1".to_vec();
+        let name : BoundedNameOf<T> = b"name1".to_vec().try_into().unwrap();
+        let value : BoundedValueOf<T> = b"value1".to_vec().try_into().unwrap();
         let _ = Did::<T>::add_attribute(RawOrigin::Signed(caller.clone()).into(), caller.clone(), name.clone(), value, None);
     }: _(RawOrigin::Signed(caller.clone()), caller.clone(), name)
 }

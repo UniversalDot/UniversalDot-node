@@ -262,8 +262,6 @@ pub mod pallet {
 	}
 
 
-
-
 	// ** Helper internal functions ** //
 	impl<T:Config> Pallet<T> {
 
