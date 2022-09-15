@@ -224,7 +224,6 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn members)]
-	#[pallet::unbounded]
 	/// Create members of organization storage map with key: Hash and value: BoundedVec<AccountID>
 	pub(super) type Members<T: Config> = StorageMap<_, Twox64Concat, T::Hash, BoundedMemberPerOrg<T>, ValueQuery>;
 
@@ -235,13 +234,11 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn member_of)]
-	#[pallet::unbounded]
 	/// Storage item that indicates which DAO's a user belongs to [AccountID, BoundedVec<OrganisationId>]
 	pub(super) type MemberOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, BoundedOrgPerMember<T>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn applicants_to_organization)]
-	#[pallet::unbounded]
 	/// Storage Map to indicate which user agree with a proposed Vision of an Organisation [OrganizationId, BoundedVec[Account]]
 	pub(super) type ApplicantsToOrganization<T: Config> = StorageMap<_, Twox64Concat, OrganizationIdOf<T>, BoundedApplicantsPerOrg<T>, ValueQuery>;
 

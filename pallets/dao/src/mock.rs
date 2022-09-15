@@ -76,6 +76,8 @@ impl pallet_timestamp::Config for Test {
 
 parameter_types! {
 	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub const MaxDelegateTypeLen: u32 = 64;
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
 	pub const MaxNameLen: u32 = 64;
 	#[derive(TypeInfo, MaxEncodedLen, Encode)]
 	pub const MaxValueLen: u32 = 64;
@@ -83,6 +85,8 @@ parameter_types! {
 
 impl pallet_did::Config for Test {
 	type Event = Event;
+	type DelegateType = ();
+	type MaxDelegateTypeLen = MaxDelegateTypeLen;
 	type MaxNameLen = MaxNameLen;
 	type MaxValueLen = MaxValueLen;
 	type Public = sr25519::Public;

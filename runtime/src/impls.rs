@@ -1,5 +1,5 @@
 // Ripped from polkadot/common/src/impls.rs
-use frame_support::traits::{Currency, Imbalance, OnUnbalanced};
+use frame_support::traits::{Imbalance, OnUnbalanced};
 use pallet_balances::NegativeImbalance;
 
 /// Logic for the author to get a portion of fees.

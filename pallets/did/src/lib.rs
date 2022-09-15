@@ -21,7 +21,7 @@ use frame_support::{dispatch::DispatchResult, ensure, traits::Time};
 use frame_system::ensure_signed;
 pub use pallet::*;
 use sp_io::hashing::blake2_256;
-use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::traits::{Get, IdentifyAccount, Verify};
 use sp_std::prelude::*;
 
 #[cfg(feature = "runtime-benchmarks")]
@@ -44,6 +44,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+type BoundedDelegateTypeOf<T> = BoundedVec<u8, <T as Config>::MaxDelegateTypeLen>;
 type BoundedNameOf<T> = BoundedVec<u8, <T as Config>::MaxNameLen>;
 type BoundedValueOf<T> = BoundedVec<u8, <T as Config>::MaxValueLen>;
 
@@ -69,6 +70,13 @@ pub mod pallet {
         // /// The origin which may forcibly set or remove a name. Root can always do this.
         // type ForceOrigin: EnsureOrigin<Self::Origin>;
 
+        /// The default delegate type.
+        type DelegateType: Get<BoundedVec<u8, Self::MaxDelegateTypeLen>>;
+
+        /// A bound on the maximum length of a delegate type.
+        #[pallet::constant]
+        type MaxDelegateTypeLen: Get<u32> + MaxEncodedLen + TypeInfo;
+
         /// A bound on name field of Attribute/AttributeTransaction structs.
         #[pallet::constant]
         type MaxNameLen: Get<u32> + MaxEncodedLen + TypeInfo;
@@ -91,7 +99,6 @@ pub mod pallet {
         AlreadyExists,
         InvalidDelegate,
         BadSignature,
-        AttributeNameTooLong,
         AttributeCreationFailed,
         AttributeResetFailed,
         AttributeRemovalFailed,
@@ -100,7 +107,6 @@ pub mod pallet {
         Overflow,
         BadTransaction,
         TransactionNameTooLong,
-        AttributeValueTooLong,
     }
 
     #[pallet::event]
@@ -108,20 +114,18 @@ pub mod pallet {
     // #[pallet::metadata(T::AccountId = "AccountId", T::Balance = "Balance", T::Signature = "Signature", T::BlockNumber = "BlockNumber")]
     pub enum Event<T: Config> {
         OwnerChanged(T::AccountId, T::AccountId, T::AccountId, T::BlockNumber),
-        DelegateAdded(T::AccountId, Vec<u8>, T::AccountId, Option<T::BlockNumber>),
-        DelegateRevoked(T::AccountId, Vec<u8>, T::AccountId),
-        AttributeAdded(T::AccountId, Vec<u8>, Option<T::BlockNumber>),
-        AttributeRevoked(T::AccountId, Vec<u8>, T::BlockNumber),
-        AttributeDeleted(T::AccountId, Vec<u8>, T::BlockNumber),
+        DelegateAdded(T::AccountId, BoundedDelegateTypeOf<T>, T::AccountId, Option<T::BlockNumber>),
+        DelegateRevoked(T::AccountId, BoundedDelegateTypeOf<T>, T::AccountId),
+        AttributeAdded(T::AccountId, BoundedNameOf<T>, Option<T::BlockNumber>),
+        AttributeRevoked(T::AccountId, BoundedNameOf<T>, T::BlockNumber),
+        AttributeDeleted(T::AccountId, BoundedNameOf<T>, T::BlockNumber),
         AttributeTransactionExecuted(AttributeTransaction<T::Signature, T::AccountId, BoundedNameOf<T>, BoundedValueOf<T>>),
     }
 
     /// Delegates are only valid for a specific period defined as blocks number.
     #[pallet::storage]
     #[pallet::getter(fn delegate_of)]
-    #[pallet::unbounded]
-    pub type DelegateOf<T: Config> =
-    StorageMap<_, Blake2_128Concat, (T::AccountId, Vec<u8>, T::AccountId), T::BlockNumber>;
+    pub type DelegateOf<T: Config> = StorageMap<_, Blake2_128Concat, (T::AccountId, BoundedDelegateTypeOf<T>, T::AccountId), T::BlockNumber>;
 
     // Attributes are only valid for a specific period defined as blocks number.
     #[pallet::storage]
@@ -136,8 +140,7 @@ pub mod pallet {
     /// Attribute nonce used to generate a unique hash even if the attribute is deleted and recreated.
     #[pallet::storage]
     #[pallet::getter(fn nonce_of)]
-    #[pallet::unbounded]
-    pub type AttributeNonce<T: Config> = StorageMap<_, Twox64Concat, (T::AccountId, Vec<u8>), u64>;
+    pub type AttributeNonce<T: Config> = StorageMap<_, Twox64Concat, (T::AccountId, BoundedNameOf<T>), u64>;
 
     /// Identity owner.
     #[pallet::storage]
@@ -172,7 +175,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             identity: T::AccountId,
             delegate: T::AccountId,
-            delegate_type: Vec<u8>,
+            delegate_type: BoundedDelegateTypeOf<T>,
             valid_for: Option<T::BlockNumber>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
@@ -213,7 +216,7 @@ pub mod pallet {
         pub fn revoke_delegate(
             origin: OriginFor<T>,
             identity: T::AccountId,
-            delegate_type: Vec<u8>,
+            delegate_type: BoundedDelegateTypeOf<T>,
             delegate: T::AccountId,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
@@ -233,12 +236,11 @@ pub mod pallet {
         pub fn add_attribute(
             origin: OriginFor<T>,
             identity: T::AccountId,
-            name: Vec<u8>,
-            value: Vec<u8>,
+            name: BoundedNameOf<T>,
+            value: BoundedValueOf<T>,
             valid_for: Option<T::BlockNumber>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            ensure!(name.len() <= 64, Error::<T>::AttributeNameTooLong);
 
             Self::create_attribute(&who, &identity, &name, &value, valid_for)?;
             Self::deposit_event(Event::AttributeAdded(identity, name, valid_for));
@@ -251,7 +253,7 @@ pub mod pallet {
         pub fn revoke_attribute(
             origin: OriginFor<T>,
             identity: T::AccountId,
-            name: Vec<u8>,
+            name: BoundedNameOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             ensure!(name.len() <= 64, Error::<T>::AttributeRemovalFailed);
@@ -270,7 +272,7 @@ pub mod pallet {
         pub fn delete_attribute(
             origin: OriginFor<T>,
             identity: T::AccountId,
-            name: Vec<u8>,
+            name: BoundedNameOf<T>,
         ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
             Self::is_owner(&identity, &who)?;
@@ -350,9 +352,8 @@ pub mod pallet {
 /// The main implementation of this Did pallet.
 impl<T: Config> Pallet<T> {
     /// Get nonce for _identity_ and _name_.
-    ///
-    fn get_nonce(identity: &T::AccountId, name: &[u8]) -> u64 {
-        Self::nonce_of((&identity, name.to_vec())).unwrap_or(0u64)
+    fn get_nonce(identity: &T::AccountId, name: &BoundedNameOf<T>) -> u64 {
+        Self::nonce_of((&identity, name)).unwrap_or(0u64)
     }
 
     /// Set identity owner.
@@ -384,7 +385,7 @@ impl<T: Config> Pallet<T> {
     pub fn revoke_delegate_internal(
         who: &T::AccountId,
         identity: &T::AccountId,
-        delegate_type: &Vec<u8>,
+        delegate_type: &BoundedDelegateTypeOf<T>,
         delegate: &T::AccountId,
     ) {
         let now_timestamp = T::Time::now();
@@ -436,7 +437,7 @@ impl<T: Config> Pallet<T> {
 }
 
 impl<T: Config>
-Did<T::AccountId, T::BlockNumber, <<T as Config>::Time as Time>::Moment, T::Signature, BoundedNameOf<T>, BoundedValueOf<T>>
+Did<T::AccountId, T::BlockNumber, <<T as Config>::Time as Time>::Moment, T::Signature, BoundedNameOf<T>, BoundedValueOf<T>, BoundedDelegateTypeOf<T>>
 for Pallet<T>
 {
     /// Validates if the AccountId 'actual_owner' owns the identity.
@@ -462,7 +463,7 @@ for Pallet<T>
     /// return Ok if valid.
     fn valid_delegate(
         identity: &T::AccountId,
-        delegate_type: &[u8],
+        delegate_type: &BoundedDelegateTypeOf<T>,
         delegate: &T::AccountId,
     ) -> DispatchResult {
         ensure!(delegate_type.len() <= 64, Error::<T>::InvalidDelegate);
@@ -477,7 +478,7 @@ for Pallet<T>
     /// Validates that a delegate contains_key for specific purpose and remains valid at this block high.
     fn valid_listed_delegate(
         identity: &T::AccountId,
-        delegate_type: &[u8],
+        delegate_type: &BoundedDelegateTypeOf<T>,
         delegate: &T::AccountId,
     ) -> DispatchResult {
         ensure!(
@@ -492,12 +493,12 @@ for Pallet<T>
         }
     }
 
-    // Creates a new delegete for an account.
+    // Creates a new delegate for an account.
     fn create_delegate(
         who: &T::AccountId,
         identity: &T::AccountId,
         delegate: &T::AccountId,
-        delegate_type: &[u8],
+        delegate_type: &BoundedDelegateTypeOf<T>,
         valid_for: Option<T::BlockNumber>,
     ) -> DispatchResult {
         Self::is_owner(identity, who)?;
@@ -510,7 +511,7 @@ for Pallet<T>
         let now_block_number = <frame_system::Pallet<T>>::block_number();
         let validity: T::BlockNumber = match valid_for {
             Some(blocks) => now_block_number + blocks,
-            None => u32::max_value().into(),
+            None => u32::MAX.into(),
         };
 
         <DelegateOf<T>>::insert((&identity, delegate_type, delegate), &validity);
@@ -538,16 +539,16 @@ for Pallet<T>
         signer: &T::AccountId,
     ) -> DispatchResult {
         // Owner or a delegate signer.
-        Self::valid_delegate(identity, b"x25519VerificationKey2018", signer)?;
+        Self::valid_delegate(identity, &T::DelegateType::get(), signer)?;
         Self::check_signature(signature, msg, signer)
     }
 
-    /// Adds a new attribute to an identity and colects the storage fee.
+    /// Adds a new attribute to an identity and collects the storage fee.
     fn create_attribute(
         who: &T::AccountId,
         identity: &T::AccountId,
-        name: &[u8],
-        value: &[u8],
+        name: &BoundedNameOf<T>,
+        value: &BoundedValueOf<T>,
         valid_for: Option<T::BlockNumber>,
     ) -> DispatchResult {
         Self::is_owner(identity, who)?;
@@ -559,21 +560,15 @@ for Pallet<T>
             let now_block_number = <frame_system::Pallet<T>>::block_number();
             let validity: T::BlockNumber = match valid_for {
                 Some(blocks) => now_block_number + blocks,
-                None => u32::max_value().into(),
+                None => u32::MAX.into(),
             };
 
             let mut nonce = Self::get_nonce(identity, name);
 
-            // Workaround until whole pallet converted to use BoundedVec
-            let bounded_name: BoundedVec<_, _> =
-                name.to_vec().try_into().map_err(|()| Error::<T>::AttributeNameTooLong)?;
-            let bounded_value: BoundedVec<_, _> =
-                value.to_vec().try_into().map_err(|()| Error::<T>::AttributeValueTooLong)?;
-
             let id = (&identity, name, nonce).using_encoded(blake2_256);
             let new_attribute = Attribute {
-                name: bounded_name,
-                value: bounded_value,
+                name: name.clone(),
+                value: value.clone(),
                 validity,
                 creation: now_timestamp,
                 nonce,
@@ -584,14 +579,14 @@ for Pallet<T>
             <AttributeOf<T>>::insert((identity, &id), new_attribute);
 
             // update nonce
-            <AttributeNonce<T>>::mutate((identity, name.to_vec()), |n| *n = Some(nonce));
+            <AttributeNonce<T>>::mutate((identity, name), |n| *n = Some(nonce));
             <UpdatedBy<T>>::insert(identity, (who, now_block_number, now_timestamp));
             Ok(())
         }
     }
 
     /// Updates the attribute validity to make it expire and invalid.
-    fn reset_attribute(who: T::AccountId, identity: &T::AccountId, name: &[u8]) -> DispatchResult {
+    fn reset_attribute(who: T::AccountId, identity: &T::AccountId, name: &BoundedNameOf<T>) -> DispatchResult {
         Self::is_owner(identity, &who)?;
         // If the attribute contains_key, the latest valid block is set to the current block.
         let result = Self::attribute_and_id(identity, name);
@@ -616,8 +611,7 @@ for Pallet<T>
     }
 
     /// Validates if an attribute belongs to an identity and it has not expired.
-    fn valid_attribute(identity: &T::AccountId, name: &[u8], value: &[u8]) -> DispatchResult {
-        ensure!(name.len() <= 64, Error::<T>::InvalidAttribute);
+    fn valid_attribute(identity: &T::AccountId, name: &BoundedNameOf<T>, value: &BoundedValueOf<T>) -> DispatchResult {
         let result = Self::attribute_and_id(identity, name);
 
         let (attr, _) = match result {
@@ -625,8 +619,7 @@ for Pallet<T>
             None => return Err(Error::<T>::InvalidAttribute.into()),
         };
 
-        if (attr.validity > (<frame_system::Pallet<T>>::block_number()))
-            && (attr.value == value.to_vec())
+        if (attr.validity > (<frame_system::Pallet<T>>::block_number())) && (attr.value == *value)
         {
             Ok(())
         } else {
@@ -638,9 +631,9 @@ for Pallet<T>
     /// Uses a nonce to keep track of identifiers making them unique after attributes deletion.
     fn attribute_and_id(
         identity: &T::AccountId,
-        name: &[u8],
+        name: &BoundedNameOf<T>,
     ) -> Option<AttributedId<T::BlockNumber, <<T as Config>::Time as Time>::Moment, BoundedNameOf<T>, BoundedValueOf<T>>> {
-        let nonce = Self::nonce_of((&identity, name.to_vec())).unwrap_or(0u64);
+        let nonce = Self::nonce_of((&identity, name)).unwrap_or(0u64);
 
         // Used for first time attribute creation
         let lookup_nonce = match nonce {
