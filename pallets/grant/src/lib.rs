@@ -253,7 +253,7 @@ pub mod pallet {
 
 				// The first parameter is the limit of iterations.
 				// should not error as we have a limit and requests is always filled.
-				let _  = <StorageRequesters<T>>::clear(requests.into(), None)?;
+				let _  = <StorageRequesters<T>>::clear(requests.into(), None);
 			}
 			
 			// return weight
