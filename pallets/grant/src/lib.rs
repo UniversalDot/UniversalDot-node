@@ -187,7 +187,7 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
-			ensure!(!Self::storage_requesters(&account).is_some(), Error::<T>::RequestAlreadyMade);
+			ensure!(Self::storage_requesters(&account).is_none(), Error::<T>::RequestAlreadyMade);
 
 			// Generate requests and store them. 
 			let _requests = Self::generate_requests(&account)?;
@@ -207,7 +207,7 @@ pub mod pallet {
 			let account = ensure_signed(origin)?;
 
 			// Ensure no conflicts of interest
-			ensure!(&account != &T::TreasuryAccount::get(), Error::<T>::CantGrantToSelf);
+			ensure!(account != T::TreasuryAccount::get(), Error::<T>::CantGrantToSelf);
 
 			// Transfer amount from one account to treasury
             <T as self::Config>::Currency::transfer(&account, &T::TreasuryAccount::get(), amount, ExistenceRequirement::KeepAlive)?;
@@ -251,8 +251,9 @@ pub mod pallet {
 				// Flush Requests each block
 				<RequestersCount<T>>::kill();
 
-				// The first parameter is the limit of iterations, set to RequesterCount max value.
-				<StorageRequesters<T>>::clear(requests.into(), None);
+				// The first parameter is the limit of iterations.
+				// should not error as we have a limit and requests is always filled.
+				let _  = <StorageRequesters<T>>::clear(requests.into(), None)?;
 			}
 			
 			// return weight
@@ -315,7 +316,7 @@ pub mod pallet {
 
 			<Winner<T>>::put(winner);
 
-			let _ = Self::transfer_funds_to_winner()?;
+			Self::transfer_funds_to_winner()?;
 
 			Ok(())
 		}
