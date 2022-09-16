@@ -292,7 +292,7 @@ pub mod pallet {
 			let balance = T::Currency::free_balance(grant_receiver);
 			
 			// Ensure only accounts with empty balance can make grant requests
-			ensure!(balance.is_zero() , Error::<T>::NonEmptyBalance);
+			ensure!(balance == T::ExistentialDeposit::get() , Error::<T>::NonEmptyBalance);
 			
 			// Populate Requesters struct
 			let requesters = Requesters::<T> {

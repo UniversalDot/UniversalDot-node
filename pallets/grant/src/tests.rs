@@ -43,6 +43,9 @@ fn accounts_can_request_a_grant() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure we can request grants with empty balance.
+		dbg!(Balances::free_balance(*JOHN_EX));
+		dbg!(<Test as Config>::ExistentialDeposit::get());
+
 		assert_ok!(Grant::request_grant(Origin::signed(*JOHN_EX)));
 
 	});
@@ -67,6 +70,7 @@ fn ensure_funds_can_be_transfered() {
 	new_test_ext().execute_with(|| {
 
 		// Account starts with balance of 10
+		fund_treasury(100_000);
 
 		let init_user_balance = Balances::free_balance(*ALICE);
 		let init_treasry_balance = Balances::free_balance(&treasury_account());
@@ -269,7 +273,7 @@ fn test_max_requestors_errs_gracefully() {
 
 		RequestersCount::<Test>::set(u16::MAX);
 
-		assert_noop!(Grant::request_grant(Origin::signed(*ALICE)), Error::<Test>::TooManyRequesters);
+		assert_noop!(Grant::request_grant(Origin::signed(*SIMON_EX)), Error::<Test>::TooManyRequesters);
 	});
 }
 
