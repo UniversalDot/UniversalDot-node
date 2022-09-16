@@ -23,10 +23,10 @@ where
 {
 	fn on_unbalanceds<B>(mut fees_then_tips: impl Iterator<Item = NegativeImbalance<R>>) {
 		if let Some(fees) = fees_then_tips.next() {
-			// for fees, 50% to treasury, 50%
+			// for fees, 50% to treasury, 50% is dropped.
 			let mut split = fees.ration(50, 50);
 			if let Some(tips) = fees_then_tips.next() {
-				// for tips, if any, 100% is burnt.
+				// for tips, if any, 100% is dropped.
 				tips.merge_into(&mut split.1);
 			}
 			use pallet_treasury::Pallet as Treasury;
@@ -34,7 +34,7 @@ where
 			// Send to treasury.
 			<Treasury<R> as OnUnbalanced<_>>::on_unbalanced(split.0);
 
-			// Burn the rest.
+			// Drop the rest.
 			drop(split.1);
 		}
 	}

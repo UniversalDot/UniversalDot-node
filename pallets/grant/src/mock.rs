@@ -65,6 +65,7 @@ impl system::Config for Test {
 parameter_types! {
 	pub GrantAmount: Balance = 10;
 	pub TreasuryAccount: AccountId = 10000;
+	pub const MaxGenerateRandom: u32 = 5;
 }
 
 impl pallet_grant::Config for Test {
@@ -75,6 +76,7 @@ impl pallet_grant::Config for Test {
 	type Randomness = TestRandomness<Self>;
 	type TreasuryAccount = TreasuryAccount;
 	type GrantAmount = GrantAmount;
+	type MaxGenerateRandom = MaxGenerateRandom;
 }
 
 parameter_types! {

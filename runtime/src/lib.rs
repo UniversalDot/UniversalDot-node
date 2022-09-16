@@ -372,6 +372,7 @@ impl pallet_profile::Config for Runtime {
 parameter_types! {
 	pub const GrantAmount: Balance = 10;
 	pub TreasuryAccountID: AccountId = pallet_treasury::Pallet::<Runtime>::account_id();
+	pub const MaxGenerateRandom: u32 = 5;
 }
 
 
@@ -382,7 +383,8 @@ impl pallet_grant::Config for Runtime {
 	type PalletId = RandomnessPalletId;
 	type Randomness = RandomnessCollectiveFlip;
 	type TreasuryAccount = TreasuryAccountID;
-	type GrantAmount = GrantAmount;  
+	type GrantAmount = GrantAmount;
+	type MaxGenerateRandom = MaxGenerateRandom;
 
 }
 

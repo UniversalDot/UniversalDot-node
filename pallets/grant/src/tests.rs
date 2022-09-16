@@ -224,8 +224,6 @@ fn winner_can_be_recieve_grant_reward() {
 	});
 }
 
-//TODO: regen weights
-
 #[test]
 fn test_reciever_can_only_request_once_per_block() {
 	new_test_ext().execute_with(|| {

@@ -120,6 +120,12 @@ pub mod pallet {
 
 		/// The total amount of tokens per grant.
 		type GrantAmount: Get<BalanceOf<Self>>;
+		
+		/// Number of time we should try to generate a random number that has no modulo bias.
+		/// The larger this number, the more potential computation is used for picking the winner,
+		/// but also the more likely that the chosen winner is done fairly.
+		#[pallet::constant]
+		type MaxGenerateRandom: Get<u32>;
 	}
 
 	#[pallet::pallet]
@@ -306,10 +312,20 @@ pub mod pallet {
 
 			let requestor: Vec<T::AccountId> = <StorageRequesters<T>>::iter_keys().collect();
 
-			//TODO: come up with a proper seed. Unix time in ns?
-			let get_random_number = Self::generate_random_number(0);
-			let total_requestors: u32 = requestor.len().try_into().unwrap();
-			let winner_index: usize = (get_random_number % total_requestors).try_into().unwrap();
+			// This is an attempt to generate more randomness and may help with modulus bias.
+			// frame/lottery/src/lib.rs 488
+			let mut random: u32 = Self::generate_random_number(0);
+			let total_requestors: u16 = requestor.len().try_into().unwrap();
+
+			for i in 1..T::MaxGenerateRandom::get() {
+				if get_random_number < u32::MAX - (u32::MAX % total_requestors.into()) {
+					break
+				}
+
+				random = Self::generate_random_number(i)
+			}
+			
+			let winner_index: usize = (random % total_requestors).try_into().unwrap();
 			let winner = &requestor[winner_index];
 
 			<Winner<T>>::put(winner);
