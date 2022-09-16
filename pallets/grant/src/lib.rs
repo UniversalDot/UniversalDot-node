@@ -74,7 +74,7 @@ pub mod pallet {
 	use frame_support::inherent::Vec;
 	use frame_system::pallet_prelude::*;
 	use frame_support::{ 
-		sp_runtime::traits::{Hash, Zero, AccountIdConversion,  Saturating},
+		sp_runtime::traits::{Hash, Zero,  Saturating},
 		traits::{
 			Currency, 
 			Randomness,
@@ -100,7 +100,7 @@ pub mod pallet {
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_randomness_collective_flip::Config {
+	pub trait Config: frame_system::Config  {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -126,6 +126,10 @@ pub mod pallet {
 		/// but also the more likely that the chosen winner is done fairly.
 		#[pallet::constant]
 		type MaxGenerateRandom: Get<u32>;
+
+		/// The minimum deposit as set in the balances config.
+		#[pallet::constant]
+		type ExistentialDeposit: Get<BalanceOf<Self>>;
 	}
 
 	#[pallet::pallet]
@@ -195,6 +199,8 @@ pub mod pallet {
 
 			ensure!(Self::storage_requesters(&account).is_none(), Error::<T>::RequestAlreadyMade);
 
+			ensure!(T::Currency::free_balance(&account) == T::ExistentialDeposit::get(), Error::<T>::NonEmptyBalance);
+
 			// Generate requests and store them. 
 			let _requests = Self::generate_requests(&account)?;
 
@@ -258,7 +264,7 @@ pub mod pallet {
 				<RequestersCount<T>>::kill();
 
 				// The first parameter is the limit of iterations.
-				// should not error as we have a limit and requests is always filled.
+				// should not error as we have a limit and requests is always > 0.
 				let _  = <StorageRequesters<T>>::clear(requests.into(), None);
 			}
 			
@@ -315,10 +321,10 @@ pub mod pallet {
 			// This is an attempt to generate more randomness and may help with modulus bias.
 			// frame/lottery/src/lib.rs 488
 			let mut random: u32 = Self::generate_random_number(0);
-			let total_requestors: u16 = requestor.len().try_into().unwrap();
+			let total_requestors: u32 = requestor.len().try_into().unwrap();
 
 			for i in 1..T::MaxGenerateRandom::get() {
-				if get_random_number < u32::MAX - (u32::MAX % total_requestors.into()) {
+				if random < u32::MAX - (u32::MAX % total_requestors) {
 					break
 				}
 

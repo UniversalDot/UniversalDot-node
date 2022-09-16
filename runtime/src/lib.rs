@@ -385,7 +385,7 @@ impl pallet_grant::Config for Runtime {
 	type TreasuryAccount = TreasuryAccountID;
 	type GrantAmount = GrantAmount;
 	type MaxGenerateRandom = MaxGenerateRandom;
-
+	type ExistentialDeposit = ConstU128<EXISTENTIAL_DEPOSIT>;
 }
 
 parameter_types! {

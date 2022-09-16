@@ -77,6 +77,7 @@ impl pallet_grant::Config for Test {
 	type TreasuryAccount = TreasuryAccount;
 	type GrantAmount = GrantAmount;
 	type MaxGenerateRandom = MaxGenerateRandom;
+	type ExistentialDeposit = ExistentialDeposit;
 }
 
 parameter_types! {
