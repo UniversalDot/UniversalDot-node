@@ -43,7 +43,7 @@ fn accounts_can_request_a_grant() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure we can request grants with empty balance.
-		assert_ok!(Grant::request_grant(Origin::signed(12345)));
+		assert_ok!(Grant::request_grant(Origin::signed(*JOHN_EX)));
 
 	});
 }
@@ -53,8 +53,8 @@ fn requests_can_be_counted() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure we can request grants with empty balance
-		assert_ok!(Grant::request_grant(Origin::signed(12345)));
-		assert_ok!(Grant::request_grant(Origin::signed(112345)));
+		assert_ok!(Grant::request_grant(Origin::signed(*JOHN_EX)));
+		assert_ok!(Grant::request_grant(Origin::signed(*PETE_EX)));
 		
 		// Ensure we can count requests
 		assert_eq!(Grant::requesters_count(), 2);
@@ -68,14 +68,14 @@ fn ensure_funds_can_be_transfered() {
 
 		// Account starts with balance of 10
 
-		let init_user_balance = Balances::free_balance(&2);
+		let init_user_balance = Balances::free_balance(*ALICE);
 		let init_treasry_balance = Balances::free_balance(&treasury_account());
 		let amount = 1;
 		// Ensure we can transfer
-		assert_ok!(Grant::transfer_to_treasury(Origin::signed(1), amount));
+		assert_ok!(Grant::transfer_to_treasury(Origin::signed(*ALICE), amount));
 
 		// User balance has decreaed by amount.
-        assert_eq!(Balances::free_balance(&1), init_user_balance - amount);
+        assert_eq!(Balances::free_balance(&*ALICE), init_user_balance - amount);
 
 		// Treasury balance has increased by amount.
 		assert!(Balances::free_balance(treasury_account()) == init_treasry_balance + amount);
@@ -100,13 +100,13 @@ fn ensure_request_is_stored() {
 		run_to_block(7);
 
 		// Ensure a user can request a grant with no balance;
-		assert_ok!(Grant::request_grant(Origin::signed(12345)));
+		assert_ok!(Grant::request_grant(Origin::signed(*PETE_EX)));
 
         // Find the request
-        let requests = Grant::storage_requesters(12345).expect("should find requests");
+        let requests = Grant::storage_requesters(*PETE_EX).expect("should find requests");
 
         // Ensure we can access the storage requests
-        assert_eq!(requests.owner, 12345);
+        assert_eq!(requests.owner, *PETE_EX);
 		assert_eq!(requests.block_number, 7);
 
 	});
@@ -117,16 +117,16 @@ fn ensure_requests_can_be_made_by_separate_accounts() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure a user can request a grant
-		assert_ok!(Grant::request_grant(Origin::signed(12345)));
-        assert_ok!(Grant::request_grant(Origin::signed(123456)));
+		assert_ok!(Grant::request_grant(Origin::signed(*PETE_EX)));
+        assert_ok!(Grant::request_grant(Origin::signed(*JOHN_EX)));
 
         // Find the request
-        let request1 = Grant::storage_requesters(12345).expect("should find requests");
-        let request2 = Grant::storage_requesters(123456).expect("should find requests");
+        let request1 = Grant::storage_requesters(*PETE_EX).expect("should find requests");
+        let request2 = Grant::storage_requesters(*JOHN_EX).expect("should find requests");
 
         // Ensure we can access the storage requests
-        assert_eq!(request1.owner, 12345);
-        assert_eq!(request2.owner, 123456);
+        assert_eq!(request1.owner, *PETE_EX);
+        assert_eq!(request2.owner, *JOHN_EX);
 
 	});
 }
@@ -136,11 +136,11 @@ fn ensure_only_users_with_no_balance_can_request_grants() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure a user can request a grant
-		assert_eq!(Balances::free_balance(72), 0);
-		assert_ok!(Grant::request_grant(Origin::signed(72)));
+		assert_eq!(Balances::free_balance(*JOHN_EX), <Test as Config>::ExistentialDeposit::get());
+		assert_ok!(Grant::request_grant(Origin::signed(*JOHN_EX)));
         
         // Ensure only empty balance can make requests
-        assert_noop!(Grant::request_grant(Origin::signed(3)), Error::<Test>::NonEmptyBalance);
+        assert_noop!(Grant::request_grant(Origin::signed(*ALICE)), Error::<Test>::NonEmptyBalance);
 
 	});
 }
@@ -150,13 +150,13 @@ fn winner_can_be_selected() {
 	new_test_ext().execute_with(|| {
 
 		// Request grant
-		assert_ok!(Grant::request_grant(Origin::signed(50)));
+		assert_ok!(Grant::request_grant(Origin::signed(*JOHN_EX)));
 
 		// go to later block 
 		run_to_block(4);
 
 		// Ensure the winner is the only account that requested
-		assert_eq!(Grant::winner().unwrap(), 50);
+		assert_eq!(Grant::winner().unwrap(), *JOHN_EX);
 
 	});
 }
@@ -166,14 +166,14 @@ fn winner_can_be_queried_by_anyone() {
 	new_test_ext().execute_with(|| {
 
 		// Request grant
-		assert_ok!(Grant::request_grant(Origin::signed(12345)));
+		assert_ok!(Grant::request_grant(Origin::signed(*JOHN_EX)));
 
 		// go to later block 
 		run_to_block(2);
 
 		// Ensure the winner is the only account that requested
-		assert_eq!(Grant::winner().unwrap(), 12345);
-		assert_ok!(Grant::winner_is(Origin::signed(12345)));
+		assert_eq!(Grant::winner().unwrap(), *JOHN_EX);
+		assert_ok!(Grant::winner_is(Origin::signed(*JOHN_EX)));
 
 	});
 }
@@ -184,18 +184,18 @@ fn winner_can_be_selected_per_block() {
 	new_test_ext().execute_with(|| {
 		
 		// Request grant and run to block
-		assert_ok!(Grant::request_grant(Origin::signed(50)));
+		assert_ok!(Grant::request_grant(Origin::signed(*JOHN_EX)));
 		run_to_block(2);
 
 		// Ensure we have selected the correct winner
-		assert_eq!(Grant::winner().unwrap(), 50);
+		assert_eq!(Grant::winner().unwrap(), *JOHN_EX);
 		
 		// Request additional grant for different block
-		assert_ok!(Grant::request_grant(Origin::signed(50)));
+		assert_ok!(Grant::request_grant(Origin::signed(*JOHN_EX)));
 		
 		run_to_block(5);
 
-		assert_eq!(Grant::winner().unwrap(), 50);
+		assert_eq!(Grant::winner().unwrap(), *JOHN_EX);
 
 	});
 }
@@ -210,17 +210,17 @@ fn winner_can_be_recieve_grant_reward() {
 		assert_eq!(treasury, 100_000u64);
 		
 		// Check initial account getting grant is zero.
-		assert_eq!(Balances::free_balance(50), 0);
+		assert_eq!(Balances::free_balance(*JOHN_EX), <Test as Config>::ExistentialDeposit::get());
 		
 		// Request grant and run to block
-		assert_ok!(Grant::request_grant(Origin::signed(50)));
+		assert_ok!(Grant::request_grant(Origin::signed(*JOHN_EX)));
 		run_to_block(2);
 
 		// Ensure we have selected the correct winner
-		assert_eq!(Grant::winner().unwrap(), 50);
+		assert_eq!(Grant::winner().unwrap(), *JOHN_EX);
 
 		//Ensure money is tranfered todo:: look for minimum balance
-		assert!(Balances::free_balance(50) == grant_amount());
+		assert!(Balances::free_balance(*JOHN_EX) == grant_amount() + <Test as Config>::ExistentialDeposit::get());
 	});
 }
 
@@ -228,10 +228,10 @@ fn winner_can_be_recieve_grant_reward() {
 fn test_reciever_can_only_request_once_per_block() {
 	new_test_ext().execute_with(|| {
 		fund_treasury(100_000u64);
-		assert_ok!(Grant::request_grant(Origin::signed(50)));
+		assert_ok!(Grant::request_grant(Origin::signed(*JOHN_EX)));
 
 		// Assert it is not possible to request from the same account twice in the same block.
-		assert_noop!(Grant::request_grant(Origin::signed(50)), Error::<Test>::RequestAlreadyMade);
+		assert_noop!(Grant::request_grant(Origin::signed(*JOHN_EX)), Error::<Test>::RequestAlreadyMade);
 
 		// Assert that the requesterscount is only one.
 		assert!(Grant::requesters_count() == 1);
@@ -246,9 +246,9 @@ fn test_requestors_is_cleared_each_block() {
 		//Setup state.
 		run_to_block(9);
 		fund_treasury(100_000u64);
-		assert_ok!(Grant::request_grant(Origin::signed(50)));
-		assert_ok!(Grant::request_grant(Origin::signed(70)));
-		assert_ok!(Grant::request_grant(Origin::signed(60)));
+		assert_ok!(Grant::request_grant(Origin::signed(*JOHN_EX)));
+		assert_ok!(Grant::request_grant(Origin::signed(*PETE_EX)));
+		assert_ok!(Grant::request_grant(Origin::signed(*SIMON_EX)));
 
 		// Assert that the storage has the right amount of elements.
 		assert!(Grant::requesters_count() == 3);
@@ -269,7 +269,7 @@ fn test_max_requestors_errs_gracefully() {
 
 		RequestersCount::<Test>::set(u16::MAX);
 
-		assert_noop!(Grant::request_grant(Origin::signed(49)), Error::<Test>::TooManyRequesters);
+		assert_noop!(Grant::request_grant(Origin::signed(*ALICE)), Error::<Test>::TooManyRequesters);
 	});
 }
 
