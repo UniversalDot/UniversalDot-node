@@ -201,7 +201,7 @@ pub mod pallet {
 			ensure!(Self::storage_requesters(&account).is_none(), Error::<T>::RequestAlreadyMade);
 
 			// Ensure that the requesting account has amount equal or smaller than existential deposit
-			ensure!(T::Currency::free_balance(&account) < T::ExistentialDeposit::get(), Error::<T>::NonEmptyBalance);
+			ensure!(T::Currency::free_balance(&account) == T::ExistentialDeposit::get(), Error::<T>::NonEmptyBalance);
 
 			// Generate requests and store them. 
 			let _requests = Self::generate_requests(&account)?;
