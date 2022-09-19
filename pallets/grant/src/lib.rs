@@ -74,7 +74,7 @@ pub mod pallet {
 	use frame_support::inherent::Vec;
 	use frame_system::pallet_prelude::*;
 	use frame_support::{ 
-		sp_runtime::traits::{Hash, Zero,  Saturating},
+		sp_runtime::traits::{Hash, Saturating},
 		traits::{
 			Currency, 
 			Randomness,
@@ -172,15 +172,15 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Cant grant to receiving account
 		CantGrantToSelf,
-		// User has already made requests
+		/// User has already made requests
 		RequestAlreadyMade,
-		// You must have empty balance to receive tokens.
+		/// You must have empty balance to receive tokens.
 		NonEmptyBalance,
-		// Too many requesters in current block
+		/// Too many requesters in the current block. Try later!
 		TooManyRequesters,
-		// No winner exists
+		/// No winner exists
 		NoWinner,
-		// Treasury is out of fund!
+		/// Treasury is out of funds!
 		TreasuryEmpty,
 	}
 
@@ -197,9 +197,11 @@ pub mod pallet {
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
+			// Ensure no previous requests are made
 			ensure!(Self::storage_requesters(&account).is_none(), Error::<T>::RequestAlreadyMade);
 
-			ensure!(T::Currency::free_balance(&account) == T::ExistentialDeposit::get(), Error::<T>::NonEmptyBalance);
+			// Ensure that the requesting account has amount equal or smaller than existential deposit
+			ensure!(T::Currency::free_balance(&account) < T::ExistentialDeposit::get(), Error::<T>::NonEmptyBalance);
 
 			// Generate requests and store them. 
 			let _requests = Self::generate_requests(&account)?;
