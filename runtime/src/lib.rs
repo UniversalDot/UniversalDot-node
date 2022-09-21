@@ -54,7 +54,7 @@ use sp_runtime::traits::Get;
 
 
 pub const MILLICENTS: Balance = 1_000_000_000;
-pub const CENTS:  = 1_000 * MILLICENTS;
+pub const CENTS: Balance  = 1_000 * MILLICENTS;
 pub const DOLLARS: Balance = 100 * CENTS;
 
 /// An index to a block.
