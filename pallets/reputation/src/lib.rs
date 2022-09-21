@@ -13,6 +13,7 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+pub mod traits;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -21,9 +22,11 @@ pub mod pallet {
 		pallet_prelude::*,
 		WeightInfo
 	};
+
 	pub type ReputationUnit = i32;
 	pub type CredibilityUnit = u32;
 	pub type Score = u16;
+	use crate::traits::*;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -33,7 +36,7 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		type WeightInfo: WeightInfo;
-		type Reputable: WeightInfo;
+		type ReputationHandler: WeightInfo;
 	}
 
 	#[pallet::storage]

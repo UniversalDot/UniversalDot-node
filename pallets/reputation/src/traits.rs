@@ -17,36 +17,35 @@ use crate::{
    ReputationUnit,
    CredibilityUnit,
    Score,
-}
+};
 
- pub trait Reputable<T: Config> {
+ pub trait ReputationHandler {
 
    /// Calculate the reputation of a voter.
-   pub fn calculate_reputation<N, P>(item: N, scores: P) -> ReputationUnit
+   fn calculate_reputation<N, P>(item: N, scores: P) -> ReputationUnit
    where N: HasCredibility + HasReputation,
          P: Scored;
 
    /// Calculate the credibility of the voter, it is used to determine how to weigh the votes.
    /// Must return a value between 0 and 1000 higher is better
-   pub fn calculate_credibility(item: HasCredibility) -> u16;
+   fn calculate_credibility<T: HasCredibility>(item: T) -> u16;
 
  }
 
 pub trait Scored {
-   pub fn collect_scores() -> Vec<Score>
-
+   fn collect_scores() -> Vec<Score>;
 }
 
 
 pub trait HasReputation {
 
    /// Return the reputation for a given struct.
-   pub fn get_reputation() -> ReputationUnit;
+   fn get_reputation() -> ReputationUnit;
 }
 
 pub trait HasCredibility {
 
    /// Return the credibility for a given struct.
-   pub fn get_credibility() -> u16;
+   fn get_credibility() -> u16;
 }
 
