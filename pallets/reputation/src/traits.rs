@@ -13,9 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use sp_runtime::Bounded;
+
  pub trait Reputable {
-    fn calculate_reputation() -> i32;
 
-    fn calculate_
+   /// Calculate the reputation of a voter.
+   fn calculate_reputation() -> i32;
 
+   /// Calculate the credibility of the voter, it is used to determine how to weigh the votes.
+   /// Must return a value between 0 and 1000 higher is better
+   fn calculate_credibility() -> u16
  }
+
+

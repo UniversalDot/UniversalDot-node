@@ -85,7 +85,7 @@ pub mod pallet {
 	use frame_support::traits::Currency;
 	use scale_info::TypeInfo;
 	use crate::weights::WeightInfo;
-
+	use pallet_reputation::Reputation;
 
 	// Account, Balance are used in Profile Struct
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
@@ -133,6 +133,9 @@ pub mod pallet {
 		/// A bound on number of completed tasks for Profile.
 		#[pallet::constant]
 		type MaxCompletedTasksLen: Get<u32> + MaxEncodedLen + TypeInfo;
+
+		/// The handler for reputation in the system.
+		type Reputation: Reputation;
 	}
 
 	#[pallet::pallet]
