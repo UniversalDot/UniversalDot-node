@@ -13,7 +13,9 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-pub mod traits;
+mod traits;
+mod impls;
+
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -27,6 +29,7 @@ pub mod pallet {
 	pub type CredibilityUnit = u32;
 	pub type Score = u16;
 	use crate::traits::*;
+	use crate::impls::Rep;
 
 	pub const MAX_CREDIBILITY: CredibilityUnit = 1000;
 
@@ -34,15 +37,6 @@ pub mod pallet {
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 	
-	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
-	#[scale_info(skip_type_params(T))]
-	pub struct Rep {
-		reputation: ReputationUnit,
-		credibility: CredibilityUnit,
-		aggregate_rating: u64,
-		num_of_ratings: u64,
-	}
-
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -63,7 +57,6 @@ pub mod pallet {
 	pub enum Error<T > {
 		ReputationAlreadyExists,
 		CannotRemoveNothing
-
 	}
 
 	impl<T: Config> Pallet<T> {

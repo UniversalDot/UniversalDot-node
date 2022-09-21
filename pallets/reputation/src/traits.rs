@@ -40,12 +40,12 @@ pub trait Scored {
 pub trait HasReputation {
 
    /// Return the reputation for a given struct.
-   fn get_reputation() -> ReputationUnit;
+   fn get_reputation(&self) -> ReputationUnit;
 }
 
 pub trait HasCredibility {
 
    /// Return the credibility for a given struct.
-   fn get_credibility() -> u16;
+   fn get_credibility(&self) -> CredibilityUnit;
 }
 
