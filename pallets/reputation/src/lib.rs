@@ -28,9 +28,20 @@ pub mod pallet {
 	pub type Score = u16;
 	use crate::traits::*;
 
+	pub const MAX_CREDIBILITY: CredibilityUnit = 1000;
+
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
+	
+	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+	#[scale_info(skip_type_params(T))]
+	pub struct Rep {
+		reputation: ReputationUnit,
+		credibility: CredibilityUnit,
+		aggregate_rating: u64,
+		num_of_ratings: u64,
+	}
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -41,12 +52,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn reputation_of)]
-	pub type ReputationOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, ReputationUnit, OptionQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn credibility_of)]
-	pub type CredibilityOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, CredibilityUnit, OptionQuery>;
-
+	pub type RepInfoOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Rep, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -65,7 +71,14 @@ pub mod pallet {
 			let rep_record = Self::reputation_of(&account); 
 			ensure!(rep_record.is_none(), Error::<T>::ReputationAlreadyExists);
 
-			ReputationOf::<T>::insert(account, default_reputation);
+			let rep = Rep {
+				reputation: default_reputation,
+				credibility: MAX_CREDIBILITY / 2,
+				aggregate_rating: Default::default(),
+				num_of_ratings: Default::default(),
+			};
+
+			RepInfoOf::<T>::insert(account, rep);
 			Ok(())
 		}
 
@@ -73,7 +86,7 @@ pub mod pallet {
 			let rep_record = Self::reputation_of(&account); 
 			ensure!(rep_record.is_some(), Error::<T>::CannotRemoveNothing);
 
-			ReputationOf::<T>::remove(account);
+			RepInfoOf::<T>::remove(account);
 			Ok(())
 		}
 
