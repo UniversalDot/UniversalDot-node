@@ -55,6 +55,7 @@ pallet-did = { path = "../pallets/did", version = '0.7.0', default-features = fa
 pallet-grant = { path = "../pallets/grant", version = '0.0.1', default-features = false }
 pallet-profile = { path = "../pallets/profile", version = '0.7.0', default-features = false }
 pallet-task = { path = "../pallets/task", version = '0.7.0', default-features = false }
+pallet-reputation = { path = "../pallets/reputation", version = '0.7.0', default-features = false }
 
 [build-dependencies]
 substrate-wasm-builder = { version = "5.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.27" }
