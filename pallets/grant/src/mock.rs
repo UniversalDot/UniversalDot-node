@@ -22,7 +22,7 @@ type Block = frame_system::mocking::MockBlock<Test>;
 pub type AccountId = sr25519::Public;
 pub type Balance = u64;
 
-const EXISTENTIAL_DEPOSIT: u64 = 5;
+const EXISTENTIAL_DEPOSIT: u64 = 0;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
