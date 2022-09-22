@@ -91,7 +91,7 @@ pub mod pallet {
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
 	type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-
+	type NadLocation = ([u8; 5], [u8; 5]);
 
 	// Struct for holding Profile information.
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -100,10 +100,11 @@ pub mod pallet {
 		pub owner: AccountOf<T>,
 		pub name: BoundedVec<u8, T::MaxUsernameLen>,
 		pub interests: BoundedVec<u8, T::MaxInterestsLen>,
-		pub balance: Option<BalanceOf<T>>,
 		pub reputation: u32,
 		pub available_hours_per_week: u8,
 		pub additional_information: Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>,
+		/// Longitude x10^4, Latitude x10^4
+		pub location: Option<NadLocation>,
 	}
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -195,14 +196,14 @@ pub mod pallet {
 		/// Dispatchable call that enables every new actor to create personal profile in storage.
 		#[pallet::weight(<T as Config>::WeightInfo::create_profile(0,0))]
 		pub fn create_profile(origin: OriginFor<T>, username: BoundedVec<u8, T::MaxUsernameLen>, interests: BoundedVec<u8, T::MaxInterestsLen>, available_hours_per_week: u8,
-			additional_information : Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>) -> DispatchResult {
+			additional_information : Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>, longitude: Option<[u8; 5]>, latitude: Option<[u8; 5]>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
 			// Call helper function to generate Profile Struct
 			let _profile_id = Self::generate_profile(&account, username, interests,
-				 available_hours_per_week, additional_information)?;
+				 available_hours_per_week, additional_information, longitude, latitude)?;
 
 			// Emit an event.
 			Self::deposit_event(Event::ProfileCreated{ who:account });
@@ -213,14 +214,14 @@ pub mod pallet {
 		/// Dispatchable call that ensures user can update existing personal profile in storage.
 		#[pallet::weight(<T as Config>::WeightInfo::update_profile(0))]
 		pub fn update_profile(origin: OriginFor<T>, username: BoundedVec<u8, T::MaxUsernameLen>, interests: BoundedVec<u8, T::MaxInterestsLen>, available_hours_per_week: u8,
-			additional_information : Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>) -> DispatchResult {
+			additional_information : Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>, longitude: Option<[u8; 5]>, latitude: Option<[u8; 5]>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
 			// Since Each account can have one profile, we call into generate profile again
 			let _profile_id = Self::change_profile(&account, username, interests,
-				available_hours_per_week, additional_information)?;
+				available_hours_per_week, additional_information, longitude, latitude)?;
 
 			// Emit an event.
 			Self::deposit_event(Event::ProfileUpdated{ who: account });
@@ -248,23 +249,29 @@ pub mod pallet {
 	// ** Helper internal functions ** //
 	impl<T:Config> Pallet<T> {
 		// Generates initial Profile.
-		pub fn generate_profile(owner: &T::AccountId, name: BoundedVec<u8, T::MaxUsernameLen>, interests: BoundedVec<u8, T::MaxInterestsLen>, available_hours_per_week: u8, additional_information: Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>) -> Result<T::Hash, DispatchError> {
+		pub fn generate_profile(
+			owner: &T::AccountId, name: BoundedVec<u8, T::MaxUsernameLen>, interests: BoundedVec<u8, T::MaxInterestsLen>, available_hours_per_week: u8,
+			additional_information: Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>,
+			longitude: Option<[u8; 5]>, latitude: Option<[u8; 5]>) 
+			-> Result<T::Hash, DispatchError> {
 
 			// Check if profile already exists for owner
 			ensure!(!Profiles::<T>::contains_key(&owner), Error::<T>::ProfileAlreadyCreated);
 
-			// Get current balance of owner
-			let balance = T::Currency::free_balance(owner);
+			let mut location: Option<NadLocation> = None;
+			if longitude.is_some() && latitude.is_some() {
+				location = Some((latitude.unwrap(), longitude.unwrap()));
+			}			
 
 			// Populate Profile struct
 			let profile = Profile::<T> {
 				owner: owner.clone(),
 				name,
 				interests,
-				balance: Some(balance),
 				reputation: 0,
 				available_hours_per_week,
 				additional_information,
+				location,
 			};
 
 			// Get hash of profile
@@ -285,7 +292,12 @@ pub mod pallet {
 		}
 
 		// Changes existing profile
-		pub fn change_profile(owner: &T::AccountId, new_username: BoundedVec<u8, T::MaxUsernameLen>, new_interests: BoundedVec<u8, T::MaxInterestsLen>, new_available_hours_per_week: u8, new_additional_information: Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>) -> Result<T::Hash, DispatchError> {
+		pub fn change_profile(
+			owner: &T::AccountId, new_username: BoundedVec<u8, T::MaxUsernameLen>,
+			new_interests: BoundedVec<u8, T::MaxInterestsLen>, new_available_hours_per_week: u8,
+			new_additional_information: Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>,
+			longitude: Option<[u8; 5]>, latitude: Option<[u8; 5]>)
+			-> Result<T::Hash, DispatchError> {
 
 			// Ensure that only owner can update profile
 			let mut profile = Self::profiles(owner).ok_or(<Error<T>>::NoProfileCreated)?;
@@ -298,6 +310,14 @@ pub mod pallet {
 			profile.change_available_hours_per_week(new_available_hours_per_week);
 
 			profile.change_additional_information(new_additional_information);
+
+			let mut location: Option<NadLocation> = None;
+			if longitude.is_some() && latitude.is_some() {
+				location = Some((latitude.unwrap(), longitude.unwrap()));
+			}
+
+			profile.location = location;
+
 			// Get hash of profile
 			let profile_id = T::Hashing::hash_of(&profile);
 
@@ -360,6 +380,7 @@ pub mod pallet {
 				}
 			})
 		}
+
 	}
 
 	// Change the reputation on a Profile (TODO MVP2: Improve reputation functions)
@@ -389,5 +410,6 @@ pub mod pallet {
 			self.additional_information =  new_additional_information;
 		}
 	}
+
 
 }
