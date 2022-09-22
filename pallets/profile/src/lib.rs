@@ -103,8 +103,9 @@ pub mod pallet {
 		pub reputation: u32,
 		pub available_hours_per_week: u8,
 		pub additional_information: Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>,
-		/// Longitude x10^4, Latitude x10^4
+		/// Longitude, Latitude 
 		pub location: Option<NadLocation>,
+		pub profile_id: T::Hash,
 	}
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -264,7 +265,7 @@ pub mod pallet {
 			}			
 
 			// Populate Profile struct
-			let profile = Profile::<T> {
+			let mut profile = Profile::<T> {
 				owner: owner.clone(),
 				name,
 				interests,
@@ -272,17 +273,18 @@ pub mod pallet {
 				available_hours_per_week,
 				additional_information,
 				location,
+				profile_id: T::Hashing::hash_of(&12345),
 			};
 
 			// Get hash of profile
-			let profile_id = T::Hashing::hash_of(&profile);
+			let profile_id: T::Hash = T::Hashing::hash_of(&profile);
+			profile.profile_id = profile_id.clone();
 
 			// Insert profile into HashMap
 			<Profiles<T>>::insert(owner, profile);
 
 			// Initialize completed tasks list with default value.
 			<CompletedTasks<T>>::insert(owner, BoundedVec::default());
-
 
 			// Increase profile count
 			let new_count = Self::profile_count().checked_add(1).ok_or(<Error<T>>::ProfileCountOverflow)?;
@@ -301,15 +303,12 @@ pub mod pallet {
 
 			// Ensure that only owner can update profile
 			let mut profile = Self::profiles(owner).ok_or(<Error<T>>::NoProfileCreated)?;
-
-			// Change interests of owner
-			profile.change_interests(new_interests);
-
-			profile.change_username(new_username);
-
-			profile.change_available_hours_per_week(new_available_hours_per_week);
-
-			profile.change_additional_information(new_additional_information);
+			let profile_id = &profile.profile_id;
+			
+			profile.interests = new_interests;
+			profile.name = new_username;
+			profile.available_hours_per_week = new_available_hours_per_week;
+			profile.additional_information = new_additional_information;
 
 			let mut location: Option<NadLocation> = None;
 			if longitude.is_some() && latitude.is_some() {
@@ -318,14 +317,11 @@ pub mod pallet {
 
 			profile.location = location;
 
-			// Get hash of profile
-			let profile_id = T::Hashing::hash_of(&profile);
-
 			// Insert profile into HashMap
-			<Profiles<T>>::insert(owner, profile);
+			<Profiles<T>>::insert(owner, &profile);
 
 			// Return hash of profileID
-			Ok(profile_id)
+			Ok(profile_id.clone())
 		}
 
 		// Public function that deletes a user profile
@@ -391,23 +387,6 @@ pub mod pallet {
 
 		pub fn decrease_reputation(&mut self) {
 			self.reputation -= 1;
-		}
-
-		pub fn change_interests(&mut self, new_interests: BoundedVec<u8, T::MaxInterestsLen>) {
-			self.interests = new_interests;
-		}
-
-		pub fn change_username(&mut self, new_username: BoundedVec<u8, T::MaxUsernameLen>) {
-			self.name = new_username;
-		}
-
-		pub fn change_available_hours_per_week(&mut self, new_available_hours_per_week: u8) {
-			self.available_hours_per_week = new_available_hours_per_week;
-		}
-
-		pub fn change_additional_information(&mut self, new_additional_information: Option<BoundedVec<u8,
-			T::MaxAdditionalInformationLen>>) {
-			self.additional_information =  new_additional_information;
 		}
 	}
 
