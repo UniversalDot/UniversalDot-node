@@ -13,8 +13,8 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-mod traits;
-mod impls;
+pub mod traits;
+pub mod impls;
 
 
 #[frame_support::pallet]

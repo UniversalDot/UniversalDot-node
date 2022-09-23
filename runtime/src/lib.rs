@@ -354,6 +354,7 @@ impl pallet_profile::Config for Runtime {
 	type MaxInterestsLen = MaxInterestsLen;
 	type MaxAdditionalInformationLen = MaxAdditionalInformationLen;
 	type MaxCompletedTasksLen = MaxCompletedTasksLen;
+	type ReputationHandler = ();
 }
 
 impl pallet_grant::Config for Runtime {

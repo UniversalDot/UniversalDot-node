@@ -18,20 +18,25 @@ use crate::{
    CredibilityUnit,
    Score,
 };
+use frame_support::inherent::Vec;
 
- pub trait ReputationHandler {
+/// Trait used to handle the reputation of a system.
+/// Opinionated so that the user must submit some for of credibility rating.
+/// This should be used to weigh the votes of a consumer against their credibility.
+ pub trait ReputationHandler<T: frame_system::Config> {
 
    /// Calculate the reputation of a voter.
    fn calculate_reputation<N, P>(item: N, scores: P) -> ReputationUnit
-   where N: HasCredibility + HasReputation,
+   where N: HasCredibility + HasReputation + HasAccountId<T>,
          P: Scored;
 
    /// Calculate the credibility of the voter, it is used to determine how to weigh the votes.
    /// Must return a value between 0 and 1000 higher is better
-   fn calculate_credibility<T: HasCredibility>(item: T) -> u16;
+   fn calculate_credibility<N: HasCredibility>(item: N) -> u16;
 
  }
 
+ //TODO: bounded vec
 pub trait Scored {
    fn collect_scores() -> Vec<Score>;
 }
@@ -47,5 +52,9 @@ pub trait HasCredibility {
 
    /// Return the credibility for a given struct.
    fn get_credibility(&self) -> CredibilityUnit;
+}
+
+pub trait HasAccountId<T: frame_system::Config> {
+   fn get_account_id(&self) -> T::AccountId;
 }
 

@@ -77,6 +77,7 @@ mod tests;
 mod benchmarking;
 pub mod weights;
 
+
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::{dispatch::DispatchResult, storage::bounded_vec::BoundedVec, pallet_prelude::*};
@@ -85,7 +86,7 @@ pub mod pallet {
 	use frame_support::traits::Currency;
 	use scale_info::TypeInfo;
 	use crate::weights::WeightInfo;
-	use pallet_reputation::Reputation;
+	use pallet_reputation::traits::ReputationHandler;
 
 	// Account, Balance are used in Profile Struct
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
@@ -134,8 +135,9 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxCompletedTasksLen: Get<u32> + MaxEncodedLen + TypeInfo;
 
+		//TODO:
 		/// The handler for reputation in the system.
-		type Reputation: Reputation;
+		type Reputation: ReputationHandler<Self>;
 	}
 
 	#[pallet::pallet]
