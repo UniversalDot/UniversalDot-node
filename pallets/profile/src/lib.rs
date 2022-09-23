@@ -94,8 +94,6 @@ pub mod pallet {
 
 	// Account, Balance are used in Profile Struct
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
-	type BalanceOf<T> =
-		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 	type NadLocation = ([u8; 5], [u8; 5]);
 
 	// Struct for holding Profile information.
