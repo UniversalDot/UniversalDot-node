@@ -55,6 +55,8 @@ fn verify_inputs_outputs_to_profile(){
 
 		// Get profile for current account
 		let profile = Profile::profiles(10).expect("should found the profile");
+
+		// Latitude, Longitude
 		let location = (*b"ABCDE", [1, 2, 3, 4, 5]);
 
 

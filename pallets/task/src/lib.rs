@@ -144,6 +144,7 @@ pub mod pallet {
 	type OrganizationIdOf<T> = <T as frame_system::Config>::Hash;
 
 	pub type MaximumTasksPerBlock = ConstU32<10_000>;
+	pub type NadLocation = ([u8; 5], [u8; 5]);
 
 	// Struct for holding Task information.
 	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
@@ -167,6 +168,7 @@ pub mod pallet {
 		pub organization: Option<OrganizationIdOf<T>>,
 		pub deadline_block: Option<<T as frame_system::Config>::BlockNumber>,
 		pub task_id: T::Hash,
+		pub location: NadLocation,
 	}
 
 	// Set TaskStatus enum.
@@ -328,7 +330,9 @@ pub mod pallet {
 		/// Function call that creates tasks.  [origin, title, specification, budget, deadline, attachments, keywords, organization]
 		#[pallet::weight(<T as Config>::WeightInfo::create_task(0,0))]
 		pub fn create_task(origin: OriginFor<T>, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: BalanceOf<T>,
-			deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>) -> DispatchResultWithPostInfo {
+			deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>
+			x: Option<[u8; 5], y: Option<[u8; 5]>>
+		) -> DispatchResultWithPostInfo {
 
 			// Check that the extrinsic was signed and get the signer.
 			let signer = ensure_signed(origin)?;
@@ -341,8 +345,10 @@ pub mod pallet {
 			// Ensure has enough balance;
 			ensure!(<T as self::Config>::Currency::can_reserve(&signer, budget), Error::<T>::NotEnoughBalance);
 
+			let 
+
 			// Update storage.
-			let task_id = Self::new_task(&signer, title, specification, &budget, deadline, attachments, keywords, organization)?;
+			let task_id = Self::new_task(&signer, title, specification, &budget, deadline, attachments, keywords, organization, (x, y))?;
 
 			// Reserve currency of the task creator.
 			<T as self::Config>::Currency::reserve(&signer, budget).expect("can_reserve has been called; qed");
@@ -601,7 +607,9 @@ pub mod pallet {
 	impl<T:Config> Pallet<T> {
 
 		fn new_task(from_initiator: &T::AccountId, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: &BalanceOf<T>,
-			 deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>) -> Result<T::Hash, DispatchError> {
+			deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>,
+			location: NadLocation,
+			) -> Result<T::Hash, DispatchError> {
 
 			let time_of_creation = T::Time::now();
 			// Ensure user has a profile before creating a task
@@ -632,6 +640,7 @@ pub mod pallet {
 				completed_at: Default::default(),
 				deadline_block: Some(deadline_block),
 				task_id: T::Hashing::hash_of(&T::Time::now().as_nanos()),
+				location,
 			};
 
 			// Create hash of task and set that as the task_id;
@@ -659,7 +668,9 @@ pub mod pallet {
 		// Task can be updated only after it has been created. Task that is already in progress can't be updated.
 		//  Private helper function.
 		fn update_created_task(old_task:Task<T>, task_id: &T::Hash, new_title: BoundedVec<u8, T::MaxTitleLen>, new_specification: BoundedVec<u8, T::MaxSpecificationLen>, new_budget: &BalanceOf<T>,
-			new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>) -> Result<(), DispatchError> {
+			new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>,
+			location: NadLocation
+		) -> Result<(), DispatchError> {
 			
 
 			let new_task: Task<T> = Task::<T> {
@@ -680,6 +691,7 @@ pub mod pallet {
 				completed_at: Default::default(),
 				deadline_block: Some(Self::get_deadline_block(new_deadline)), 
 				task_id: old_task.task_id,
+				location
 			};
 
 			if old_task.deadline != new_deadline {
