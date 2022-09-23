@@ -26,7 +26,9 @@ use frame_system::RawOrigin;
 use sp_std::convert::TryInto;
 
 use frame_support::{
-	traits::{Currency}};
+	traits::{Currency},
+	sp_runtime::traits::Hash
+};
 
 // Helper function to assert event thrown during verification
 fn assert_last_event<T: Config>(generic_event: <T as Config>::Event) {
@@ -46,13 +48,14 @@ fn create_profile_info<T: Config>(_num_fields: u32) -> Profile<T> {
 	let balance = T::Currency::free_balance(&caller);
 
 	Profile {
+		profile_id: T::Hashing::hash_of(b"hello world! i love beans"),
 		owner: caller,
 		name: username.try_into().unwrap(),
 		interests: interests.try_into().unwrap(),
-		balance: Some(balance),
 		reputation: u32::MAX,
 		available_hours_per_week,
 		additional_information: None,
+		location: None,
 	}
 }
 
@@ -66,14 +69,15 @@ benchmarks! {
 		// Populate data fields
 		let x in 1 .. 100;  // # of profiles
 		let s in 1 .. u8::MAX.into(); // max bytes for interests
-		let profile = create_profile_info::<T>(1);
 		let interests = vec![0u8, s as u8];
 		let username = vec![0u8, s as u8];
 		let additional_information = vec![0_u8; 5000];
 		let available_hours_per_week = 40_u8;
+		let x_coord = [8u8; 5];
+		let y_coord = [8u8; 5];
 
 	}: create_profile(RawOrigin::Signed(caller), username.try_into().unwrap(),
-	interests.try_into().unwrap(), available_hours_per_week, Some(additional_information.try_into().unwrap()))
+	interests.try_into().unwrap(), available_hours_per_week, Some(additional_information.try_into().unwrap()), Some(x_coord), Some(y_coord))
 
 	verify {
 		/* verifying final state */
@@ -92,12 +96,15 @@ benchmarks! {
 		let username = vec![0u8, s as u8];
 		let available_hours_per_week = 40_u8;
 		let additional_information = vec![0_u8; 5000];
+		let x_coord = [8u8; 5];
+		let y_coord = [8u8; 5];
+
 
 		// before we update profile, profile must be created
 		let _ = PalletProfile::<T>::create_profile(RawOrigin::Signed(create_account_caller).into(), username.clone().try_into().unwrap(), interests.clone().try_into().unwrap(), 
-			available_hours_per_week, Some(additional_information.clone().try_into().unwrap()));
+			available_hours_per_week, Some(additional_information.clone().try_into().unwrap()), Some(x_coord), Some(y_coord));
 
-	}: update_profile(RawOrigin::Signed(update_account_caller), username.try_into().unwrap(), interests.try_into().unwrap(), available_hours_per_week, Some(additional_information.try_into().unwrap()))
+	}: update_profile(RawOrigin::Signed(update_account_caller), username.try_into().unwrap(), interests.try_into().unwrap(), available_hours_per_week, Some(additional_information.try_into().unwrap()), Some(x_coord), Some(y_coord))
 
 	verify {
 		/* verifying final state */
@@ -116,10 +123,13 @@ benchmarks! {
 		let username = vec![0u8, s as u8];
 		let available_hours_per_week = 40_u8;
 		let additional_information = vec![0_u8; 5000];
+		let x_coord = [8u8; 5];
+		let y_coord = [8u8; 5];
+
 
 		// before we delete profile, profile must be created
 		let _ = PalletProfile::<T>::create_profile(RawOrigin::Signed(create_account_caller).into(), username.try_into().unwrap(), interests.try_into().unwrap(), 
-			available_hours_per_week, Some(additional_information.try_into().unwrap()));
+			available_hours_per_week, Some(additional_information.try_into().unwrap()), Some(x_coord), Some(y_coord));
 
 	}: remove_profile(RawOrigin::Signed(delete_account_caller))
 
