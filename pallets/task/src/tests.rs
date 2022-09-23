@@ -61,6 +61,13 @@ fn additional_info() -> BoundedVec<u8, MaxAdditionalInformationLen> {
 	vec![1u8, 4].try_into().unwrap()
 }
 
+fn x() -> [u8; 5] {
+	[1, 2, 3, 4, 5]
+}
+fn y() -> [u8; 5] {
+	*b"ABCDE"
+}
+
 fn get_deadline(multiple: u64) -> u64 {
 	// deadline is current time + 1 hour
 	let deadline = <Time as UnixTime>::now() + std::time::Duration::from_millis(3600 * multiple * 1000_u64);
@@ -119,7 +126,7 @@ fn create_organization() -> H256 {
 fn create_new_task(){
 	new_test_ext().execute_with(|| {
 		// Create profile (required by task)
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
 		let title = title();
@@ -128,7 +135,7 @@ fn create_new_task(){
 		let attachments = attachments();
 		let keywords = keywords();
 		let organization = Some(create_organization());
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title.clone(), specification.clone(), BUDGET, deadline, attachments.clone(), keywords.clone(), organization));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title.clone(), specification.clone(), BUDGET, deadline, attachments.clone(), keywords.clone(), organization, Some(x()), Some(y())));
 
 		// Get task
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -149,13 +156,13 @@ fn create_new_task(){
 fn fund_transfer_on_create_task(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure balance
 		assert_eq!(Balances::free_balance(&*ALICE), 1000);
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec() , BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec() , BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		assert_eq!(Balances::free_balance(&*ALICE), 993);
 		assert_eq!(Balances::reserved_balance(&*ALICE), BUDGET);
@@ -166,10 +173,10 @@ fn fund_transfer_on_create_task(){
 fn increase_task_count_when_creating_task(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec() , BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec() , BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Assert that count is incremented by 1 after task creation
 		assert_eq!(Task::task_count(), 1);
@@ -180,11 +187,11 @@ fn increase_task_count_when_creating_task(){
 fn increase_task_count_when_creating_two_tasks(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), BUDGET2, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), BUDGET2, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Assert that count is incremented to 2 after task creation
 		assert_eq!(Task::task_count(), 2);
@@ -195,19 +202,19 @@ fn increase_task_count_when_creating_two_tasks(){
 fn cant_own_more_tasks_than_max_tasks(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Create 77 tasks  ExceedMaxTasksOwned
 		for _n in 0..MAX_TASKS_OWNED {
 			// Ensure new task can be created.
-			assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+			assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 		}
 
 		// Assert that count is incremented to 2 after task creation
 		assert_eq!(Task::task_count(), MAX_TASKS_OWNED as u64);
 
 		// Assert that when creating the 77 Task, Error is thrown
-		assert_noop!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), BUDGET, get_deadline(1), attachments(), keywords(), None), Error::<Test>::ExceedMaxTasksOwned);
+		assert_noop!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())), Error::<Test>::ExceedMaxTasksOwned);
 	});
 }
 
@@ -215,10 +222,10 @@ fn cant_own_more_tasks_than_max_tasks(){
 fn assign_task_to_current_owner(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure task can be created
-		assert_ok!(Task::create_task(Origin::signed(*TED), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*TED), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Get task
 		let task_id = Task::tasks_owned(*TED)[0];
@@ -233,15 +240,16 @@ fn assign_task_to_current_owner(){
 fn verify_inputs_outputs_to_tasks(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure task can be created
 		let organization = Some(create_organization());
-		assert_ok!(Task::create_task(Origin::signed(*TED), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), organization));
+		assert_ok!(Task::create_task(Origin::signed(*TED), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), organization, Some(x()), Some(y())));
 
 		// Get task
 		let task_id = Task::tasks_owned(*TED)[0];
 		let task = Task::tasks(task_id).expect("should found the task");
+		let location = (x(), y());
 
 		// Ensure that task properties are assigned correctly
 		assert_eq!(task.current_owner, *TED);
@@ -251,6 +259,8 @@ fn verify_inputs_outputs_to_tasks(){
 		assert_eq!(task.attachments, attachments());
 		assert_eq!(task.keywords, keywords());
 		assert_eq!(task.organization, organization);
+		assert!(task.location == Some(location))
+
 	});
 }
 
@@ -258,10 +268,10 @@ fn verify_inputs_outputs_to_tasks(){
 fn task_can_be_updated_after_it_is_created(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure task can be created
-		assert_ok!(Task::create_task(Origin::signed(*TED), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*TED), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Get task
 		let task_id = Task::tasks_owned(*TED)[0];
@@ -273,7 +283,7 @@ fn task_can_be_updated_after_it_is_created(){
 
 		// Ensure task can be updated
 		let organization = Some(create_organization());
-		assert_ok!(Task::update_task(Origin::signed(*TED), task_id, title2(), spec2(), BUDGET2, get_deadline(1), attachments2(), keywords2(), organization));
+		assert_ok!(Task::update_task(Origin::signed(*TED), task_id, title2(), spec2(), BUDGET2, get_deadline(1), attachments2(), keywords2(), organization, Some(x()), Some(y())));
 
 		// Get task
 		let task_id = Task::tasks_owned(*TED)[0];
@@ -296,12 +306,12 @@ fn check_balance_after_update_task(){
 		let initial_balance_of_sender = Balances::free_balance(&*TED);
 
 		// Create profile and task
-		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Task::create_task(Origin::signed(*TED), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Task::create_task(Origin::signed(*TED), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Get task identifier and update task with new budget
 		let task_id = Task::tasks_owned(*TED)[0];
-		assert_ok!(Task::update_task(Origin::signed(*TED), task_id, title2(), spec2(), BUDGET2, get_deadline(1), attachments2(), keywords2(), None));
+		assert_ok!(Task::update_task(Origin::signed(*TED), task_id, title2(), spec2(), BUDGET2, get_deadline(1), attachments2(), keywords2(), None, Some(x()), Some(y())));
 
 		// Ensure the new budget is reserved
 		let task_id = Task::tasks_owned(*TED)[0];
@@ -312,7 +322,7 @@ fn check_balance_after_update_task(){
 		assert_eq!(task.budget, BUDGET2);
 
 		// Update task again with previous budget: can use reserved balance here because there is only one task to play with.
-		assert_ok!(Task::update_task(Origin::signed(*TED), task_id, title2(), spec2(), BUDGET, get_deadline(1), attachments2(), keywords2(), None));
+		assert_ok!(Task::update_task(Origin::signed(*TED), task_id, title2(), spec2(), BUDGET, get_deadline(1), attachments2(), keywords2(), None, Some(x()), Some(y())));
 		let reserved_balance = Balances::reserved_balance(&*TED);
 		assert_eq!(reserved_balance, BUDGET);
 	});
@@ -322,15 +332,15 @@ fn check_balance_after_update_task(){
 fn check_balance_after_complete_task(){
 	new_test_ext().execute_with(|| {
 		// Create profiles
-		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Get balance of users
 		let creator_balance = Balances::balance(&*TED);
 		let volunteer_balance = Balances::balance(&*ALICE);
 
 		// Ensure task can be created
-		assert_ok!(Task::create_task(Origin::signed(*TED), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*TED), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Get task identifier
 		let task_id = Task::tasks_owned(*TED)[0];
@@ -355,16 +365,16 @@ fn task_can_be_updated_only_by_one_who_created_it(){
 	new_test_ext().execute_with(|| {
 
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure task can be created
-		assert_ok!(Task::create_task(Origin::signed(*TED), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*TED), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Get task identifier
 		let task_id = Task::tasks_owned(*TED)[0];
 
 		// Throw error when someone other than creator tries to update task
-		assert_noop!(Task::update_task(Origin::signed(*ALICE), task_id, title(), spec(), BUDGET2, get_deadline(1), attachments2(), keywords2(), None), Error::<Test>::OnlyInitiatorUpdatesTask);
+		assert_noop!(Task::update_task(Origin::signed(*ALICE), task_id, title(), spec(), BUDGET2, get_deadline(1), attachments2(), keywords2(), None, Some(x()), Some(y())), Error::<Test>::OnlyInitiatorUpdatesTask);
 	});
 }
 
@@ -372,10 +382,10 @@ fn task_can_be_updated_only_by_one_who_created_it(){
 fn task_can_be_updated_only_after_it_has_been_created(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*TED), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure task can be created
-		assert_ok!(Task::create_task(Origin::signed(*TED), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*TED), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Get task identifier
 		let task_id = Task::tasks_owned(*TED)[0];
@@ -384,7 +394,7 @@ fn task_can_be_updated_only_after_it_has_been_created(){
 		assert_ok!(Task::start_task(Origin::signed(*BOB), task_id));
 
 		// Throw error when someone other than creator tries to update task
-		assert_noop!(Task::update_task(Origin::signed(*TED), task_id, title(), spec(), BUDGET2, get_deadline(1), attachments2(), keywords2(), None), Error::<Test>::NoPermissionToUpdate);
+		assert_noop!(Task::update_task(Origin::signed(*TED), task_id, title(), spec(), BUDGET2, get_deadline(1), attachments2(), keywords2(), None, Some(x()), Some(y())), Error::<Test>::NoPermissionToUpdate);
 	});
 }
 
@@ -392,11 +402,11 @@ fn task_can_be_updated_only_after_it_has_been_created(){
 fn start_tasks_assigns_new_current_owner(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Ensure new task is assigned to new current_owner (user 1)
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -417,10 +427,10 @@ fn start_tasks_assigns_new_current_owner(){
 fn start_tasks_assigns_task_to_volunteer(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Ensure new task is assigned to new current_owner (user 1)
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -442,10 +452,10 @@ fn start_tasks_assigns_task_to_volunteer(){
 fn completing_tasks_assigns_new_current_owner(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Ensure new task is assigned to new current_owner (user 1)
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -474,10 +484,10 @@ fn completing_tasks_assigns_new_current_owner(){
 fn the_volunteer_is_different_from_task_creator(){
 	new_test_ext().execute_with(|| {
 		// Ensure profile can be created
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Ensure the user that created the task can't start working on the same task
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -489,10 +499,10 @@ fn the_volunteer_is_different_from_task_creator(){
 fn task_can_only_be_started_once(){
 	new_test_ext().execute_with(|| {
 		// Ensure profile can be created
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Ensure that task can't be started once its started
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -505,10 +515,10 @@ fn task_can_only_be_started_once(){
 fn task_can_only_be_finished_by_the_user_who_started_it(){
 	new_test_ext().execute_with(|| {
 		// Ensure profile can be created
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Ensure that task can't be started once its started
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -523,10 +533,10 @@ fn task_can_only_be_finished_by_the_user_who_started_it(){
 fn task_can_be_removed_by_owner(){
 	new_test_ext().execute_with(|| {
 		// Ensure profile can be created
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Ensure that task can't be started once its started
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -544,10 +554,10 @@ fn task_can_be_removed_by_owner(){
 fn task_can_be_removed_only_when_status_is_created(){
 	new_test_ext().execute_with(|| {
 		// Ensure profile can be created
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), 7, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), 7, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Ensure that task can't be started once its started
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -562,11 +572,11 @@ fn task_can_be_removed_only_when_status_is_created(){
 fn only_creator_accepts_task(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Ensure new task is assigned to new current_owner (user 1)
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -598,11 +608,11 @@ fn only_creator_accepts_task(){
 fn accepted_task_is_added_to_completed_task_for_volunteer(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure task can be created
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Ensure the task can be started, completed and accepted
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -621,11 +631,11 @@ fn accepted_task_is_added_to_completed_task_for_volunteer(){
 fn volunteer_gets_paid_on_task_completion(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 		let task_id = Task::tasks_owned(*ALICE)[0];
 
 		// Ensure task is started by new current_owner (user 2)
@@ -645,11 +655,11 @@ fn volunteer_gets_paid_on_task_completion(){
 fn only_started_task_can_be_completed(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Ensure new task is assigned to new current_owner (user 1)
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -672,11 +682,11 @@ fn only_started_task_can_be_completed(){
 fn when_task_is_accepted_ownership_is_cleared(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Ensure new task is assigned to new current_owner (user 1)
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -711,10 +721,10 @@ fn when_task_is_accepted_ownership_is_cleared(){
 fn decrease_task_count_when_accepting_task(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Get task identifier
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -730,10 +740,10 @@ fn decrease_task_count_when_accepting_task(){
 fn task_can_be_rejected_by_creator(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Get task identifier
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -764,10 +774,10 @@ fn task_can_be_rejected_by_creator(){
 fn feedback_is_given_when_task_is_rejected(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Get task identifier
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -797,11 +807,11 @@ fn feedback_is_given_when_task_is_rejected(){
 fn increase_profile_reputation_when_task_completed(){
 	new_test_ext().execute_with(|| {
 		// Profiles necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Profile::create_profile(Origin::signed(*BOB), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Ensure new task is assigned to new current_owner (user 1)
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -831,10 +841,10 @@ fn increase_profile_reputation_when_task_completed(){
 fn only_add_reputation_when_task_has_been_accepted(){
 	new_test_ext().execute_with(|| {
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Get id of task owned
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -855,10 +865,10 @@ fn delete_task_after_deadline() {
 		run_to_block(1);
 
 		// Profile is necessary for task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 		let task_id = Task::tasks_owned(*ALICE)[0];
 		let task = Task::tasks(task_id);
 		
@@ -877,11 +887,11 @@ fn delete_task_after_deadline() {
 fn balance_check_after_task_deletion() {
 	new_test_ext().execute_with(|| {
 		// Create profile
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 		let signer_balance = Balances::balance(&*ALICE);
 
 		// Create task
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 		
 		// Assign balances to task creator and escrow after task creation
 		let signer_free_balance = Balances::free_balance(&*ALICE);
@@ -909,10 +919,10 @@ fn block_time_is_added_when_task_is_updated() {
 		System::set_block_number(1);
 
 		// Ensure profile is created before task creation
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Ensure new task can be created.
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		// Get id of task owned
 		let task_id = Task::tasks_owned(*ALICE)[0];
@@ -923,7 +933,7 @@ fn block_time_is_added_when_task_is_updated() {
 
 		// Update task at set block number
 		System::set_block_number(3);
-		assert_ok!(Task::update_task(Origin::signed(*ALICE), task_id, title2(), spec2(), BUDGET2, get_deadline(1), attachments2(), keywords2(), None));
+		assert_ok!(Task::update_task(Origin::signed(*ALICE), task_id, title2(), spec2(), BUDGET2, get_deadline(1), attachments2(), keywords2(), None, Some(x()), Some(y())));
 		let task = Task::tasks(task_id).expect("no task found");
 		assert_eq!(task.updated_at, 3);
 
@@ -942,21 +952,21 @@ fn block_time_is_added_when_task_is_updated() {
 fn test_multiple_tasks_and_reserve_amounts() {
 	new_test_ext().execute_with(|| {
 		// Create profile (required by task)
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Create 2 tasks of budgets 7 and 10
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None));
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title2(), spec2(), BUDGET2, get_deadline(1), attachments2(), keywords2(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), BUDGET, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title2(), spec2(), BUDGET2, get_deadline(1), attachments2(), keywords2(), None, Some(x()), Some(y())));
 
 		// Assert that the reserved balances add up
 		assert_eq!(Balances::reserved_balance(&*ALICE), BUDGET + BUDGET2);
 
 		// Swap around budgets
 		let task_id = Task::tasks_owned(*ALICE)[0];
-		assert_ok!(Task::update_task(Origin::signed(*ALICE), task_id, title(), spec(), BUDGET2, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::update_task(Origin::signed(*ALICE), task_id, title(), spec(), BUDGET2, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 
 		assert_eq!(Balances::reserved_balance(&*ALICE), BUDGET2 + BUDGET2);
-		assert_ok!(Task::update_task(Origin::signed(*ALICE), task_id, title2(), spec2(), BUDGET, get_deadline(1), attachments2(), keywords2(), None));
+		assert_ok!(Task::update_task(Origin::signed(*ALICE), task_id, title2(), spec2(), BUDGET, get_deadline(1), attachments2(), keywords2(), None, Some(x()), Some(y())));
 		assert_eq!(Balances::reserved_balance(&*ALICE), BUDGET2 + BUDGET);
 	})
 }
@@ -964,10 +974,10 @@ fn test_multiple_tasks_and_reserve_amounts() {
 fn test_create_insufficient_funds_to_reserve() {
 	new_test_ext().execute_with(|| {
 		// Create profile (required by task)
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 		
 		//Create a task with more tokens than the signer has
-		assert_noop!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(1), attachments(), keywords(), None), Error::<Test>::NotEnoughBalance);
+		assert_noop!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())), Error::<Test>::NotEnoughBalance);
 	})
 }
 
@@ -975,15 +985,15 @@ fn test_create_insufficient_funds_to_reserve() {
 fn test_update_insufficient_funds_to_reserve() {
 	new_test_ext().execute_with(|| {
 		// Create profile (required by task)
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 		
 		// Create task that should be ok (and get id)
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 		let task_id = Task::tasks_owned(*ALICE)[0];
 
 		// Update that task with a balance more than signer has
 
-		assert_noop!(Task::update_task(Origin::signed(*ALICE), task_id, title2(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(1), attachments2(), keywords2(), None), Error::<Test>::NotEnoughBalance);
+		assert_noop!(Task::update_task(Origin::signed(*ALICE), task_id, title2(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(1), attachments2(), keywords2(), None, Some(x()), Some(y())), Error::<Test>::NotEnoughBalance);
 	})
 }	
 
@@ -991,14 +1001,14 @@ fn test_update_insufficient_funds_to_reserve() {
 fn test_create_two_tasks_insufficient_balance() {
 	new_test_ext().execute_with(|| {
 		// Create profile (required by task)
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
 
 		// Create a task with an ok balance
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 		
 		// Create a task with a balance not possible
 
-		assert_noop!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(1), attachments(), keywords(), None), Error::<Test>::NotEnoughBalance);		
+		assert_noop!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) + 1000, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())), Error::<Test>::NotEnoughBalance);		
 
 	})
 }
@@ -1008,9 +1018,9 @@ fn tasks_are_moved_to_expiry() {
 	new_test_ext().execute_with( || {
 
 		// Setup state;
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), Balances::free_balance(&*ALICE), get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec(), Balances::free_balance(&*ALICE), get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 		
 		let task_id_0 = Task::tasks_owned(*ALICE)[0];
 		let task_id_1 = Task::tasks_owned(*ALICE)[1];
@@ -1029,8 +1039,8 @@ fn tasks_are_moved_to_dying_after_expiry() {
 	new_test_ext().execute_with( || {
 
 		// Setup state;
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 		
 		let task_id_0 = Task::tasks_owned(*ALICE)[0];
 		let dying_deadline_block = get_dying_deadline_block(1);
@@ -1053,8 +1063,8 @@ fn update_task_updates_block_expiry_with_different_deadline() {
 	new_test_ext().execute_with( || {
 		
 		// Setup state;
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 		
 		let task_id_0 = Task::tasks_owned(*ALICE)[0];
 		let deadline_block_1 = get_deadline_block(1); 
@@ -1062,7 +1072,7 @@ fn update_task_updates_block_expiry_with_different_deadline() {
 
 		// Assert state is correct and update with new deadline;
 		assert!(ExpiringTasksPerBlock::<Test>::get(deadline_block_1).contains(&task_id_0));
-		assert_ok!(Task::update_task(Origin::signed(*ALICE), task_id_0, title2(), spec2(), BUDGET2, get_deadline(2), attachments2(), keywords2(), None));		
+		assert_ok!(Task::update_task(Origin::signed(*ALICE), task_id_0, title2(), spec2(), BUDGET2, get_deadline(2), attachments2(), keywords2(), None, Some(x()), Some(y())));		
 
 		// Assert that the expiring task has been added to the new deadline block and removed from the old one;
 		assert!(ExpiringTasksPerBlock::<Test>::get(deadline_block_2).contains(&task_id_0));
@@ -1075,8 +1085,8 @@ fn dying_tasks_are_removed_after_grace_period() {
 	new_test_ext().execute_with( || {
 		
 		// Setup state;
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 		
 		let task_id_0 = Task::tasks_owned(*ALICE)[0];
 		let dying_deadline_block = get_dying_deadline_block(1);
@@ -1095,8 +1105,8 @@ fn dying_tasks_are_removed_after_grace_period() {
 fn test_expired_task_revival_status() {
 	new_test_ext().execute_with( || {
 		// Setup state;
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 		
 		let task_id = Task::tasks_owned(*ALICE)[0];
 		let task = Task::tasks(task_id).expect("no task found");
@@ -1125,8 +1135,8 @@ fn test_expired_task_revival_status() {
 fn test_revival_swaps_task_from_dying_to_expired() {
 	new_test_ext().execute_with( || {
 		// Setup state;
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 		
 		let task_id = Task::tasks_owned(*ALICE)[0];
 		let deadline_block = get_deadline_block(1);
@@ -1154,8 +1164,8 @@ fn test_revival_swaps_task_from_dying_to_expired() {
 fn test_only_initiator_can_revive() {
 	new_test_ext().execute_with( || {
 			// Setup state;
-			assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
-			assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
+			assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+			assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 			
 			let task_id = Task::tasks_owned(*ALICE)[0];
 			let deadline_block = get_deadline_block(1);
@@ -1174,8 +1184,8 @@ fn test_only_initiator_can_revive() {
 fn test_revive_task_with_invalid_new_deadline() {
 	new_test_ext().execute_with( || {
 		// Setup state;
-		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info())));
-		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None));
+		assert_ok!(Profile::create_profile(Origin::signed(*ALICE), username(), interests(), HOURS, Some(additional_info()), Some(x()), Some(y())));
+		assert_ok!(Task::create_task(Origin::signed(*ALICE), title(), spec2(), Balances::free_balance(&*ALICE) - 1000, get_deadline(1), attachments(), keywords(), None, Some(x()), Some(y())));
 		
 		let task_id = Task::tasks_owned(*ALICE)[0];
 		let deadline_block = get_deadline_block(1);
