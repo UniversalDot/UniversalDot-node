@@ -168,7 +168,7 @@ pub mod pallet {
 		pub organization: Option<OrganizationIdOf<T>>,
 		pub deadline_block: Option<<T as frame_system::Config>::BlockNumber>,
 		pub task_id: T::Hash,
-		pub location: NadLocation,
+		pub location: Option<NadLocation>,
 	}
 
 	// Set TaskStatus enum.
@@ -330,8 +330,8 @@ pub mod pallet {
 		/// Function call that creates tasks.  [origin, title, specification, budget, deadline, attachments, keywords, organization]
 		#[pallet::weight(<T as Config>::WeightInfo::create_task(0,0))]
 		pub fn create_task(origin: OriginFor<T>, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: BalanceOf<T>,
-			deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>
-			x: Option<[u8; 5], y: Option<[u8; 5]>>
+			deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>,
+			x: Option<[u8; 5]>, y: Option<[u8; 5]>
 		) -> DispatchResultWithPostInfo {
 
 			// Check that the extrinsic was signed and get the signer.
@@ -345,10 +345,13 @@ pub mod pallet {
 			// Ensure has enough balance;
 			ensure!(<T as self::Config>::Currency::can_reserve(&signer, budget), Error::<T>::NotEnoughBalance);
 
-			let 
+			let mut location: Option<NadLocation> = None;
+			if x.is_some() && y.is_some() {
+				location = Some((x.unwrap(), y.unwrap()))
+			}
 
 			// Update storage.
-			let task_id = Self::new_task(&signer, title, specification, &budget, deadline, attachments, keywords, organization, (x, y))?;
+			let task_id = Self::new_task(&signer, title, specification, &budget, deadline, attachments, keywords, organization, location)?;
 
 			// Reserve currency of the task creator.
 			<T as self::Config>::Currency::reserve(&signer, budget).expect("can_reserve has been called; qed");
@@ -363,7 +366,9 @@ pub mod pallet {
 		//	todo: minimum change amount?
 		#[pallet::weight(<T as Config>::WeightInfo::update_task(0,0))]
 		pub fn update_task(origin: OriginFor<T>, task_id: T::Hash, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>,
-			budget: BalanceOf<T>, deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>) -> DispatchResultWithPostInfo {
+			budget: BalanceOf<T>, deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>,
+			x: Option<[u8; 5]>, y: Option<[u8; 5]>
+		) -> DispatchResultWithPostInfo {
 
 			// Check that the extrinsic was signed and get the signer.
 			let signer = ensure_signed(origin)?;
@@ -402,6 +407,11 @@ pub mod pallet {
 					let diff = old_task.budget - budget;
 					<T as self::Config>::Currency::unreserve(&signer, diff);
 				}
+			}
+
+			let mut location: Option<NadLocation> = None;
+			if x.is_some() && y.is_some() {
+				location = Some((x.unwrap(), y.unwrap()))
 			}
 
 			// Update storage after as we need to check if sender can reserve new amount.
@@ -608,7 +618,7 @@ pub mod pallet {
 
 		fn new_task(from_initiator: &T::AccountId, title: BoundedVec<u8, T::MaxTitleLen>, specification: BoundedVec<u8, T::MaxSpecificationLen>, budget: &BalanceOf<T>,
 			deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>,
-			location: NadLocation,
+			location: Option<NadLocation>,
 			) -> Result<T::Hash, DispatchError> {
 
 			let time_of_creation = T::Time::now();
@@ -669,7 +679,7 @@ pub mod pallet {
 		//  Private helper function.
 		fn update_created_task(old_task:Task<T>, task_id: &T::Hash, new_title: BoundedVec<u8, T::MaxTitleLen>, new_specification: BoundedVec<u8, T::MaxSpecificationLen>, new_budget: &BalanceOf<T>,
 			new_deadline: u64, attachments: BoundedVec<u8, T::MaxAttachmentsLen>, keywords: BoundedVec<u8, T::MaxKeywordsLen>, organization: Option<OrganizationIdOf<T>>,
-			location: NadLocation
+			location: Option<NadLocation>
 		) -> Result<(), DispatchError> {
 			
 
