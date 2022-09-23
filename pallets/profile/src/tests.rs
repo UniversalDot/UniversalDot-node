@@ -51,16 +51,20 @@ fn verify_inputs_outputs_to_profile(){
 	new_test_ext().execute_with(|| {
 
 		// Create Profile
-		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info()), Some(longitude()), Some(latitude())));
+		assert_ok!(Profile::create_profile(Origin::signed(10), username(), interests(), HOURS, Some(additional_info()), Some(longitude()), Some(latitude())));
 
 		// Get profile for current account
 		let profile = Profile::profiles(10).expect("should found the profile");
+		let location = (*b"ABCDE", [1, 2, 3, 4, 5]);
+
 
 		// Ensure that profile properties are assigned correctly
 		assert_eq!(profile.name.into_inner(), &[1, 4]);
 		assert_eq!(profile.reputation, 0);
 		assert_eq!(profile.interests.into_inner(), &[2,4]);
 		assert_eq!(profile.available_hours_per_week, 40_u8);
+		assert!(profile.location == Some(location));
+
 	});
 }
 
@@ -138,7 +142,7 @@ fn user_can_update_profile() {
 	new_test_ext().execute_with(|| {
 
 		// Ensure the user can create profile
-		assert_ok!(Profile::create_profile(Origin::signed(1), username(), interests(), HOURS, Some(additional_info()), Some(longitude()), Some(latitude())));
+		assert_ok!(Profile::create_profile(Origin::signed(10), username(), interests(), HOURS, Some(additional_info()), Some(longitude()), Some(latitude())));
 
 		// Ensure user can update profile with new interests
 		assert_ok!(Profile::update_profile(Origin::signed(10), username2(), interests2(), HOURS2, Some(additional_info()), Some(longitude()), Some(latitude())));
