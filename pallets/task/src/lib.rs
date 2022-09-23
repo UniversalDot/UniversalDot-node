@@ -415,7 +415,7 @@ pub mod pallet {
 			}
 
 			// Update storage after as we need to check if sender can reserve new amount.
-			Self::update_created_task(old_task, &task_id, title, specification, &budget, deadline, attachments, keywords, organization)?;
+			Self::update_created_task(old_task, &task_id, title, specification, &budget, deadline, attachments, keywords, organization, location)?;
 
 			// Emit a Task Updated Event.
 			Self::deposit_event(Event::TaskUpdated(signer, task_id));
