@@ -223,7 +223,7 @@ fn winner_can_be_recieve_grant_reward() {
 		assert_eq!(Grant::winner().unwrap(), *JOHN_EX);
 
 		//Ensure money is tranfered todo:: look for minimum balance
-		assert!(Balances::free_balance(*JOHN_EX) == grant_amount() + <Test as Config>::ExistentialDeposit::get());
+		assert!(Balances::free_balance(*JOHN_EX) == (grant_amount() + <Test as Config>::ExistentialDeposit::get()));
 	});
 }
 

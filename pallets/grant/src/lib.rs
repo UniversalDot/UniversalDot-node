@@ -154,13 +154,13 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Profile was successfully created.
+		/// Grant was successfully Issued.
 		GrantIssued { who: T::AccountId },
 
-		/// Profile was successfully deleted.
+		/// Grant was successfully requested.
 		GrantRequested { who: T::AccountId },
 
-		/// Profile was successfully updated.
+		/// Winner was selected.
 		WinnerSelected { who: T::AccountId },
 
 		/// There was a donation to treasury

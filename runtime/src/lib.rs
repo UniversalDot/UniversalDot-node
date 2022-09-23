@@ -370,7 +370,7 @@ impl pallet_profile::Config for Runtime {
 }
 
 parameter_types! {
-	pub const GrantAmount: Balance = 10;
+	pub const GrantAmount: Balance = 500;
 	pub TreasuryAccountID: AccountId = pallet_treasury::Pallet::<Runtime>::account_id();
 	pub const MaxGenerateRandom: u32 = 5;
 }
