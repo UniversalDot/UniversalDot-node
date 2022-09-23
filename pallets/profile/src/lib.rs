@@ -42,6 +42,8 @@
 //!         - interests: BoundedVec,
 //!         - available_hours_per_week: u8,
 //!         - additional_information
+//!			- x: Option<[u8; 5]>: The NAD system x coord
+//!			- y: Option<[u8; 5]>: The NAD system y coord
 //!
 //! - `update_profile` - Function used to update an already existing user profile.
 //!     Inputs:
@@ -49,6 +51,9 @@
 //!         - interests: BoundedVec,
 //!         - available_hours_per_week: u8,
 //!         - additional_information
+//!			- x: Option<[u8; 5]>: The NAD system x coord
+//!			- y: Option<[u8; 5]>: The NAD system y coord
+
 //!
 //! - `remove_profile` - Function used to delete an existing user profile.
 //!     Inputs:
@@ -197,14 +202,14 @@ pub mod pallet {
 		/// Dispatchable call that enables every new actor to create personal profile in storage.
 		#[pallet::weight(<T as Config>::WeightInfo::create_profile(0,0))]
 		pub fn create_profile(origin: OriginFor<T>, username: BoundedVec<u8, T::MaxUsernameLen>, interests: BoundedVec<u8, T::MaxInterestsLen>, available_hours_per_week: u8,
-			additional_information : Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>, longitude: Option<[u8; 5]>, latitude: Option<[u8; 5]>) -> DispatchResult {
+			additional_information : Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>, x: Option<[u8; 5]>, y: Option<[u8; 5]>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
 			// Call helper function to generate Profile Struct
 			let _profile_id = Self::generate_profile(&account, username, interests,
-				 available_hours_per_week, additional_information, longitude, latitude)?;
+				 available_hours_per_week, additional_information, x, y)?;
 
 			// Emit an event.
 			Self::deposit_event(Event::ProfileCreated{ who:account });
@@ -215,14 +220,14 @@ pub mod pallet {
 		/// Dispatchable call that ensures user can update existing personal profile in storage.
 		#[pallet::weight(<T as Config>::WeightInfo::update_profile(0))]
 		pub fn update_profile(origin: OriginFor<T>, username: BoundedVec<u8, T::MaxUsernameLen>, interests: BoundedVec<u8, T::MaxInterestsLen>, available_hours_per_week: u8,
-			additional_information : Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>, longitude: Option<[u8; 5]>, latitude: Option<[u8; 5]>) -> DispatchResult {
+			additional_information : Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>, x: Option<[u8; 5]>, y: Option<[u8; 5]>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
 			// Since Each account can have one profile, we call into generate profile again
 			let _profile_id = Self::change_profile(&account, username, interests,
-				available_hours_per_week, additional_information, longitude, latitude)?;
+				available_hours_per_week, additional_information, x, y)?;
 
 			// Emit an event.
 			Self::deposit_event(Event::ProfileUpdated{ who: account });
@@ -253,15 +258,15 @@ pub mod pallet {
 		pub fn generate_profile(
 			owner: &T::AccountId, name: BoundedVec<u8, T::MaxUsernameLen>, interests: BoundedVec<u8, T::MaxInterestsLen>, available_hours_per_week: u8,
 			additional_information: Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>,
-			longitude: Option<[u8; 5]>, latitude: Option<[u8; 5]>) 
+			x: Option<[u8; 5]>, y: Option<[u8; 5]>) 
 			-> Result<T::Hash, DispatchError> {
 
 			// Check if profile already exists for owner
 			ensure!(!Profiles::<T>::contains_key(&owner), Error::<T>::ProfileAlreadyCreated);
 
 			let mut location: Option<NadLocation> = None;
-			if longitude.is_some() && latitude.is_some() {
-				location = Some((latitude.unwrap(), longitude.unwrap()));
+			if x.is_some() && y.is_some() {
+				location = Some((y.unwrap(), x.unwrap()));
 			}			
 
 			// Populate Profile struct
@@ -298,7 +303,7 @@ pub mod pallet {
 			owner: &T::AccountId, new_username: BoundedVec<u8, T::MaxUsernameLen>,
 			new_interests: BoundedVec<u8, T::MaxInterestsLen>, new_available_hours_per_week: u8,
 			new_additional_information: Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>,
-			longitude: Option<[u8; 5]>, latitude: Option<[u8; 5]>)
+			x: Option<[u8; 5]>, y: Option<[u8; 5]>)
 			-> Result<T::Hash, DispatchError> {
 
 			// Ensure that only owner can update profile
@@ -311,8 +316,8 @@ pub mod pallet {
 			profile.additional_information = new_additional_information;
 
 			let mut location: Option<NadLocation> = None;
-			if longitude.is_some() && latitude.is_some() {
-				location = Some((latitude.unwrap(), longitude.unwrap()));
+			if x.is_some() && y.is_some() {
+				location = Some((y.unwrap(), x.unwrap()));
 			}
 
 			profile.location = location;

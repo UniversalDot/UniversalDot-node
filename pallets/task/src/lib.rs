@@ -54,6 +54,8 @@
 //!         - attachments: BoundedVec,
 //!         - keywords: BoundedVec
 //!         - organization: Option<OrganizationIdOf<T>>
+//!			- x: Option<[u8; 5]>: NAD system x coordiante 
+//!			- y: Option<[u8; 5]>: NAD system y coordiante 
 //!
 //! - `update_task` - Function used to update already existing task.
 //!     Inputs:
@@ -65,6 +67,9 @@
 //!         - attachments, BoundedVec
 //!         - keywords: BoundedVec,
 //!         - organization: Option<OrganizationIdOf<T>>
+//!			- x: Option<[u8; 5]>: NAD system x coordiante 
+//!			- y: Option<[u8; 5]>: NAD system y coordiante 
+//!
 //!     Only the creator of the task has the update rights.
 //!
 //! - `remove_task` - Function used to remove an already existing task.
