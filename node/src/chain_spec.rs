@@ -1,13 +1,13 @@
 use node_template_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig, Signature, SudoConfig,
-	SystemConfig, WASM_BINARY, EXISTENTIAL_DEPOSIT, Balance
+	SystemConfig, WASM_BINARY, EXISTENTIAL_DEPOSIT, Balance, Runtime
 };
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{sr25519, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 use sp_runtime::traits::{IdentifyAccount, Verify};
-
+use pallet_treasury::Pallet as TreasuryPallet;
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
@@ -59,7 +59,9 @@ pub fn development_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Empty_account1"),
-					get_account_id_from_seed::<sr25519::Public>("Empty_account2")
+					get_account_id_from_seed::<sr25519::Public>("Empty_account2"),
+					TreasuryPallet::<Runtime>::account_id(),
+
 				],
 				true,
 			)
@@ -109,7 +111,8 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Empty_account1"),
-					get_account_id_from_seed::<sr25519::Public>("Empty_account2")
+					get_account_id_from_seed::<sr25519::Public>("Empty_account2"),
+					TreasuryPallet::<Runtime>::account_id()
 				],
 				true,
 			)
@@ -146,11 +149,7 @@ fn testnet_genesis(
 			// Configure endowed accounts with initial balance of 1 << 60.
 			balances: 
 			endowed_accounts.iter().enumerate().map(|(i ,k)|{
-				if i >= endowed_accounts.len() - 3 {
-					(k.clone() ,EXISTENTIAL_DEPOSIT)
-				} else {
 					(k.clone(), 1 << 60)
-				}
 			}).collect::<Vec<(AccountId, Balance)>>()
 		
 		},
