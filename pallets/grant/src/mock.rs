@@ -1,7 +1,9 @@
 use crate as pallet_grant;
-use frame_support::parameter_types;
 use frame_system as system;
-use sp_core::H256;
+use sp_core::{
+	H256,
+	sr25519
+};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
@@ -9,12 +11,18 @@ use sp_runtime::{
 	traits::ConstU32
 };
 use frame_support_test::TestRandomness;
-use frame_support::PalletId;
-
+use frame_support::{
+	PalletId,
+	once_cell::sync::Lazy,
+	parameter_types,
+};
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+pub type AccountId = sr25519::Public;
+pub type Balance = u64;
 
+const EXISTENTIAL_DEPOSIT: u64 = 0;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -37,7 +45,7 @@ parameter_types! {
 
 impl system::Config for Test {
 	type AccountData = pallet_balances::AccountData<u64>;
-	type AccountId = u128;
+	type AccountId = AccountId;
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockHashCount = BlockHashCount;
 	type BlockLength = ();
@@ -62,6 +70,11 @@ impl system::Config for Test {
 	type MaxConsumers = ConstU32<16>;
 }
 
+parameter_types! {
+	pub GrantAmount: Balance = 10;
+	pub static TreasuryAccount: AccountId = *Lazy::new(||{sr25519::Public::from_raw([100u8; 32])});
+	pub const MaxGenerateRandom: u32 = 5;
+}
 
 impl pallet_grant::Config for Test {
 	type Event = Event;
@@ -69,15 +82,19 @@ impl pallet_grant::Config for Test {
 	type WeightInfo = ();
 	type PalletId = LotteryPalletId;
 	type Randomness = TestRandomness<Self>;
+	type TreasuryAccount = TreasuryAccount;
+	type GrantAmount = GrantAmount;
+	type MaxGenerateRandom = MaxGenerateRandom;
+	type ExistentialDeposit = ExistentialDeposit;
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u64 = 1;
+	pub const ExistentialDeposit: u64 = EXISTENTIAL_DEPOSIT;
 }
 
 impl pallet_balances::Config for Test {
 	type AccountStore = System;
-	type Balance = u64;
+	type Balance = Balance;
 	type DustRemoval = ();
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
@@ -91,12 +108,20 @@ impl pallet_randomness_collective_flip::Config for Test {
 
 }
 
+pub static ALICE : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([1u8; 32])});
+pub static BOB : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([2u8; 32])});
+pub static TED : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([10u8; 32])});
+pub static JOHN_EX : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([11u8; 32])});
+pub static PETE_EX : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([12u8; 32])});
+pub static SIMON_EX : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([13u8; 32])});
+
+
 // Build genesis storage according to the mock runtime.
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 	GenesisConfig {
 		balances: BalancesConfig {
-			balances: vec![(1,  10), (2,  10), (3, 1), (4, 1)]
+			balances: vec![(*ALICE,  10), (*BOB,  10), (*TED, 10), (*JOHN_EX, EXISTENTIAL_DEPOSIT), (*PETE_EX, EXISTENTIAL_DEPOSIT), (*SIMON_EX, EXISTENTIAL_DEPOSIT) ]
 		},
 		..Default::default()
 	}

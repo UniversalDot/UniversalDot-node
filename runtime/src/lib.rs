@@ -54,7 +54,7 @@ use sp_runtime::traits::Get;
 
 
 pub const MILLICENTS: Balance = 1_000_000_000;
-pub const CENTS: Balance = 1_000 * MILLICENTS;
+pub const CENTS: Balance  = 1_000 * MILLICENTS;
 pub const DOLLARS: Balance = 100 * CENTS;
 
 /// An index to a block.
@@ -291,7 +291,7 @@ parameter_types! {
 	#[derive(TypeInfo, MaxEncodedLen, Encode)]
 	pub const MaxKeywordsLen: u32 = 100;
 	// 2 weeks
-	pub const TaskLongevityAfterExpiration: BlockNumber = ((2 * 7 * 24 * 60 * 60 * 1000) as u32) / MILLISECS_PER_BLOCK as u32;
+	pub const TaskLongevityAfterExpiration: BlockNumber = 14 * DAYS;
 	pub const MilisPerBlock: u64 = MILLISECS_PER_BLOCK; 
 }
 
@@ -369,13 +369,23 @@ impl pallet_profile::Config for Runtime {
 	type MaxCompletedTasksLen = MaxCompletedTasksLen;
 }
 
+parameter_types! {
+	pub const GrantAmount: Balance = 500;
+	pub TreasuryAccountID: AccountId = pallet_treasury::Pallet::<Runtime>::account_id();
+	pub const MaxGenerateRandom: u32 = 5;
+}
+
+
 impl pallet_grant::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
 	type WeightInfo = pallet_grant::weights::SubstrateWeight<Runtime>;
 	type PalletId = RandomnessPalletId;
 	type Randomness = RandomnessCollectiveFlip;
-
+	type TreasuryAccount = TreasuryAccountID;
+	type GrantAmount = GrantAmount;
+	type MaxGenerateRandom = MaxGenerateRandom;
+	type ExistentialDeposit = ConstU128<EXISTENTIAL_DEPOSIT>;
 }
 
 parameter_types! {

@@ -36,7 +36,7 @@
 //!
 //! The Process is envisioned as follows:
 //! 1. Anyone can send Funds into a Treasury Account. The Treasury account is used to distribute grant rewards.
-//! 2. Anyone can request a grant each block.
+//! 2. Anyone can request a single grant each block.
 //! 3. Each block a grant is offered randomly to selected grant requester.
 //!
 //! ## Interface
@@ -45,7 +45,7 @@
 //!  -  request_grant()
 //!     Function used to request grants.
 //!
-//!  -  transfer_funds()
+//!  -  transfer_to_treasury()
 //!     Function used to transfer funds into a Treasury Account. Anyone can transfer into Treasury.
 //!
 //!  -  winner_is()
@@ -74,7 +74,7 @@ pub mod pallet {
 	use frame_support::inherent::Vec;
 	use frame_system::pallet_prelude::*;
 	use frame_support::{ 
-		sp_runtime::traits::{Hash, Zero, AccountIdConversion,  Saturating},
+		sp_runtime::traits::{Hash, Saturating},
 		traits::{
 			Currency, 
 			Randomness,
@@ -87,7 +87,7 @@ pub mod pallet {
 
 	// Account, Balance
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
-	type BalanceOf<T> =
+	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	// Struct for holding Request information.
@@ -95,13 +95,12 @@ pub mod pallet {
 	#[scale_info(skip_type_params(T))]
 	pub struct Requesters<T: Config> {
 		pub owner: AccountOf<T>,
-		pub balance: Option<BalanceOf<T>>,
 		pub block_number: <T as frame_system::Config>::BlockNumber,
 	}
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_randomness_collective_flip::Config {
+	pub trait Config: frame_system::Config  {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -115,6 +114,22 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		type Randomness: Randomness<Self::Hash, Self::BlockNumber>;
+
+		/// The configured account of the treasury.
+		type TreasuryAccount: Get<Self::AccountId>;
+
+		/// The total amount of tokens per grant.
+		type GrantAmount: Get<BalanceOf<Self>>;
+		
+		/// Number of time we should try to generate a random number that has no modulo bias.
+		/// The larger this number, the more potential computation is used for picking the winner,
+		/// but also the more likely that the chosen winner is done fairly.
+		#[pallet::constant]
+		type MaxGenerateRandom: Get<u32>;
+
+		/// The minimum deposit as set in the balances config.
+		#[pallet::constant]
+		type ExistentialDeposit: Get<BalanceOf<Self>>;
 	}
 
 	#[pallet::pallet]
@@ -133,21 +148,23 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn requesters_count)]
-	/// Store requester count
-	pub(super) type RequestersCount<T: Config> = StorageValue<_, u32, ValueQuery>;
-
+	/// Store requester count, is u16 to defend against spam, checked add is used
+	pub(super) type RequestersCount<T: Config> = StorageValue<_, u16, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Profile was successfully created.
+		/// Grant was successfully Issued.
 		GrantIssued { who: T::AccountId },
 
-		/// Profile was successfully deleted.
+		/// Grant was successfully requested.
 		GrantRequested { who: T::AccountId },
 
-		/// Profile was successfully updated.
+		/// Winner was selected.
 		WinnerSelected { who: T::AccountId },
+
+		/// There was a donation to treasury
+		TreasuryDonation { who: T::AccountId },
 	}
 
 	// Errors inform users that something went wrong.
@@ -155,14 +172,16 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Cant grant to receiving account
 		CantGrantToSelf,
-		// User has already made requests
+		/// User has already made requests
 		RequestAlreadyMade,
-		// You must have empty balance to receive tokens.
+		/// You must have empty balance to receive tokens.
 		NonEmptyBalance,
-		// Too many requesters in current block
+		/// Too many requesters in the current block. Try later!
 		TooManyRequesters,
-		// No winner exists
-		NoWinner
+		/// No winner exists
+		NoWinner,
+		/// Treasury is out of funds!
+		TreasuryEmpty,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -172,43 +191,48 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 
 		/// Dispatchable call that ensures grants can be requested
-		#[pallet::weight(<T as Config>::WeightInfo::request_grant())]
-		pub fn request_grant(origin: OriginFor<T>, grant_requester: T::AccountId) -> DispatchResult {
+		#[pallet::weight((<T as Config>::WeightInfo::request_grant(), Pays::No))]
+		pub fn request_grant(origin: OriginFor<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
-			let _account = ensure_signed(origin)?;
+			let account = ensure_signed(origin)?;
 
-			// Generate requests and store them 
-			let _requests = Self::generate_requests(&grant_requester)?;
+			// Ensure no previous requests are made
+			ensure!(Self::storage_requesters(&account).is_none(), Error::<T>::RequestAlreadyMade);
 
-			// Deposit event for grant requested			
-			Self::deposit_event(Event::GrantRequested{ who:grant_requester });
+			ensure!(T::Currency::free_balance(&account) <= T::ExistentialDeposit::get(), Error::<T>::NonEmptyBalance);
+
+			// Generate requests and store them. 
+			let _requests = Self::generate_requests(&account)?;
+
+			// Deposit event for grant requested.			
+			Self::deposit_event(Event::GrantRequested{who: account});
 
 			// pays no fees
 			Ok(())
 		}
 
-		/// Dispatchable call that enables transfer of funds
-		#[pallet::weight(<T as Config>::WeightInfo::request_grant())]
-		pub fn transfer_funds(origin: OriginFor<T>, treasury: T::AccountId, amount: BalanceOf<T>) -> DispatchResult {
+		/// Dispatchable call that enables transfer of funds to the treasury.
+		#[pallet::weight(<T as Config>::WeightInfo::transfer_to_treasury())]
+		pub fn transfer_to_treasury(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let account = ensure_signed(origin)?;
 
 			// Ensure no conflicts of interest
-			ensure!(account != treasury, Error::<T>::CantGrantToSelf);
+			ensure!(account != T::TreasuryAccount::get(), Error::<T>::CantGrantToSelf);
 
-			// Transfer ammount from one account to treasury
-            <T as self::Config>::Currency::transfer(&account, &treasury, amount, ExistenceRequirement::KeepAlive)?;
+			// Transfer amount from one account to treasury
+            <T as self::Config>::Currency::transfer(&account, &T::TreasuryAccount::get(), amount, ExistenceRequirement::KeepAlive)?;
 
 			// Emit an event.
-			Self::deposit_event(Event::GrantIssued{ who:account });
+			Self::deposit_event(Event::TreasuryDonation{who: account});
 
 			Ok(())
 		}
 
 		// Dispatchable calls that allows to query the winner
-		#[pallet::weight(<T as Config>::WeightInfo::request_grant())]
+		#[pallet::weight(<T as Config>::WeightInfo::winner_is())]
 		pub fn winner_is(origin: OriginFor<T>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
@@ -234,12 +258,15 @@ pub mod pallet {
 			let requests = Self::requesters_count();
 
 			// Only select winners when we have requests
-			if requests > 0u32 {
+			if requests > 0u16 {
 				let _winner = Self::select_winner();
 				
 				// Flush Requests each block
 				<RequestersCount<T>>::kill();
-				<StorageRequesters<T>>::drain();
+
+				// The first parameter is the limit of iterations.
+				// should not error as we have a limit and requests is always > 0.
+				let _  = <StorageRequesters<T>>::clear(requests.into(), None);
 			}
 			
 			// return weight
@@ -247,17 +274,12 @@ pub mod pallet {
 		}
 	}
 
+
 	// ** Helper internal functions ** //
 	impl<T:Config> Pallet<T> {
 
-
-		// Generates treasury account
-		pub(crate) fn account_id() -> T::AccountId {
-			T::PalletId::get().into_account_truncating()
-		}
-
-		fn treasury_account() -> (T::AccountId, BalanceOf<T>) {
-			let account_id = Self::account_id();
+		pub fn treasury_account() -> (T::AccountId, BalanceOf<T>) {
+			let account_id = T::TreasuryAccount::get();
 			let balance =
 				T::Currency::free_balance(&account_id).saturating_sub(T::Currency::minimum_balance());
 	
@@ -271,25 +293,25 @@ pub mod pallet {
 			let balance = T::Currency::free_balance(grant_receiver);
 			
 			// Ensure only accounts with empty balance can make grant requests
-			ensure!(balance.is_zero() , Error::<T>::NonEmptyBalance);
+			ensure!(balance <= T::ExistentialDeposit::get() , Error::<T>::NonEmptyBalance);
 			
 			// Populate Requesters struct
 			let requesters = Requesters::<T> {
 				owner: grant_receiver.clone(),
-				balance: Some(balance),
 				block_number: <frame_system::Pallet<T>>::block_number(),
 			};
 			
 			// Get hash of profile
 			let requesters_id = T::Hashing::hash_of(&requesters);
 
-			// Insert profile into HashMap
-			<StorageRequesters<T>>::insert(grant_receiver, requesters);
-
 			// Increase count for requesters
 			let new_count = Self::requesters_count().checked_add(1).ok_or(<Error<T>>::TooManyRequesters)?;
 			<RequestersCount<T>>::put(new_count);
 
+			// Insert profile into HashMap
+			<StorageRequesters<T>>::insert(grant_receiver, requesters);
+
+			
 			Ok(requesters_id)
 		}
 
@@ -297,16 +319,25 @@ pub mod pallet {
 
 			let requestor: Vec<T::AccountId> = <StorageRequesters<T>>::iter_keys().collect();
 
-			// Generate randomness
-			// let _random_material = <pallet_randomness_collective_flip::Pallet<T>>::random_material();
-			let get_random_number = Self::generate_random_number(0);
+			// This is an attempt to generate more randomness and may help with modulus bias.
+			// frame/lottery/src/lib.rs 488
+			let mut random: u32 = Self::generate_random_number(0);
 			let total_requestors: u32 = requestor.len().try_into().unwrap();
-			let winner_index: usize = (get_random_number % total_requestors).try_into().unwrap();
+
+			for i in 1..T::MaxGenerateRandom::get() {
+				if random < u32::MAX - (u32::MAX % total_requestors) {
+					break
+				}
+
+				random = Self::generate_random_number(i)
+			}
+			
+			let winner_index: usize = (random % total_requestors).try_into().unwrap();
 			let winner = &requestor[winner_index];
 
 			<Winner<T>>::put(winner);
 
-			let _ = Self::transfer_funds_to_winner();
+			Self::transfer_funds_to_winner()?;
 
 			Ok(())
 		}
@@ -322,15 +353,14 @@ pub mod pallet {
 		// Function that allows funds to be sent to winner
 		fn transfer_funds_to_winner() -> Result<(), DispatchError> {
 
-			let (_lottery_account, lottery_balance) = Self::treasury_account();
+			let (treasury_account, treasury_balance) = Self::treasury_account();
+			let grant_total = T::GrantAmount::get();
 
-			let treasury= &Self::account_id();
-
-			// TODO: Implement formula that grants based on total supply and not whole balance
-			let _total = T::Currency::total_issuance();
+			ensure!(treasury_balance > grant_total, Error::<T>::TreasuryEmpty);
 
 			let winner = &Self::winner().ok_or(<Error<T>>::NoWinner)?; // AccountId should not use default: https://substrate.stackexchange.com/a/1814
-			let transfer = T::Currency::transfer(treasury, winner, lottery_balance, ExistenceRequirement::KeepAlive);
+			
+			let transfer = T::Currency::transfer(&treasury_account, winner, grant_total, ExistenceRequirement::KeepAlive);
 			debug_assert!(transfer.is_ok());
 
 			Ok(())

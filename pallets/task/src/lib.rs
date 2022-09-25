@@ -567,7 +567,7 @@ pub mod pallet {
 			// Handle the new deadline without the old deadline;
 			// Using none here because handle_new_task_deadline only deals with expiring tasks
 			// not expired;
-			let _ = Self::handle_new_task_deadline(&task.task_id, &None, &new_deadline_block);
+			Self::handle_new_task_deadline(&task.task_id, &None, &new_deadline_block)?;
 			
 			// Emit a Task Rejected Event;
 			Self::deposit_event(Event::TaskRevived(signer, task_id));
@@ -712,7 +712,7 @@ pub mod pallet {
 			if old_task.deadline != new_deadline {
 				if let Some(d) = new_task.deadline_block {
 				// Make sure to handle the storage changes on deadline change;
-					let _ = Self::handle_new_task_deadline(task_id, &old_task.deadline_block, &d)?;
+					Self::handle_new_task_deadline(task_id, &old_task.deadline_block, &d)?;
 				}
 			}
 
