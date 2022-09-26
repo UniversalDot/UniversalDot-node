@@ -37,15 +37,18 @@ fn duplicate_records_cannot_be_created() {
 fn placeholder_rep_function_works() {
 	new_test_ext().execute_with(|| {
         assert_ok!(Reputation::create_reputation_record(&0));
-        assert_ok!(Reputation::rate_account(&0, &vec![0u8, 0u8]));
+        assert_ok!(Reputation::rate_account(&0, &vec![1u8, 1u8]));
 
         let rep_record = RepInfoOf::<Test>::get(0).unwrap();
         assert!(rep_record.reputation == (-4));
 
         assert_ok!(Reputation::rate_account(&0, &vec![5u8, 5u8]));
+        let rep_record = RepInfoOf::<Test>::get(0).unwrap();
         assert!(rep_record.reputation == 0);
 
+
         assert_ok!(Reputation::rate_account(&0, &vec![5u8, 5u8]));
+        let rep_record = RepInfoOf::<Test>::get(0).unwrap();
         assert!(rep_record.reputation == 4);
         
     });

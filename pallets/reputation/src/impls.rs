@@ -26,9 +26,9 @@ impl<T: frame_system::Config> crate::traits::ReputationHandler<T> for Reputation
         let _: Vec<_> = ratings.iter().map(|r|{
             let diff: i32 = *r as i32 - 3i32;
             rep += diff;    
-
         }).collect::<_>();
-        ReputationUnit::default()
+    
+        rep
     }
 }
 
