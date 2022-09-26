@@ -21,8 +21,8 @@ use crate::{
 use frame_support::inherent::Vec;
 
 /// Trait used to handle the reputation of a system.
-/// Opinionated so that the user must submit some for of credibility rating.
-/// This should be used to weigh the votes of a consumer against their credibility.
+/// Opinionated so that the user must submit a credibility rating.
+/// This should be used to weigh the votes of a consumer's reputation against their credibility.
  pub trait ReputationHandler<T: frame_system::Config> {
 
    /// Calculate the new reputation of a voter based of a new score given.

@@ -362,7 +362,7 @@ fn task_can_be_updated_only_by_one_who_created_it(){
 
 		// Get task identifier
 		let task_id = Task::tasks_owned(*TED)[0];
-
+		
 		// Throw error when someone other than creator tries to update task
 		assert_noop!(Task::update_task(Origin::signed(*ALICE), task_id, title(), spec(), BUDGET2, get_deadline(1), attachments2(), keywords2(), None), Error::<Test>::OnlyInitiatorUpdatesTask);
 	});
