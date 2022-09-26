@@ -28,8 +28,7 @@ pub mod pallet {
 	pub type ReputationUnit = i32;
 	pub type CredibilityUnit = u32;
 	pub type Score = u16;
-	use crate::traits::*;
-	use crate::impls::Rep;
+	use crate::traits::ReputationHandler;
 
 	pub const MAX_CREDIBILITY: CredibilityUnit = 1000;
 
@@ -37,16 +36,26 @@ pub mod pallet {
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 	
+	#[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug, TypeInfo, MaxEncodedLen)]
+	#[scale_info(skip_type_params(T))]
+	pub struct Reputable<T: frame_system::Config> {
+		pub reputation: ReputationUnit,
+		pub credibility: CredibilityUnit,
+		pub aggregate_rating: u64,
+		pub num_of_ratings: u64,
+		pub account: T::AccountId,
+	}
+	
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		type WeightInfo: WeightInfo;
-		type ReputationHandler: WeightInfo;
+		type ReputationHandler: ReputationHandler<Self>;
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn reputation_of)]
-	pub type RepInfoOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Rep, OptionQuery>;
+	pub type RepInfoOf<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Reputable<T>, OptionQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -60,11 +69,14 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+
+		/// Creates a reputation record for a given account id.
 		pub fn create_reputation_record(account: T::AccountId, default_reputation: ReputationUnit) -> DispatchResult {
 			let rep_record = Self::reputation_of(&account); 
 			ensure!(rep_record.is_none(), Error::<T>::ReputationAlreadyExists);
 
-			let rep = Rep {
+			let rep = Reputable {
+				account: account.clone(),
 				reputation: default_reputation,
 				credibility: MAX_CREDIBILITY / 2,
 				aggregate_rating: Default::default(),
@@ -75,6 +87,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Remove a reputation record from storage.
 		pub fn remove_reputation_record(account: T::AccountId) -> DispatchResult {
 			let rep_record = Self::reputation_of(&account); 
 			ensure!(rep_record.is_some(), Error::<T>::CannotRemoveNothing);
@@ -83,8 +96,19 @@ pub mod pallet {
 			Ok(())
 		}
 
-		pub fn handle_reputation_change(account: T::AccountId) -> DispatchResult {
+		/// Rate the entity and adjust the reputation and credibility as defined by the ReputationHandler.
+		pub fn rate_entity(account: &T::AccountId, ratings: &Vec<u8>) -> DispatchResult {
 			
+			let mut record: Reputable<T> = RepInfoOf::<T>::get(account);
+			let new_credibility = T::ReputationHander::calculate_credibility(record, ratings);
+			let new_reputation = T::ReputationHandler::calculate_reputation(record, ratings);
+
+			record.reputation = new_reputation;
+			record.num_of_ratings += ratings.len();
+			aggregate_rating += ratings.iter().sum();
+			credibility = new_credibility;
+			
+			let _  = RepInfoOf::<T>::insert(account, record)
 			Ok(())
 		}
 	}
