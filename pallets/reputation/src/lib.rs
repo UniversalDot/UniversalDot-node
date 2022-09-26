@@ -27,7 +27,7 @@ pub mod pallet {
 
 	pub type ReputationUnit = i32;
 	pub type CredibilityUnit = u32;
-	pub type Score = u16;
+	pub type Rating = u8;
 	use crate::traits::ReputationHandler;
 
 	pub const MAX_CREDIBILITY: CredibilityUnit = 1000;
@@ -60,21 +60,22 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		ReputationRecordCreated{who: &AccountId}
-		ReputationRecordRemoved{who: &AccountId}
-		EntityRated{who: &AccountId}
+		ReputationRecordCreated{who: T::AccountId},
+		ReputationRecordRemoved{who: T::AccountId},
+		AccountRated{who: T::AccountId},
 	}
 
 	#[pallet::error]
-	pub enum Error<T > {
+	pub enum Error<T> {
 		ReputationAlreadyExists,
-		CannotRemoveNothing
+		CannotRemoveNothing,
+		RecordNotFound
 	}
 
 	impl<T: Config> Pallet<T> {
 
 		/// Creates a reputation record for a given account id.
-		pub fn create_reputation_record(account: T::AccountId, default_reputation: ReputationUnit) -> DispatchResult {
+		pub fn create_reputation_record(account: &T::AccountId, default_reputation: ReputationUnit) -> DispatchResult {
 			let rep_record = Self::reputation_of(&account); 
 			ensure!(rep_record.is_none(), Error::<T>::ReputationAlreadyExists);
 
@@ -87,7 +88,7 @@ pub mod pallet {
 			};
 
 			RepInfoOf::<T>::insert(account, rep);
-			Self::deposit_event(Event::ReputationRecordCreated{who: account});
+			Self::deposit_event(Event::ReputationRecordCreated{who: account.clone()});
 			Ok(())
 		}
 
@@ -96,8 +97,8 @@ pub mod pallet {
 			let rep_record = Self::reputation_of(&account); 
 			ensure!(rep_record.is_some(), Error::<T>::CannotRemoveNothing);
 
-			RepInfoOf::<T>::remove(account);
-			Self::deposit_event(Event::ReputationRecordRemoved{who: account});
+			RepInfoOf::<T>::remove(&account);
+			Self::deposit_event(Event::ReputationRecordRemoved{who: account.clone()});
 
 			Ok(())
 		}
@@ -105,16 +106,20 @@ pub mod pallet {
 		/// Rate the account and adjust the reputation and credibility as defined by the ReputationHandler.
 		pub fn rate_account(account: &T::AccountId, ratings: &Vec<u8>) -> DispatchResult {
 			
-			let mut record: Reputable<T> = RepInfoOf::<T>::get(account);
-			let new_credibility = T::ReputationHander::calculate_credibility(record, ratings);
-			let new_reputation = T::ReputationHandler::	(record, ratings);
+			let mut record: Reputable<T> = RepInfoOf::<T>::get(account).ok_or(Error::<T>::RecordNotFound).unwrap();
+
+			let new_credibility = T::ReputationHandler::calculate_credibility(&record, ratings);
+			let new_reputation = T::ReputationHandler::calculate_reputation(&record, ratings);
+			let ratings_sum = ratings.iter().map(|i| *i as u64).sum();
 
 			record.reputation = new_reputation;
-			record.num_of_ratings += ratings.len();
-			record.aggregate_rating += ratings.iter().sum();
+			record.num_of_ratings.saturating_add(ratings.len() as u64);
+			record.aggregate_rating.saturating_add(ratings_sum);
 			record.credibility = new_credibility;
 			
-			let _  = RepInfoOf::<T>::insert(account, record);
+			let _  = RepInfoOf::<T>::insert(&account, record);
+
+			Self::deposit_event(Event::AccountRated{who: account.clone()});
 			Ok(())
 		}
 	}

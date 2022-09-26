@@ -1,14 +1,28 @@
 
-use crate::traits::*;
-use crate::pallet::{CredibilityUnit, ReputationUnit, Reputable};
+use crate::{
+    pallet::{CredibilityUnit, ReputationUnit, Reputable, Rating},
+    traits::{HasReputation, HasCredibility, HasAccountId}
+
+};
 use frame_support::pallet_prelude::*;
+
+
 
 pub struct ReputationHandler;
 
-impl ReputationHandler<T> for ReputationHandler
-where T: frame_system::Config
-{
+impl<T: frame_system::Config> crate::traits::ReputationHandler<T> for ReputationHandler {
     
+    fn calculate_credibility<N>(entity: &N, ratings: &Vec<Rating>) -> CredibilityUnit 
+    where N: HasCredibility
+    {
+        CredibilityUnit::default()
+    }
+
+    fn calculate_reputation<N>(entity: &N, ratings: &Vec<Rating>) -> ReputationUnit
+    where N: HasCredibility + HasReputation + HasAccountId<T>
+    {
+        ReputationUnit::default()
+    }
 }
 
 

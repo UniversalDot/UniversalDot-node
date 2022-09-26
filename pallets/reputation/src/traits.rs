@@ -16,7 +16,7 @@
 use crate::{
    ReputationUnit,
    CredibilityUnit,
-   Score,
+   Rating,
 };
 use frame_support::inherent::Vec;
 
@@ -26,13 +26,12 @@ use frame_support::inherent::Vec;
  pub trait ReputationHandler<T: frame_system::Config> {
 
    /// Calculate the new reputation of a voter based of a new score given.
-   fn calculate_reputation<N, P>(item: &N, score: &Vec<Score>) -> ReputationUnit
-   where N: HasCredibility + HasReputation + HasAccountId<T>,
-         P: Scored;
+   fn calculate_reputation<N>(item: &N, score: &Vec<Rating>) -> ReputationUnit
+   where N: HasCredibility + HasReputation + HasAccountId<T>;  
 
    /// Calculate the new credibility of the voter, it is used to determine how to weigh the votes.
    /// Must return a value between 0 and 1000 higher is better
-   fn calculate_credibility<N: HasCredibility>(item: &N, score: &Vec<Score>) -> u16;
+   fn calculate_credibility<N: HasCredibility>(item: &N, score: &Vec<Rating>) -> CredibilityUnit;
 
  }
 
