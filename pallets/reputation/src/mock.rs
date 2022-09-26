@@ -1,11 +1,18 @@
-use crate as pallet_template;
-use frame_support::traits::{ConstU16, ConstU64};
+use crate as pallet_reputation;
+use frame_support::{
+	traits::{ConstU16, ConstU64},
+	parameter_types,
+};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
+use crate::{
+	impls::ReputationHandler,
+};
+
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -18,7 +25,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system,
-		TemplateModule: pallet_template,
+		Reputation: pallet_reputation,
 	}
 );
 
@@ -49,9 +56,16 @@ impl system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-impl pallet_template::Config for Test {
-	type Event = Event;
+parameter_types! {
+	pub DefaultReputation: i32 = 0;
 }
+
+impl pallet_reputation::Config for Test {
+	type Event = Event;
+	type ReputationHandler = ReputationHandler;
+	type DefaultReputation = DefaultReputation;
+}
+
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {

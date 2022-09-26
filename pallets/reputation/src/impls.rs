@@ -21,6 +21,13 @@ impl<T: frame_system::Config> crate::traits::ReputationHandler<T> for Reputation
     fn calculate_reputation<N>(entity: &N, ratings: &Vec<Rating>) -> ReputationUnit
     where N: HasCredibility + HasReputation + HasAccountId<T>
     {
+        let mut rep = entity.get_reputation();
+
+        let _: Vec<_> = ratings.iter().map(|r|{
+            let diff: i32 = *r as i32 - 3i32;
+            rep += diff;    
+
+        }).collect::<_>();
         ReputationUnit::default()
     }
 }

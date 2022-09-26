@@ -49,8 +49,8 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-		type WeightInfo: WeightInfo;
 		type ReputationHandler: ReputationHandler<Self>;
+		type DefaultReputation: Get<i32>;
 	}
 
 	#[pallet::storage]
@@ -75,13 +75,13 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 
 		/// Creates a reputation record for a given account id.
-		pub fn create_reputation_record(account: &T::AccountId, default_reputation: ReputationUnit) -> DispatchResult {
+		pub fn create_reputation_record(account: &T::AccountId) -> DispatchResult {
 			let rep_record = Self::reputation_of(&account); 
 			ensure!(rep_record.is_none(), Error::<T>::ReputationAlreadyExists);
 
 			let rep = Reputable {
 				account: account.clone(),
-				reputation: default_reputation,
+				reputation: T::DefaultReputation::get(),
 				credibility: MAX_CREDIBILITY / 2,
 				aggregate_rating: Default::default(),
 				num_of_ratings: Default::default(),
@@ -113,8 +113,8 @@ pub mod pallet {
 			let ratings_sum = ratings.iter().map(|i| *i as u64).sum();
 
 			record.reputation = new_reputation;
-			record.num_of_ratings.saturating_add(ratings.len() as u64);
-			record.aggregate_rating.saturating_add(ratings_sum);
+			record.num_of_ratings = record.num_of_ratings.saturating_add(ratings.len() as u64);
+			record.aggregate_rating = record.aggregate_rating.saturating_add(ratings_sum);
 			record.credibility = new_credibility;
 			
 			let _  = RepInfoOf::<T>::insert(&account, record);
