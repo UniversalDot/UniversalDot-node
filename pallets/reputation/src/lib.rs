@@ -60,6 +60,9 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
+		ReputationRecordCreated{who: &AccountId}
+		ReputationRecordRemoved{who: &AccountId}
+		EntityRated{who: &AccountId}
 	}
 
 	#[pallet::error]
@@ -84,6 +87,7 @@ pub mod pallet {
 			};
 
 			RepInfoOf::<T>::insert(account, rep);
+			Self::deposit_event(Event::ReputationRecordCreated{who: account});
 			Ok(())
 		}
 
@@ -93,22 +97,24 @@ pub mod pallet {
 			ensure!(rep_record.is_some(), Error::<T>::CannotRemoveNothing);
 
 			RepInfoOf::<T>::remove(account);
+			Self::deposit_event(Event::ReputationRecordRemoved{who: account});
+
 			Ok(())
 		}
 
-		/// Rate the entity and adjust the reputation and credibility as defined by the ReputationHandler.
-		pub fn rate_entity(account: &T::AccountId, ratings: &Vec<u8>) -> DispatchResult {
+		/// Rate the account and adjust the reputation and credibility as defined by the ReputationHandler.
+		pub fn rate_account(account: &T::AccountId, ratings: &Vec<u8>) -> DispatchResult {
 			
 			let mut record: Reputable<T> = RepInfoOf::<T>::get(account);
 			let new_credibility = T::ReputationHander::calculate_credibility(record, ratings);
-			let new_reputation = T::ReputationHandler::calculate_reputation(record, ratings);
+			let new_reputation = T::ReputationHandler::	(record, ratings);
 
 			record.reputation = new_reputation;
 			record.num_of_ratings += ratings.len();
-			aggregate_rating += ratings.iter().sum();
-			credibility = new_credibility;
+			record.aggregate_rating += ratings.iter().sum();
+			record.credibility = new_credibility;
 			
-			let _  = RepInfoOf::<T>::insert(account, record)
+			let _  = RepInfoOf::<T>::insert(account, record);
 			Ok(())
 		}
 	}

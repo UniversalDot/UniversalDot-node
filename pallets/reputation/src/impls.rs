@@ -3,9 +3,13 @@ use crate::traits::*;
 use crate::pallet::{CredibilityUnit, ReputationUnit, Reputable};
 use frame_support::pallet_prelude::*;
 
-
-
 pub struct ReputationHandler;
+
+impl ReputationHandler<T> for ReputationHandler
+where T: frame_system::Config
+{
+    
+}
 
 
 impl<T> HasCredibility for Reputable<T> 
