@@ -4,9 +4,10 @@ use crate::{
     traits::{HasReputation, HasCredibility, HasAccountId}
 
 };
-use frame_support::pallet_prelude::*;
-
-
+use frame_support::{
+    pallet_prelude::*,
+    inherent::Vec
+};
 
 pub struct ReputationHandler;
 

@@ -50,6 +50,7 @@ use pallet_transaction_payment::CurrencyAdapter;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
+pub use pallet_reputation::impls::ReputationHandler;
 
 
 pub const MILLICENTS: Balance = 1_000_000_000;
@@ -354,7 +355,6 @@ impl pallet_profile::Config for Runtime {
 	type MaxInterestsLen = MaxInterestsLen;
 	type MaxAdditionalInformationLen = MaxAdditionalInformationLen;
 	type MaxCompletedTasksLen = MaxCompletedTasksLen;
-	type ReputationHandler = ();
 }
 
 impl pallet_grant::Config for Runtime {

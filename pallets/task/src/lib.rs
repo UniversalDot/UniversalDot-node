@@ -134,6 +134,8 @@ pub mod pallet {
 		traits::Organization,
 		traits
 	};
+		
+	use pallet_reputation::Rating;
 
 	#[cfg(feature = "std")]
 	use frame_support::serde::{Deserialize, Serialize};
@@ -790,7 +792,7 @@ pub mod pallet {
 			<Tasks<T>>::insert(task_id, task);
 
 			// Reward reputation points to profiles who created/completed a task
-			Self::handle_reputation(task_id)?;
+			Self::handle_reputation(task.status)?;
 
 			// remove task once accepted
 			<Tasks<T>>::remove(task_id);
@@ -881,15 +883,11 @@ pub mod pallet {
 		}
 
 		// Handles reputation update for profiles
-		fn handle_reputation(task_id: &T::Hash) -> Result<(), DispatchError> {
-
-			// Check if task exists
-			let task = Self::tasks(&task_id).ok_or(<Error<T>>::TaskNotExist)?;
-
+		fn handle_reputation(task_status: &TaskStatus, ratings: &Vec<Score>) -> Result<(), DispatchError> {
 			// Ensure that reputation is added only when task is in status Accepted
-			if task.status == TaskStatus::Accepted {
-				pallet_profile::Pallet::<T>::add_reputation(&task.initiator)?;
-				pallet_profile::Pallet::<T>::add_reputation(&task.volunteer)?;
+			if task_status == TaskStatus::Accepted {
+				// TODO:pallet_profile::Pallet::<T>::add_reputation(&task.initiator)?;
+				pallet_reputation::Pallet::<T>::rate_account(&task.volunteer, ratings);
 			}
 
 			Ok(())

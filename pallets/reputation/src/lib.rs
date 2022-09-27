@@ -44,7 +44,10 @@ pub mod impls;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::pallet_prelude::*;
+	use frame_support::{
+		pallet_prelude::*,
+		inherent::Vec
+	};
 	use frame_system::{
 		pallet_prelude::*,
 		WeightInfo

@@ -86,7 +86,11 @@ pub mod pallet {
 	use frame_support::traits::Currency;
 	use scale_info::TypeInfo;
 	use crate::weights::WeightInfo;
-	use pallet_reputation::traits::ReputationHandler;
+	use pallet_reputation::{
+		traits::ReputationHandler,
+		Pallet as ReputationPallet,
+		Rating
+	};
 
 	// Account, Balance are used in Profile Struct
 	type AccountOf<T> = <T as frame_system::Config>::AccountId;
@@ -102,7 +106,6 @@ pub mod pallet {
 		pub name: BoundedVec<u8, T::MaxUsernameLen>,
 		pub interests: BoundedVec<u8, T::MaxInterestsLen>,
 		pub balance: Option<BalanceOf<T>>,
-		pub reputation: u32,
 		pub available_hours_per_week: u8,
 		pub additional_information: Option<BoundedVec<u8, T::MaxAdditionalInformationLen>>,
 	}
@@ -134,10 +137,6 @@ pub mod pallet {
 		/// A bound on number of completed tasks for Profile.
 		#[pallet::constant]
 		type MaxCompletedTasksLen: Get<u32> + MaxEncodedLen + TypeInfo;
-
-		//TODO:
-		/// The handler for reputation in the system.
-		type Reputation: ReputationHandler<Self>;
 	}
 
 	#[pallet::pallet]
@@ -267,7 +266,6 @@ pub mod pallet {
 				name,
 				interests,
 				balance: Some(balance),
-				reputation: 0,
 				available_hours_per_week,
 				additional_information,
 			};
@@ -281,6 +279,7 @@ pub mod pallet {
 			// Initialize completed tasks list with default value.
 			<CompletedTasks<T>>::insert(owner, BoundedVec::default());
 
+			ReputationPallet::<T>::create_reputation_record(owner);
 
 			// Increase profile count
 			let new_count = Self::profile_count().checked_add(1).ok_or(<Error<T>>::ProfileCountOverflow)?;
@@ -322,6 +321,8 @@ pub mod pallet {
 			// Remove profile from storage
 			<Profiles<T>>::remove(owner);
 
+			ReputationPallet::<T>::remove_reputation_record(owner);
+
 			// Reduce profile count
 			let new_count = Self::profile_count().saturating_sub(1);
 			<ProfileCount<T>>::put(new_count);
@@ -329,21 +330,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// Public function that adds reputation to a profile
-		pub fn add_reputation(owner: &T::AccountId) -> Result<(), DispatchError> {
-
-			// Get current profile
-			let mut profile = Self::profiles(owner).ok_or(<Error<T>>::NoProfileCreated)?;
-
-			// Increase reputation
-			profile.increase_reputation();
-
-			// Insert into storage a new profile
-			<Profiles<T>>::insert(owner, profile);
-
-			Ok(())
-		}
-
+	
 		// Public function that check if user has a profile
 		pub fn has_profile(owner: &T::AccountId) -> Result<bool, DispatchError>  {
 
@@ -369,14 +356,6 @@ pub mod pallet {
 
 	// Change the reputation on a Profile (TODO MVP2: Improve reputation functions)
 	impl<T:Config> Profile<T> {
-		pub fn increase_reputation(&mut self) {
-			self.reputation += 1;
-		}
-
-		pub fn decrease_reputation(&mut self) {
-			self.reputation -= 1;
-		}
-
 		pub fn change_interests(&mut self, new_interests: BoundedVec<u8, T::MaxInterestsLen>) {
 			self.interests = new_interests;
 		}
