@@ -1,13 +1,12 @@
 [package]
 name = "pallet-did"
 version = "0.7.0"
-description = "Decentralized identifiers (DIDs) pallet."
-authors = ["UNIVERSALDOT FOUNDATION <https://github.com/UniversalDot>"]
-homepage = "https://universaldot.foundation"
+description = "Nuchain decentralized identifiers (DIDs) pallet."
+authors = ["Robin Syihab <robin.syihab@gmail.com>"]
+homepage = ""
 edition = "2021"
-license = "Apache-2.0"
+license = "GPL-3"
 publish = false
-repository = "https://github.com/UniversalDot/universal-dot-node"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
