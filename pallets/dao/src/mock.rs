@@ -27,6 +27,7 @@ frame_support::construct_runtime!(
 		Did: pallet_did::{Pallet, Call, Storage, Event<T>},
 		Dao: pallet_dao::{Pallet, Call, Storage, Event<T>},
 		Profile: pallet_profile::{Pallet, Call, Storage, Event<T>},
+		Reputation: pallet_reputation,
 	}
 );
 pub type Moment = u64;
@@ -159,6 +160,21 @@ impl pallet_balances::Config for Test {
 	type AccountStore = System;
 	type WeightInfo = ();
 }
+
+parameter_types! {
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub MaximumRatingsPer: u32 = 5;
+
+	pub DefaultReputation: i32 = 0;
+}		
+
+impl pallet_reputation::Config for Test {
+	type Event = Event;
+	type ReputationHandler = pallet_reputation::impls::ReputationHandler;
+	type DefaultReputation = DefaultReputation;
+	type MaximumRatingsPer = MaximumRatingsPer; 
+}
+
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {

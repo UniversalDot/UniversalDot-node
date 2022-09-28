@@ -28,6 +28,7 @@ sp-core = { version = "6.0.0", default-features = false, git = "https://github.c
 # universal
 pallet-did = { path = "../did", package = "pallet-did", default-features = false }
 pallet-profile = { path = "../profile", version = "0.7.0", default-features = false }
+pallet-reputation = { path = "../reputation", version = "0.7.0", default-features = false }
 
 # dev dependencies
 [dev-dependencies]

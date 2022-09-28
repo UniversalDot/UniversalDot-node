@@ -457,6 +457,7 @@ construct_runtime!(
 		Did: pallet_did::{Pallet, Call, Storage, Event<T>},
 		Grant: pallet_grant::{Pallet, Call, Storage, Event<T>},
 		Treasury: pallet_treasury,
+		Reputation: pallet_reputation,
 	}
 );
 

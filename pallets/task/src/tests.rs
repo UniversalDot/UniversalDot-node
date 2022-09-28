@@ -5,6 +5,7 @@ use frame_support::traits::fungible::Inspect;
 use frame_support::storage::bounded_vec::BoundedVec;
 use frame_support::{assert_noop, assert_ok, traits::{UnixTime, Hooks}};
 use sp_core::H256;
+use pallet_reputation::RepInfoOf;
 
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  Constants and Functions used in TESTS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -59,6 +60,11 @@ fn feedback() -> BoundedVec<u8, MaxFeedbackLen> {
 
 fn additional_info() -> BoundedVec<u8, MaxAdditionalInformationLen> {
 	vec![1u8, 4].try_into().unwrap()
+}
+
+fn get_ratings() -> BoundedVec<u8, MaximumRatingsPer> {
+	// +2 rating overall
+	vec![0, 5, 5].try_into().expect("test")
 }
 
 fn get_deadline(multiple: u64) -> u64 {
@@ -338,7 +344,7 @@ fn check_balance_after_complete_task(){
 		// Ensure task is started by new current_owner (user 2)
 		assert_ok!(Task::start_task(Origin::signed(*BOB), task_id));
 		assert_ok!(Task::complete_task(Origin::signed(*BOB), task_id));
-		assert_ok!(Task::accept_task(Origin::signed(*TED), task_id));
+		assert_ok!(Task::accept_task(Origin::signed(*TED), task_id, get_ratings()));
 
 		// Ensure the escrow account is 0
 		let task_account = Task::account_id(&task_id);
@@ -589,8 +595,8 @@ fn only_creator_accepts_task(){
 		assert_eq!(Task::tasks_owned(*BOB).len(), 0);
 
 		// Ensure task is accepted by task creator (user 1)
-		assert_noop!(Task::accept_task(Origin::signed(*BOB), task_id), Error::<Test>::OnlyInitiatorAcceptsTask);
-		assert_ok!(Task::accept_task(Origin::signed(*ALICE), task_id));
+		assert_noop!(Task::accept_task(Origin::signed(*BOB), task_id, get_ratings()), Error::<Test>::OnlyInitiatorAcceptsTask);
+		assert_ok!(Task::accept_task(Origin::signed(*ALICE), task_id, get_ratings()));
 	});
 }
 
@@ -608,7 +614,7 @@ fn accepted_task_is_added_to_completed_task_for_volunteer(){
 		let task_id = Task::tasks_owned(*ALICE)[0];
 		assert_ok!(Task::start_task(Origin::signed(*BOB), task_id));
 		assert_ok!(Task::complete_task(Origin::signed(*BOB), task_id));
-		assert_ok!(Task::accept_task(Origin::signed(*ALICE), task_id));
+		assert_ok!(Task::accept_task(Origin::signed(*ALICE), task_id, get_ratings()));
 
 		// An accepted task is added as completed task on volunteer's profile.
 		let completed_tasks = Profile::completed_tasks(*BOB);
@@ -636,7 +642,7 @@ fn volunteer_gets_paid_on_task_completion(){
 
 		// Ensure User 2 gets funds for completing task after it is accepted by user 1
 		assert_eq!(Balances::balance(&*BOB), 1000);
-		assert_ok!(Task::accept_task(Origin::signed(*ALICE), task_id));
+		assert_ok!(Task::accept_task(Origin::signed(*ALICE), task_id, get_ratings()));
 		assert_eq!(Balances::balance(&*BOB), 1007);
 	});
 }
@@ -699,7 +705,7 @@ fn when_task_is_accepted_ownership_is_cleared(){
 		assert_eq!(Task::tasks_owned(*BOB).len(), 0);
 
 		// Ensure task is accepted by task creator (user 1)
-		assert_ok!(Task::accept_task(Origin::signed(*ALICE), task_id));
+		assert_ok!(Task::accept_task(Origin::signed(*ALICE), task_id, get_ratings()));
 
 		// Ensure ownership of task is cleared
 		assert_eq!(Task::tasks_owned(*ALICE).len(), 0);
@@ -721,7 +727,7 @@ fn decrease_task_count_when_accepting_task(){
 		assert_ok!(Task::tasks(task_id).ok_or(()));
 
 		// Accepting task decreases count
-		assert_ok!(Task::accept_task(Origin::signed(*ALICE), task_id));
+		assert_ok!(Task::accept_task(Origin::signed(*ALICE), task_id, get_ratings()));
 		assert_eq!(Task::task_count(), 0);
 	});
 }
@@ -815,15 +821,18 @@ fn increase_profile_reputation_when_task_completed(){
 		assert_ok!(Task::complete_task(Origin::signed(*BOB), task_id));
 
 		// Ensure task is accepted by task creator (user 1)
-		assert_ok!(Task::accept_task(Origin::signed(*ALICE), task_id));
+		assert_ok!(Task::accept_task(Origin::signed(*ALICE), task_id, get_ratings()));
 
 		// Expect to find the profiles
-		let profile1 = Profile::profiles(*ALICE).expect("should find the profile");
-		let profile2 = Profile::profiles(*BOB).expect("should find the profile");
+		let _profile1 = Profile::profiles(*ALICE).expect("should find the profile");
+		let _profile2 = Profile::profiles(*BOB).expect("should find the profile");
+
+		let rep_1 = RepInfoOf::<Test>::get(*ALICE).unwrap().reputation;
+		let rep_2 = RepInfoOf::<Test>::get(*BOB).unwrap().reputation;
 
 		// Ensure that the reputation has been added to both profiles
-		assert_eq!(profile1.reputation, 1);
-		assert_eq!(profile2.reputation, 1);
+		assert_eq!(rep_1, 2);
+		assert_eq!(rep_2, 2);
 	});
 }
 
@@ -841,11 +850,12 @@ fn only_add_reputation_when_task_has_been_accepted(){
 		assert_ok!(Task::tasks(task_id).ok_or(()));
 
 		// Ensure task can be accepted
-		assert_ok!(Task::accept_task(Origin::signed(*ALICE), task_id));
+		assert_ok!(Task::accept_task(Origin::signed(*ALICE), task_id, get_ratings()));
 
 		// Reputation should remain 0 since the task was removed without being completed
-		let profile = Profile::profiles(*ALICE).expect("should find the profile");
-		assert_eq!(profile.reputation, 2);
+		let rep_1 = RepInfoOf::<Test>::get(*ALICE).unwrap().reputation;
+
+		assert_eq!(rep_1, 2);
 	});
 }
 

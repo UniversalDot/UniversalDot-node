@@ -2,6 +2,10 @@ use core::convert::TryInto;
 use frame_support::storage::bounded_vec::BoundedVec;
 use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
+use pallet_reputation::{
+	RepInfoOf,
+	Reputable,
+};
 
 
 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<  Constants and Functions used in TESTS >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -51,12 +55,14 @@ fn verify_inputs_outputs_to_profile(){
 
 		// Get profile for current account
 		let profile = Profile::profiles(10).expect("should found the profile");
+		let maybe_reputation: Option<Reputable<Test>> = RepInfoOf::<Test>::get(10);
 
+		assert!(maybe_reputation.is_some());
 		// Ensure that profile properties are assigned correctly
 		assert_eq!(profile.name.into_inner(), &[1, 4]);
-		assert_eq!(profile.reputation, 0);
 		assert_eq!(profile.interests.into_inner(), &[2,4]);
 		assert_eq!(profile.available_hours_per_week, 40_u8);
+		assert_eq!(maybe_reputation.unwrap().reputation, 0i32);		
 	});
 }
 
