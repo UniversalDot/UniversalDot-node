@@ -18,20 +18,21 @@ use crate::{
    CredibilityUnit,
    Rating,
 };
-use frame_support::inherent::Vec;
+use frame_support::BoundedVec;
 
 /// Trait used to handle the reputation of a system.
 /// Opinionated so that the user must submit a credibility rating.
 /// This should be used to weigh the votes of a consumer's reputation against their credibility.
- pub trait ReputationHandler<T: frame_system::Config> {
-
+pub trait ReputationHandler<T> 
+where T: frame_system::Config + crate::Config
+{
    /// Calculate the new reputation of a voter based of a new score given.
-   fn calculate_reputation<N>(item: &N, score: &Vec<Rating>) -> ReputationUnit
+   fn calculate_reputation<N>(item: &N, score: &BoundedVec<Rating, T::MaximumRatingsPer>) -> ReputationUnit
    where N: HasCredibility + HasReputation + HasAccountId<T>;  
 
    /// Calculate the new credibility of the voter, it is used to determine how to weigh the votes.
    /// Must return a value between 0 and 1000 higher is better
-   fn calculate_credibility<N: HasCredibility>(item: &N, score: &Vec<Rating>) -> CredibilityUnit;
+   fn calculate_credibility<N: HasCredibility>(item: &N, score: &BoundedVec<Rating, T::MaximumRatingsPer>) -> CredibilityUnit;
 
  }
 

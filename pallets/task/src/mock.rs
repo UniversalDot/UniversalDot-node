@@ -33,6 +33,7 @@ frame_support::construct_runtime!(
 		Profile: pallet_profile::{Pallet, Call, Storage, Event<T>},
 		Time: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 		Task: pallet_task::{Pallet, Call, Storage, Event<T>},
+		Reputation: pallet_reputation::{Pallet, Storage, Event<T>},
 	}
 );
 
@@ -200,6 +201,20 @@ impl pallet_task::traits::Organization<H256> for Test {
 	fn exists(id: &H256) -> bool {
 		Dao::does_organization_exist(id)
 	}
+}
+
+parameter_types! {
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub MaximumRatingsPer: u32 = 5;
+
+	pub DefaultReputation: i32 = 0;
+}		
+
+impl pallet_reputation::Config for Test {
+	type Event = Event;
+	type ReputationHandler = pallet_reputation::impls::ReputationHandler;
+	type DefaultReputation = DefaultReputation;
+	type MaximumRatingsPer = MaximumRatingsPer; 
 }
 
 pub static ALICE : Lazy<sr25519::Public> = Lazy::new(||{sr25519::Public::from_raw([1u8; 32])});

@@ -421,6 +421,20 @@ impl pallet_treasury::Config for Runtime {
 	type SpendOrigin = frame_support::traits::NeverEnsureOrigin<u128>;
 }
 
+parameter_types! {
+	pub DefaultReputation: i32 = 0;
+
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub MaximumRatingsPer: u32 = 5;
+}
+
+impl pallet_reputation::Config for Runtime {
+	type Event = Event;
+	type ReputationHandler = pallet_reputation::impls::ReputationHandler;
+	type DefaultReputation = DefaultReputation;
+	type MaximumRatingsPer = MaximumRatingsPer;
+}
+
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(

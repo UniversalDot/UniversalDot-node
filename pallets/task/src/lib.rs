@@ -82,6 +82,7 @@
 //! - `accept_task` - Function used to accept completed task.
 //!     Inputs:
 //!         - task_id: T::Hash,
+//!			- ratings: BoundedVec<u8 ,T::MaxRatingsPer>
 //!     After the task is accepted, its data is removed from storage.
 //!
 //! - `reject_task` - Function used to reject an already completed task.
@@ -185,7 +186,7 @@ pub mod pallet {
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_profile::Config {
+	pub trait Config: frame_system::Config + pallet_reputation::Config + pallet_profile::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -461,7 +462,7 @@ pub mod pallet {
 		/// Function to accept a completed task. [origin, task_id]
 		#[transactional]
 		#[pallet::weight(<T as Config>::WeightInfo::accept_task(0,0))]
-		pub fn accept_task(origin: OriginFor<T>, task_id: T::Hash) -> DispatchResult {
+		pub fn accept_task(origin: OriginFor<T>, task_id: T::Hash, ratings: BoundedVec<Rating, T::MaximumRatingsPer>) -> DispatchResult {
 
 			// Check that the extrinsic was signed and get the signer.
 			let signer = ensure_signed(origin)?;
@@ -477,7 +478,7 @@ pub mod pallet {
 			<T as self::Config>::Currency::transfer(&signer, &task.volunteer, task.budget, ExistenceRequirement::AllowDeath)?;
 
 			// Accept task and update storage.
-			Self::accept_completed_task(&signer, &mut task, &task_id)?;
+			Self::accept_completed_task(&signer, &mut task, &task_id, &ratings)?;
 
 			// Add task to completed tasks list of volunteer's profile.
 			pallet_profile::Pallet::<T>::add_task_to_completed_tasks(&task.volunteer, task_id)?;
@@ -776,7 +777,7 @@ pub mod pallet {
 		}
 
 		// Internal helper function, checks Must be called before calling this function.
-		fn accept_completed_task(task_initiator: &T::AccountId, task: &mut Task<T>, task_id: &T::Hash) -> Result<(), DispatchError> {
+		fn accept_completed_task(task_initiator: &T::AccountId, task: &mut Task<T>, task_id: &T::Hash, ratings: &BoundedVec<Rating, T::MaximumRatingsPer>) -> Result<(), DispatchError> {
 
 			// Remove from ownership
 			<TasksOwned<T>>::try_mutate(&task_initiator, |owned| {
@@ -789,10 +790,10 @@ pub mod pallet {
 
 			// Update task state
 			task.status = TaskStatus::Accepted;
-			<Tasks<T>>::insert(task_id, task);
+			<Tasks<T>>::insert(task_id, &*task);
 
 			// Reward reputation points to profiles who created/completed a task
-			Self::handle_reputation(task.status)?;
+			Self::handle_reputation(&task.status, &task.volunteer, &ratings)?;
 
 			// remove task once accepted
 			<Tasks<T>>::remove(task_id);
@@ -883,11 +884,11 @@ pub mod pallet {
 		}
 
 		// Handles reputation update for profiles
-		fn handle_reputation(task_status: &TaskStatus, ratings: &Vec<Score>) -> Result<(), DispatchError> {
+		fn handle_reputation(task_status: &TaskStatus, account: &T::AccountId, ratings: &BoundedVec<Rating, T::MaximumRatingsPer>) -> Result<(), DispatchError> {
 			// Ensure that reputation is added only when task is in status Accepted
-			if task_status == TaskStatus::Accepted {
+			if *task_status == TaskStatus::Accepted {
 				// TODO:pallet_profile::Pallet::<T>::add_reputation(&task.initiator)?;
-				pallet_reputation::Pallet::<T>::rate_account(&task.volunteer, ratings);
+				pallet_reputation::Pallet::<T>::rate_account(account, ratings);
 			}
 
 			Ok(())

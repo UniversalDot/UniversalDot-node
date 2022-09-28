@@ -46,7 +46,7 @@ pub mod impls;
 pub mod pallet {
 	use frame_support::{
 		pallet_prelude::*,
-		inherent::Vec
+		BoundedVec
 	};
 	use frame_system::{
 		pallet_prelude::*,
@@ -84,6 +84,9 @@ pub mod pallet {
 
 		/// The default reputation of an account.
 		type DefaultReputation: Get<i32>;
+
+		/// Maximum number of ratings per action
+		type MaximumRatingsPer: Get<u32> + MaxEncodedLen + TypeInfo;
 	}
 
 	#[pallet::storage]
@@ -149,7 +152,7 @@ pub mod pallet {
 		}
 
 		/// Rate the account and adjust the reputation and credibility as defined by the ReputationHandler.
-		pub fn rate_account(account: &T::AccountId, ratings: &Vec<u8>) -> DispatchResult {
+		pub fn rate_account(account: &T::AccountId, ratings: &BoundedVec<Rating, T::MaximumRatingsPer>) -> DispatchResult {
 			
 			// Get the old record.
 			let mut record: Reputable<T> = RepInfoOf::<T>::get(account).ok_or(Error::<T>::RecordNotFound).unwrap();

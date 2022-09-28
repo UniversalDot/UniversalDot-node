@@ -1,5 +1,5 @@
 use crate::{mock::*, Error, RepInfoOf};
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, bounded_vec};
 
 
 #[test]
@@ -47,15 +47,15 @@ fn placeholder_rep_function_works() {
         assert_ok!(Reputation::create_reputation_record(&0));
 
         // Assert logic follows as described in: https://github.com/UniversalDot/universal-dot-node/issues/37
-        assert_ok!(Reputation::rate_account(&0, &vec![1u8, 1u8]));
+        assert_ok!(Reputation::rate_account(&0, &bounded_vec![1u8, 1u8]));
         let rep_record = RepInfoOf::<Test>::get(0).unwrap();
         assert!(rep_record.reputation == (-4));
 
-        assert_ok!(Reputation::rate_account(&0, &vec![5u8, 5u8]));
+        assert_ok!(Reputation::rate_account(&0, &bounded_vec![5u8, 5u8]));
         let rep_record = RepInfoOf::<Test>::get(0).unwrap();
         assert!(rep_record.reputation == 0);
 
-        assert_ok!(Reputation::rate_account(&0, &vec![5u8, 5u8]));
+        assert_ok!(Reputation::rate_account(&0, &bounded_vec![5u8, 5u8]));
         let rep_record = RepInfoOf::<Test>::get(0).unwrap();
         assert!(rep_record.reputation == 4);
         

@@ -2,6 +2,7 @@ use crate as pallet_reputation;
 use frame_support::{
 	traits::{ConstU16, ConstU64},
 	parameter_types,
+	pallet_prelude::*,
 };
 use frame_system as system;
 use sp_core::H256;
@@ -57,13 +58,17 @@ impl system::Config for Test {
 }
 
 parameter_types! {
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub MaximumRatingsPer: u32 = 5;
+
 	pub DefaultReputation: i32 = 0;
-}
+}		
 
 impl pallet_reputation::Config for Test {
 	type Event = Event;
 	type ReputationHandler = ReputationHandler;
 	type DefaultReputation = DefaultReputation;
+	type MaximumRatingsPer = MaximumRatingsPer; 
 }
 
 

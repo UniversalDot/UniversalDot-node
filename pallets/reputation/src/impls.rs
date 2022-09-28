@@ -6,20 +6,23 @@ use crate::{
 };
 use frame_support::{
     pallet_prelude::*,
-    inherent::Vec
+    inherent::Vec,
+    BoundedVec
 };
 
 pub struct ReputationHandler;
 
-impl<T: frame_system::Config> crate::traits::ReputationHandler<T> for ReputationHandler {
+impl<T> crate::traits::ReputationHandler<T> for ReputationHandler
+where T: frame_system::Config + crate::Config
+{
     
-    fn calculate_credibility<N>(entity: &N, ratings: &Vec<Rating>) -> CredibilityUnit 
+    fn calculate_credibility<N>(entity: &N, ratings: &BoundedVec<Rating, T::MaximumRatingsPer>) -> CredibilityUnit 
     where N: HasCredibility
     {
         CredibilityUnit::default()
     }
 
-    fn calculate_reputation<N>(entity: &N, ratings: &Vec<Rating>) -> ReputationUnit
+    fn calculate_reputation<N>(entity: &N, ratings: &BoundedVec<Rating, T::MaximumRatingsPer>) -> ReputationUnit
     where N: HasCredibility + HasReputation + HasAccountId<T>
     {
         let mut rep = entity.get_reputation();
@@ -29,7 +32,7 @@ impl<T: frame_system::Config> crate::traits::ReputationHandler<T> for Reputation
             rep += diff;    
         }).collect::<_>();
     
-        rep
+        rep.try_into().expect("input vec is bounded, output is same length; qed")
     }
 }
 

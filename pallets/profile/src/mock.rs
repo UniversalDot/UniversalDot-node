@@ -22,9 +22,10 @@ frame_support::construct_runtime!(
 		NodeBlock = Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Profile: pallet_profile::{Pallet, Call, Storage, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		System: frame_system,
+		Profile: pallet_profile,
+		Balances: pallet_balances,
+		Reputation: pallet_reputation,
 	}
 );
 
@@ -96,6 +97,21 @@ impl pallet_balances::Config for Test {
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 }
+
+parameter_types! {
+	#[derive(TypeInfo, MaxEncodedLen, Encode)]
+	pub MaximumRatingsPer: u32 = 5;
+
+	pub DefaultReputation: i32 = 0;
+}		
+
+impl pallet_reputation::Config for Test {
+	type Event = Event;
+	type ReputationHandler = pallet_reputation::impls::ReputationHandler;
+	type DefaultReputation = DefaultReputation;
+	type MaximumRatingsPer = MaximumRatingsPer; 
+}
+
 
 // Build genesis storage according to the mock runtime.
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
