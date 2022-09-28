@@ -36,8 +36,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
+
 pub mod traits;
 pub mod impls;
 
@@ -86,7 +85,7 @@ pub mod pallet {
 		type DefaultReputation: Get<i32>;
 
 		/// Maximum number of ratings per action
-		type MaximumRatingsPer: Get<u32> + MaxEncodedLen + TypeInfo;
+		type MaximumRatingsPer: Get<u32	> + MaxEncodedLen + TypeInfo;
 	}
 
 	#[pallet::storage]

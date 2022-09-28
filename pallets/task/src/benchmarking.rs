@@ -247,6 +247,7 @@ benchmarks! {
 		let budget = <T as pallet::Config>::Currency::total_balance(&task_creator);
 		let attachments = vec![0u8, s as u8];
 		let keywords = vec![0u8, s as u8];
+		let ratings = vec![1,2,3,4,5];
 
 		// Create profile before creating a task
 		create_profile::<T>();
@@ -255,7 +256,7 @@ benchmarks! {
 		let _ = PalletTask::<T>::start_task(RawOrigin::Signed(volunteer.clone()).into(), hash_task);
 		let _ = PalletTask::<T>::complete_task(RawOrigin::Signed(volunteer).into(), hash_task);
 
-	}: accept_task(RawOrigin::Signed(task_creator.clone()), hash_task)
+	}: accept_task(RawOrigin::Signed(task_creator.clone()), hash_task, ratings.try_into().unwrap())
 		/* the code to be benchmarked */
 
 	verify {

@@ -50,7 +50,6 @@ fn create_profile_info<T: Config>(_num_fields: u32) -> Profile<T> {
 		name: username.try_into().unwrap(),
 		interests: interests.try_into().unwrap(),
 		balance: Some(balance),
-		reputation: u32::MAX,
 		available_hours_per_week,
 		additional_information: None,
 	}
