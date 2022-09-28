@@ -64,7 +64,7 @@ fn additional_info() -> BoundedVec<u8, MaxAdditionalInformationLen> {
 
 fn get_ratings() -> BoundedVec<u8, MaximumRatingsPer> {
 	// +2 rating overall
-	vec![0, 5, 5].try_into().expect("test")
+	vec![1, 5, 5].try_into().expect("test")
 }
 
 fn get_deadline(multiple: u64) -> u64 {
@@ -831,7 +831,7 @@ fn increase_profile_reputation_when_task_completed(){
 		let rep_2 = RepInfoOf::<Test>::get(*BOB).unwrap().reputation;
 
 		// Ensure that the reputation has been added to both profiles
-		assert_eq!(rep_1, 2);
+		assert_eq!(rep_1, 0);
 		assert_eq!(rep_2, 2);
 	});
 }
