@@ -61,6 +61,10 @@ fn additional_info() -> BoundedVec<u8, MaxAdditionalInformationLen> {
 	vec![1u8, 4].try_into().unwrap()
 }
 
+fn insert_ipfs_cid() -> [u8; 46] {
+	*b"QmPmN9nrWrJypfbvJLYDNYyL3d7hi1gToQwDHhvtHWcfKZ"
+}
+
 fn x() -> [u8; 5] {
 	[1, 2, 3, 4, 5]
 }
